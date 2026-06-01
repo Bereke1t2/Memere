@@ -1,0 +1,165 @@
+// ignore_for_file: prefer_const_constructors, deprecated_member_use, use_build_context_synchronously, unused_import
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_sizes.dart';
+import '../../../../core/constants/app_text_styles.dart';
+import '../../../../core/errors/failures.dart';
+import '../../../../core/router/app_router.dart';
+import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_text_field.dart';
+import '../providers/auth_state_provider.dart';
+import '../../domain/usecases/register_usecase.dart';
+
+class RegisterScreen extends ConsumerStatefulWidget {
+  const RegisterScreen({super.key});
+
+  @override
+  ConsumerState<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends ConsumerState<RegisterScreen> {
+  final _formKey     = GlobalKey<FormState>();
+  final _firstCtrl   = TextEditingController();
+  final _lastCtrl    = TextEditingController();
+  final _emailCtrl   = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _phoneCtrl   = TextEditingController();
+
+  @override
+  void dispose() {
+    _firstCtrl.dispose(); _lastCtrl.dispose();
+    _emailCtrl.dispose(); _passwordCtrl.dispose(); _phoneCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    await ref.read(authStateProvider.notifier).register(
+      RegisterParams(
+        email: _emailCtrl.text.trim(),
+        password: _passwordCtrl.text,
+        firstName: _firstCtrl.text.trim(),
+        lastName: _lastCtrl.text.trim(),
+        phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authAsync = ref.watch(authStateProvider);
+
+    ref.listen(authStateProvider, (_, next) {
+      if (next.hasError) {
+        final failure = next.error as Failure?;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(failure?.message ?? 'Registration failed. Please try again.'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(AppSizes.md),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
+        ));
+      }
+    });
+
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      appBar: AppBar(
+        backgroundColor: AppColors.bgPrimary,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () => context.go(AppRoutes.login),
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSizes.screenPaddingH, vertical: AppSizes.md,
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Create account', style: AppTextStyles.displayMedium),
+                const SizedBox(height: AppSizes.sm),
+                Text('Start your exam prep journey today',
+                    style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary)),
+                const SizedBox(height: AppSizes.xxl),
+
+                Row(children: [
+                  Expanded(child: AppTextField(
+                    controller: _firstCtrl, hintText: 'First name', labelText: 'First Name',
+                    textInputAction: TextInputAction.next,
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  )),
+                  const SizedBox(width: AppSizes.md),
+                  Expanded(child: AppTextField(
+                    controller: _lastCtrl, hintText: 'Last name', labelText: 'Last Name',
+                    textInputAction: TextInputAction.next,
+                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
+                  )),
+                ]),
+                const SizedBox(height: AppSizes.md),
+
+                AppTextField(
+                  controller: _emailCtrl, hintText: 'your@email.com', labelText: 'Email',
+                  prefixIcon: Icons.email_outlined, keyboardType: TextInputType.emailAddress,
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.email],
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Email is required';
+                    if (!v.contains('@')) return 'Enter a valid email';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: AppSizes.md),
+
+                AppTextField(
+                  controller: _phoneCtrl, hintText: '+251 9XX XXX XXX', labelText: 'Phone (optional)',
+                  prefixIcon: Icons.phone_outlined, keyboardType: TextInputType.phone,
+                  textInputAction: TextInputAction.next,
+                ),
+                const SizedBox(height: AppSizes.md),
+
+                AppTextField(
+                  controller: _passwordCtrl, hintText: 'Min. 8 characters', labelText: 'Password',
+                  prefixIcon: Icons.lock_outline_rounded, isPassword: true,
+                  textInputAction: TextInputAction.done,
+                  autofillHints: const [AutofillHints.newPassword],
+                  onFieldSubmitted: (_) => _submit(),
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Password is required';
+                    if (v.length < 8) return 'Min. 8 characters';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: AppSizes.xl),
+
+                AppButton(
+                  label: 'Create Account',
+                  onPressed: authAsync.isLoading ? null : _submit,
+                  isLoading: authAsync.isLoading,
+                ),
+                const SizedBox(height: AppSizes.lg),
+
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Text('Already have an account? ',
+                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                  GestureDetector(
+                    onTap: () => context.go(AppRoutes.login),
+                    child: Text('Sign In',
+                        style: AppTextStyles.labelMedium.copyWith(color: AppColors.accentPrimary)),
+                  ),
+                ]),
+                const SizedBox(height: AppSizes.lg),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
