@@ -598,3 +598,203 @@ The Flutter app mirrors the backend's Clean Architecture. Features are self-cont
 
 lib/
 
+├── main.dart              \# App entry point, ProviderScope
+
+├── app.dart               \# MaterialApp, GoRouter setup
+
+├── core/
+
+│   ├── constants/         \# API endpoints, colors, text styles
+
+│   ├── errors/            \# Failure classes (ServerFailure, CacheFailure)
+
+│   ├── network/           \# Dio client, interceptors, connectivity check
+
+│   ├── storage/           \# Hive/SharedPrefs wrappers
+
+│   ├── theme/             \# AppTheme, dark/light modes
+
+│   ├── router/            \# GoRouter config, route guards
+
+│   └── di/                \# Dependency injection providers
+
+├── features/
+
+│   ├── auth/
+
+│   │   ├── data/
+
+│   │   │   ├── datasources/   \# AuthRemoteDataSource (Dio calls)
+
+│   │   │   │                  \# AuthLocalDataSource (Hive tokens)
+
+│   │   │   ├── models/        \# UserModel (from JSON, extends UserEntity)
+
+│   │   │   └── repositories/  \# AuthRepositoryImpl
+
+│   │   ├── domain/
+
+│   │   │   ├── entities/      \# UserEntity (pure Dart, no JSON)
+
+│   │   │   ├── repositories/  \# AuthRepository (abstract)
+
+│   │   │   └── usecases/      \# LoginUseCase, RegisterUseCase
+
+│   │   └── presentation/
+
+│   │       ├── providers/     \# authStateProvider, loginProvider
+
+│   │       ├── screens/       \# LoginScreen, RegisterScreen
+
+│   │       └── widgets/       \# LoginForm, SocialLoginButtons
+
+│   ├── courses/
+
+│   │   └── ... (same structure)
+
+│   ├── video\_player/
+
+│   │   └── ... (custom HLS player wrapper)
+
+│   ├── quiz/
+
+│   ├── exam/
+
+│   ├── payment/
+
+│   └── notifications/
+
+└── shared/
+
+    ├── widgets/           \# AppButton, AppTextField, LoadingOverlay
+
+    ├── extensions/        \# String, DateTime, int extensions
+
+    └── utils/             \# Formatters, validators, helpers
+
+## **6.3 Riverpod State Management**
+
+| Provider Type | Use Case | Example |
+| :---- | :---- | :---- |
+| Provider | Simple computed values, no state | currentUserProvider (reads auth state) |
+| StateProvider | Simple mutable state | selectedSubjectProvider (String) |
+| StateNotifierProvider | Complex state with methods | CourseListNotifier (filtering, pagination) |
+| FutureProvider | One-time async fetch | courseDetailProvider(courseId) |
+| StreamProvider | Real-time data | notificationsStreamProvider |
+| AsyncNotifierProvider | Async state with methods | ExamAttemptNotifier (start, submit) |
+
+## **6.4 Offline-First Strategy**
+
+| Data Type | Storage | Strategy |
+| :---- | :---- | :---- |
+| Auth tokens | Flutter Secure Storage | Encrypted at rest; refresh on 401 |
+| Course metadata | Hive (NoSQL local DB) | Cache API response; TTL \= 1 hour; stale-while-revalidate |
+| Video files | Device filesystem (path\_provider) | Explicit user download; encrypted with device key |
+| PDF/Notes | Device filesystem | Download on demand; indexed in Hive |
+| Quiz state | Hive | Persist in-progress attempt; sync on reconnect |
+| User preferences | SharedPreferences | Immediate write; no sync needed |
+
+| Offline Sync Strategy 1\. On app launch: check connectivity via connectivity\_plus 2\. Offline: serve all data from Hive cache; queue writes to a SyncQueue 3\. On reconnect: flush SyncQueue to backend (idempotent endpoints) 4\. Conflict resolution: server-wins for all data except quiz answers (client-wins) 5\. Background sync: WorkManager (Android) / BGTaskScheduler (iOS) |
+| :---- |
+
+| PHASE 7 Authentication & Security |
+| :---: |
+
+## **7.1 JWT Authentication Flow**
+
+**JWT Authentication Sequence (Mermaid)**
+
+| sequenceDiagram   participant App as Flutter App   participant GW as API Gateway   participant Auth as Auth Service   participant DB as PostgreSQL   participant Cache as Redis   App-\>\>GW: POST /api/v1/auth/login {email, password}   GW-\>\>Auth: Forward request   Auth-\>\>DB: SELECT user WHERE email=?   DB--\>\>Auth: User record   Auth-\>\>Auth: bcrypt.Compare(password, hash)   Auth-\>\>Auth: Generate access\_token (15min TTL)   Auth-\>\>Auth: Generate refresh\_token (30 days TTL)   Auth-\>\>Cache: SET session:{user\_id} \= refresh\_token\_hash TTL=30d   Auth-\>\>DB: INSERT refresh\_tokens (hash, device\_info, expires\_at)   Auth--\>\>App: { access\_token, refresh\_token, user }   Note over App,Cache: Access token expired — silent refresh   App-\>\>GW: POST /api/v1/auth/refresh {refresh\_token}   GW-\>\>Auth: Forward   Auth-\>\>Cache: GET session:{user\_id} — verify not revoked   Auth-\>\>Auth: Issue new access\_token   Auth--\>\>App: { access\_token } |
+| :---- |
+
+## **7.2 Role-Based Access Control (RBAC)**
+
+| Role | Permissions |
+| :---- | :---- |
+| student | Read courses (enrolled), submit quizzes/exams, view own progress, purchase |
+| teacher | All student permissions \+ create/edit own courses, view student analytics for own courses |
+| admin | All permissions \+ manage all users, all courses, payment reconciliation, platform config |
+
+## **7.3 Attack Vectors & Mitigations**
+
+| Attack Vector | Risk | Mitigation |
+| :---- | :---- | :---- |
+| Brute Force Login | Account takeover | Rate limit: 5 attempts/15min per IP. Account lockout after 10 failures. |
+| JWT Token Theft | Unauthorized access | Short-lived access tokens (15 min). HttpOnly cookie option. Token rotation. |
+| SQL Injection | Data breach | Parameterized queries via sqlx/pgx. No raw string interpolation. |
+| XSS (Web Admin) | Script injection | CSP headers. React auto-escaping. Sanitize all user HTML input. |
+| IDOR (Insecure Direct Object Ref) | Unauthorized data access | Always filter DB queries by authenticated user\_id. Never trust client-side IDs. |
+| Payment Replay | Double charge | Idempotency keys on all payment requests. Webhook deduplication. |
+| Video Hotlinking | Content theft | Pre-signed CDN URLs with 2-hour expiry per authenticated user. |
+| Exam Answer Leaking | Academic dishonesty | Never send correct answers in API response. Grade server-side only. |
+| DDoS | Platform downtime | CloudFlare / AWS Shield. Rate limiting at gateway. Auto-scaling. |
+| Credential Stuffing | Mass account takeover | Email breach detection. Suspicious login alerting. 2FA option. |
+
+| PHASE 8 Video Learning System |
+| :---: |
+
+## **8.1 Video Upload & Processing Pipeline**
+
+**Video Processing Workflow (Mermaid)**
+
+| graph TD   A\[Teacher uploads video\<br/\>via Flutter App\] \--\> B\[Request pre-signed S3 URL\<br/\>from Course Service\]   B \--\> C\[Flutter uploads directly\<br/\>to S3 via pre-signed URL\]   C \--\> D\[S3 Event Notification\<br/\>triggers SQS message\]   D \--\> E\[Video Processor Worker\<br/\>picks up SQS message\]   E \--\> F{Processing}   F \--\> G\[Transcode to HLS\<br/\>480p / 720p / 1080p\<br/\>using FFmpeg/MediaConvert\]   F \--\> H\[Generate thumbnail\<br/\>at 5-second mark\]   G \--\> I\[Upload HLS segments\<br/\>and .m3u8 manifest to S3\]   I \--\> J\[Update video record\<br/\>status \= ready\<br/\>in PostgreSQL\]   J \--\> K\[Invalidate CDN cache\<br/\>for new content\]   J \--\> L\[Push notification to teacher\<br/\>Video processing complete\]   H \--\> I |
+| :---- |
+
+## **8.2 Adaptive Bitrate Streaming (HLS)**
+
+| Quality | Resolution | Bitrate | Use Case |
+| :---- | :---- | :---- | :---- |
+| Low | 360p | 400 kbps | 2G / very slow mobile data |
+| Medium | 480p | 800 kbps | 3G mobile connection |
+| High | 720p | 1.5 Mbps | 4G / good WiFi |
+| HD | 1080p | 3 Mbps | Strong WiFi / broadband |
+
+The HLS master manifest (.m3u8) lists all available quality levels. The video player (flutter\_hls\_parser \+ video\_player) automatically selects the best quality based on current bandwidth measurement, switching seamlessly without buffering.
+
+## **8.3 Offline Video Download Strategy**
+
+| Step | Action | Implementation |
+| :---- | :---- | :---- |
+| 1\. Request | Student taps "Download" on lesson | Flutter app calls GET /api/v1/videos/{id}/download-url |
+| 2\. Signed URL | Backend generates time-limited CDN URL | S3 pre-signed URL valid for 2 hours (single-use) |
+| 3\. Download | App downloads HLS segments | Download all .ts segments \+ manifest |
+| 4\. Storage | Save to app documents directory | path\_provider getApplicationDocumentsDirectory() |
+| 5\. Encryption | Encrypt downloaded files | AES-256 with device-bound key from Secure Storage |
+| 6\. Offline Play | Play from local files | Custom FileDataSource for video\_player |
+| 7\. Expiry | Downloaded content valid 30 days | Check timestamp on each play; prompt to re-download |
+
+| PHASE 9 Quiz & Mock Exam Engine |
+| :---: |
+
+## **9.1 Quiz Engine Design**
+
+| Aspect | Design Decision | Rationale |
+| :---- | :---- | :---- |
+| Answer security | Correct answers NEVER sent to client | Prevents cheating via API inspection |
+| Question randomization | Shuffle on attempt creation, snapshot stored in Redis | Consistent order for duration of attempt; different per attempt |
+| Grading | Server-side only, triggered on submission | Client cannot manipulate score |
+| Partial attempts | State saved to Redis every 30 seconds | No data loss on app crash or disconnect |
+| Time enforcement | Timer managed server-side (started\_at in DB) | Client timer is display-only; server auto-submits at expiry |
+| Attempt limits | Configurable per quiz (1–unlimited) | Teacher sets max attempts |
+
+## **9.2 Mock Exam Flow**
+
+**Exam Attempt State Machine (Mermaid)**
+
+| stateDiagram-v2   \[\*\] \--\> NOT\_STARTED   NOT\_STARTED \--\> IN\_PROGRESS: Student clicks Start   IN\_PROGRESS \--\> IN\_PROGRESS: Save answer (auto-save every 30s)   IN\_PROGRESS \--\> SUBMITTED: Student submits manually   IN\_PROGRESS \--\> EXPIRED: Server timer fires at duration\_minutes   SUBMITTED \--\> GRADED: Auto-grading completes   EXPIRED \--\> GRADED: Auto-graded on expiry   GRADED \--\> \[\*\] |
+| :---- |
+
+## **9.3 Scoring & Analytics**
+
+| Metric | Calculation | Storage |
+| :---- | :---- | :---- |
+| Raw Score | Sum of points for correct answers | exam\_attempts.score |
+| Percentage | (raw\_score / total\_marks) \* 100 | exam\_attempts.percentage |
+| Subject Breakdown | Points scored per subject tag on questions | JSONB in exam\_attempts |
+| Weak Areas | Questions answered wrong grouped by topic | Aggregated in progress service |
+| Percentile Rank | Student score vs all attempts for same exam | Calculated on-demand via Redis sorted set |
+| Trend Analysis | Score over consecutive attempts for same subject | Time-series query on exam\_attempts |
+
+| PHASE 10 Payment System |
+| :---: |
+
