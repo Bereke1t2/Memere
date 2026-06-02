@@ -704,6 +704,7 @@ class _DangerButton extends StatelessWidget {
     child: _ButtonContent(label: label, labelColor: AppColors.error, isLoading: isLoading, loadingColor: AppColors.error),
   );
 }
+
 ```
 
 ---
