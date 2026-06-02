@@ -198,3 +198,203 @@ The MVP must validate core learning value: students can enroll, watch videos, re
 
 ## **2.3 Future Features (Month 7–12+)**
 
+| \# | Feature | Notes |
+| :---- | :---- | :---- |
+| 1 | AI-powered tutoring chatbot | LLM integration (OpenAI/Claude API) |
+| 2 | Adaptive learning paths | Personalized curriculum based on performance |
+| 3 | Live video sessions (Zoom/Agora SDK) | Real-time teacher-student interaction |
+| 4 | Peer study groups | Social/collaborative learning |
+| 5 | Multi-language content (Amharic-first) | Localization for broader reach |
+| 6 | Parent monitoring portal | Track child's study habits and scores |
+| 7 | School/institution licensing | B2B revenue stream |
+| 8 | Predictive score analytics (ML) | Predict exam outcomes, identify risk |
+
+| PHASE 3 System Design & Architecture |
+| :---: |
+
+## **3.1 High-Level Architecture Overview**
+
+The platform follows a microservices-oriented, API-first architecture. The Flutter mobile app communicates exclusively through a single API Gateway. Each bounded domain (courses, quizzes, payments, etc.) is an independently deployable service. All services share a PostgreSQL cluster (with per-service schemas) and Redis for caching and session management.
+
+**Architecture Diagram (Mermaid — High-Level System)**
+
+| graph TB   subgraph Mobile\["Flutter Mobile App"\]     APP\[Flutter App\<br/\>Riverpod \+ GoRouter\]   end   subgraph Edge\["Edge Layer"\]     CDN\[CloudFront / GCP CDN\]     GW\[API Gateway\<br/\>Nginx \+ Rate Limiter\]   end   subgraph Services\["Backend Microservices (Go)"\]     AUTH\[Auth Service\<br/\>JWT \+ Refresh Tokens\]     COURSE\[Course Service\<br/\>Videos, Notes, Sections\]     QUIZ\[Quiz Service\<br/\>Questions, Attempts\]     EXAM\[Exam Service\<br/\>Mock Exams, Timer\]     PAY\[Payment Service\<br/\>Stripe / Chapa / Telebirr\]     NOTIF\[Notification Service\<br/\>FCM \+ Email \+ In-App\]     PROG\[Progress Service\<br/\>Tracking \+ Analytics\]   end   subgraph Data\["Data Layer"\]     PG\[(PostgreSQL\<br/\>Primary DB)\]     REDIS\[(Redis\<br/\>Cache \+ Sessions)\]     S3\[(S3 / GCS\<br/\>Object Storage)\]     MQ\[RabbitMQ / SQS\<br/\>Message Queue\]   end   APP \--\> CDN   APP \--\> GW   GW \--\> AUTH   GW \--\> COURSE   GW \--\> QUIZ   GW \--\> EXAM   GW \--\> PAY   GW \--\> NOTIF   GW \--\> PROG   AUTH \--\> PG   AUTH \--\> REDIS   COURSE \--\> PG   COURSE \--\> S3   COURSE \--\> MQ   QUIZ \--\> PG   QUIZ \--\> REDIS   EXAM \--\> PG   EXAM \--\> REDIS   PAY \--\> PG   NOTIF \--\> MQ   PROG \--\> PG   PROG \--\> REDIS   CDN \--\> S3 |
+| :---- |
+
+## **3.2 Service Responsibilities**
+
+| Service | Port | Responsibilities |
+| :---- | :---- | :---- |
+| API Gateway | 8080 | Rate limiting, routing, auth validation, SSL termination |
+| Auth Service | 8081 | Registration, login, JWT issuance, refresh tokens, password reset |
+| Course Service | 8082 | Course CRUD, section management, lesson management, video/note metadata |
+| Quiz Service | 8083 | Quiz creation, question bank, attempt recording, auto-grading |
+| Exam Service | 8084 | Mock exam engine, timer management, exam sessions, score calculation |
+| Payment Service | 8085 | Purchase flow, subscription management, webhook handling, receipts |
+| Notification Service | 8086 | Push (FCM), email (SendGrid), in-app notifications, scheduling |
+| Progress Service | 8087 | Completion tracking, streak calculation, analytics aggregation |
+
+## **3.3 Infrastructure Components**
+
+| Component | Technology | Purpose |
+| :---- | :---- | :---- |
+| Object Storage | AWS S3 / GCS | Store video files, PDFs, images, certificates |
+| CDN | CloudFront / GCP CDN | Deliver video and static content with low latency globally |
+| Video Processing | AWS MediaConvert / FFmpeg | Transcode uploaded videos to HLS adaptive bitrate streams |
+| Database | PostgreSQL 15 (RDS/Cloud SQL) | Primary relational data store |
+| Cache | Redis 7 (ElastiCache) | Session tokens, quiz states, rate limit counters |
+| Message Queue | SQS / RabbitMQ | Async tasks: video processing, email sending, notifications |
+| Container Registry | ECR / GCR | Docker image storage |
+| Orchestration | Kubernetes (EKS/GKE) | Container deployment and scaling |
+| Load Balancer | AWS ALB / GCP LB | Traffic distribution across service instances |
+| Monitoring | Prometheus \+ Grafana | Metrics collection and visualization |
+| Logging | ELK Stack / CloudWatch | Centralized log aggregation and search |
+
+| PHASE 4 Database Design |
+| :---: |
+
+## **4.1 Database Design Principles**
+
+* One PostgreSQL cluster, schemas per domain (auth, courses, payments, notifications)
+
+* UUID primary keys for all entities (prevents enumeration attacks)
+
+* Soft deletes (deleted\_at timestamp) — never hard delete user data
+
+* created\_at / updated\_at on every table
+
+* JSONB for flexible metadata; typed columns for queryable fields
+
+## **4.2 Core Tables**
+
+### **4.2.1 Users Table**
+
+| Column | Type | Constraints | Description |
+| :---- | :---- | :---- | :---- |
+| id | UUID | PK, default gen\_random\_uuid() | Unique user identifier |
+| email | VARCHAR(255) | UNIQUE, NOT NULL | Login email address |
+| phone | VARCHAR(20) | UNIQUE, nullable | Phone number (Telebirr payments) |
+| password\_hash | VARCHAR(255) | NOT NULL | bcrypt hashed password |
+| role | ENUM | NOT NULL (student/teacher/admin) | User role for RBAC |
+| first\_name | VARCHAR(100) | NOT NULL | First name |
+| last\_name | VARCHAR(100) | NOT NULL | Last name |
+| avatar\_url | TEXT | nullable | Profile picture URL (S3) |
+| is\_active | BOOLEAN | default true | Account active state |
+| is\_email\_verified | BOOLEAN | default false | Email verification status |
+| email\_verification\_token | VARCHAR(255) | nullable | Token for email verification |
+| password\_reset\_token | VARCHAR(255) | nullable | Token for password reset |
+| password\_reset\_expires\_at | TIMESTAMPTZ | nullable | Token expiry time |
+| last\_login\_at | TIMESTAMPTZ | nullable | Last successful login |
+| created\_at | TIMESTAMPTZ | NOT NULL, default now() | Record creation time |
+| updated\_at | TIMESTAMPTZ | NOT NULL, default now() | Last update time |
+| deleted\_at | TIMESTAMPTZ | nullable | Soft delete timestamp |
+
+Indexes: email (UNIQUE), phone (UNIQUE), role, deleted\_at, created\_at
+
+### **4.2.2 Courses Table**
+
+| Column | Type | Constraints | Description |
+| :---- | :---- | :---- | :---- |
+| id | UUID | PK | Course identifier |
+| teacher\_id | UUID | FK → users.id, NOT NULL | Course creator/teacher |
+| title | VARCHAR(200) | NOT NULL | Course display title |
+| slug | VARCHAR(200) | UNIQUE, NOT NULL | URL-friendly identifier |
+| description | TEXT | NOT NULL | Full course description |
+| short\_description | VARCHAR(500) | nullable | Card preview text |
+| subject | VARCHAR(100) | NOT NULL | e.g., Mathematics, Physics |
+| grade | INTEGER | NOT NULL (e.g., 12\) | Target grade level |
+| thumbnail\_url | TEXT | nullable | Cover image URL |
+| price | DECIMAL(10,2) | NOT NULL default 0 | Price in ETB |
+| currency | VARCHAR(3) | NOT NULL default ETB | Currency code |
+| is\_free | BOOLEAN | default false | Free course flag |
+| is\_published | BOOLEAN | default false | Visibility flag |
+| language | VARCHAR(10) | default en | en or am (Amharic) |
+| level | ENUM | beginner/intermediate/advanced | Difficulty level |
+| total\_duration\_seconds | INTEGER | default 0 | Sum of all video durations |
+| total\_lessons | INTEGER | default 0 | Denormalized lesson count |
+| rating\_avg | DECIMAL(3,2) | default 0 | Average student rating |
+| enrollment\_count | INTEGER | default 0 | Total enrolled students |
+| metadata | JSONB | nullable | Flexible extra data |
+| created\_at | TIMESTAMPTZ | NOT NULL, default now() |  |
+| updated\_at | TIMESTAMPTZ | NOT NULL, default now() |  |
+| deleted\_at | TIMESTAMPTZ | nullable | Soft delete |
+
+Indexes: teacher\_id, subject, grade, is\_published, slug (UNIQUE), price, enrollment\_count
+
+### **4.2.3 Course Sections & Lessons**
+
+| Column | Type | Description |
+| :---- | :---- | :---- |
+| id | UUID | Primary key |
+| course\_id | UUID FK | Parent course |
+| title | VARCHAR(200) | Section title |
+| description | TEXT | Section overview |
+| order\_index | INTEGER | Display order within course |
+| is\_published | BOOLEAN | Visibility toggle |
+| created\_at / updated\_at | TIMESTAMPTZ | Audit timestamps |
+
+| Column | Type | Description |
+| :---- | :---- | :---- |
+| id | UUID | Lesson primary key |
+| section\_id | UUID FK | Parent section |
+| course\_id | UUID FK | Denormalized for fast queries |
+| title | VARCHAR(200) | Lesson title |
+| type | ENUM | video / note / quiz / mixed |
+| order\_index | INTEGER | Display order |
+| is\_free\_preview | BOOLEAN | Allow non-enrolled preview |
+| duration\_seconds | INTEGER | Video duration (if applicable) |
+| is\_published | BOOLEAN | Visibility |
+| created\_at / updated\_at | TIMESTAMPTZ | Audit timestamps |
+
+### **4.2.4 Videos Table**
+
+| Column | Type | Description |
+| :---- | :---- | :---- |
+| id | UUID | Primary key |
+| lesson\_id | UUID FK UNIQUE | One video per lesson |
+| original\_file\_key | TEXT | S3 key for raw upload |
+| hls\_master\_key | TEXT | S3 key for HLS manifest (.m3u8) |
+| processing\_status | ENUM | pending / processing / ready / failed |
+| duration\_seconds | INTEGER | Video duration |
+| resolution\_480p\_key | TEXT | HLS 480p stream key |
+| resolution\_720p\_key | TEXT | HLS 720p stream key |
+| resolution\_1080p\_key | TEXT | HLS 1080p stream key |
+| thumbnail\_key | TEXT | Video thumbnail on S3 |
+| file\_size\_bytes | BIGINT | Original file size |
+| created\_at / updated\_at | TIMESTAMPTZ | Audit timestamps |
+
+### **4.2.5 Quizzes, Questions & Answers**
+
+| Column | Type | Description |
+| :---- | :---- | :---- |
+| quizzes.id | UUID | Quiz primary key |
+| quizzes.lesson\_id | UUID FK | Linked lesson (nullable for standalone) |
+| quizzes.course\_id | UUID FK | Linked course |
+| quizzes.title | VARCHAR(200) | Quiz title |
+| quizzes.time\_limit\_seconds | INTEGER | Nullable — timed or untimed |
+| quizzes.pass\_percentage | DECIMAL(5,2) | Minimum pass score |
+| quizzes.randomize\_questions | BOOLEAN | Shuffle question order |
+| questions.id | UUID | Question PK |
+| questions.quiz\_id | UUID FK | Parent quiz |
+| questions.text | TEXT | Question content |
+| questions.type | ENUM | multiple\_choice / true\_false / short\_answer |
+| questions.points | INTEGER | Point value |
+| questions.explanation | TEXT | Explanation shown after submission |
+| questions.order\_index | INTEGER | Display order |
+| answers.id | UUID | Answer option PK |
+| answers.question\_id | UUID FK | Parent question |
+| answers.text | TEXT | Answer option text |
+| answers.is\_correct | BOOLEAN | Correct answer flag (server-only) |
+| answers.order\_index | INTEGER | Display order |
+
+### **4.2.6 Exams & Attempts**
+
+| Column | Type | Description |
+| :---- | :---- | :---- |
+| exams.id | UUID | Exam primary key |
+| exams.course\_id | UUID FK | Parent course (nullable for standalone) |
+| exams.title | VARCHAR(200) | Exam title |
+| exams.subject | VARCHAR(100) | Subject area |
+| exams.grade | INTEGER | Target grade |
+| exams.duration\_minutes | INTEGER | Total allowed time |
+| exams.total\_marks | INTEGER | Maximum possible score |
