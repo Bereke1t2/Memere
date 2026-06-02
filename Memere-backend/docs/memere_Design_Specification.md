@@ -798,3 +798,294 @@ The HLS master manifest (.m3u8) lists all available quality levels. The video pl
 | PHASE 10 Payment System |
 | :---: |
 
+## **10.1 Payment Providers**
+
+| Provider | Use Case | Currency | Notes |
+| :---- | :---- | :---- | :---- |
+| Chapa | Primary ETB payments for local users | ETB | Mobile money \+ bank transfer; dominant in Ethiopia |
+| Telebirr | Ethio Telecom mobile wallet | ETB | Largest mobile money in Ethiopia; \~30M users |
+| Stripe | International cards; diaspora users | USD/EUR | For future international expansion |
+
+## **10.2 Payment Flow**
+
+**Payment Sequence Diagram (Mermaid)**
+
+| sequenceDiagram   participant App   participant PayService as Payment Service   participant Provider as Chapa/Stripe   participant DB   App-\>\>PayService: POST /payments/initiate {course\_id, provider}   PayService-\>\>DB: INSERT payment {status=pending, idempotency\_key}   PayService-\>\>Provider: Create payment intent / checkout   Provider--\>\>PayService: payment\_url or client\_secret   PayService--\>\>App: { payment\_url, payment\_id }   App-\>\>Provider: User completes payment in WebView   Provider-\>\>PayService: POST /payments/webhook {event, transaction\_id}   PayService-\>\>PayService: Verify webhook signature   PayService-\>\>DB: UPDATE payment {status=completed, paid\_at}   PayService-\>\>DB: INSERT enrollment {student\_id, course\_id}   PayService-\>\>NotifService: Trigger enrollment confirmation notification   App-\>\>PayService: GET /payments/{id}/status (polling)   PayService--\>\>App: { status: "completed" }   App-\>\>App: Navigate to course player |
+| :---- |
+
+## **10.3 Coupon System**
+
+| Column | Type | Description |
+| :---- | :---- | :---- |
+| code | VARCHAR(50) UNIQUE | Human-readable coupon code (e.g., EXAM50) |
+| discount\_type | ENUM | percentage or fixed\_amount |
+| discount\_value | DECIMAL(10,2) | e.g., 50 \= 50% off or ETB 50 off |
+| max\_uses | INTEGER | Total redemption limit (null \= unlimited) |
+| used\_count | INTEGER | Current redemption count |
+| expires\_at | TIMESTAMPTZ | Coupon expiry date |
+| applicable\_to | ENUM | all / specific\_courses / subscription\_only |
+| course\_ids | UUID\[\] | Applicable course IDs (if specific) |
+
+| PHASE 11 Notifications System |
+| :---: |
+
+## **11.1 Notification Channels**
+
+| Channel | Provider | Use Cases | Priority |
+| :---- | :---- | :---- | :---- |
+| Push (Mobile) | Firebase Cloud Messaging (FCM) | New lesson, exam reminder, score ready, announcement | P0 |
+| In-App | PostgreSQL \+ WebSocket/polling | Unread count badge, notification center in app | P0 |
+| Email | SendGrid | Registration confirmation, purchase receipt, weekly progress report | P1 |
+| SMS | Africa's Talking | Critical: password reset, payment confirmation (if no email) | P2 |
+
+## **11.2 Notification Event Catalog**
+
+| Event | Trigger | Channels |
+| :---- | :---- | :---- |
+| welcome\_email | User registration completed | Email |
+| email\_verification | Registration or resend request | Email |
+| exam\_reminder | 24h before a scheduled exam | Push \+ Email |
+| lesson\_published | Teacher publishes new lesson in enrolled course | Push \+ In-App |
+| exam\_graded | Exam attempt grading complete | Push \+ In-App |
+| purchase\_confirmed | Payment completed successfully | Email \+ In-App |
+| streak\_warning | User hasn't studied in 2 days | Push |
+| certificate\_ready | Course 100% completed | Push \+ Email |
+| announcement | Admin broadcasts platform news | Push \+ In-App |
+
+| PHASE 12 Scalability Planning |
+| :---: |
+
+## **12.1 Scaling Tiers**
+
+| User Scale | Architecture | Infrastructure | Monthly AWS Cost (Est.) |
+| :---- | :---- | :---- | :---- |
+| 1K users | Monolith (single Go binary) | EC2 t3.medium (2vCPU/4GB), RDS db.t3.micro, S3, CloudFront | \~$80–120/month |
+| 10K users | Modular monolith \+ Redis \+ CDN | EC2 t3.large x2 (LB), RDS db.t3.medium, ElastiCache t3.micro, S3 | \~$250–350/month |
+| 100K users | Microservices \+ Kubernetes | EKS 3-node cluster, RDS db.r5.large (Multi-AZ), ElastiCache r6g.large, ALB | \~$1,200–1,800/month |
+| 1M users | Full microservices \+ read replicas | EKS multi-region, RDS r5.2xlarge \+ 2 read replicas, ElastiCache cluster, CDN edge caching | \~$8,000–15,000/month |
+
+## **12.2 Scaling Decision Triggers**
+
+| Component | Introduce When | Signal |
+| :---- | :---- | :---- |
+| Redis Cache | 500+ concurrent users | DB CPU \> 60% or p95 query time \> 100ms |
+| CDN | First video upload | Always — even at 100 users, CDN pays for itself |
+| Load Balancer | 2,000+ concurrent users or deployment downtime is unacceptable | Single instance bottleneck |
+| Message Queue | Any async task (video processing, emails) | Always — decouple processing from API response |
+| Read Replicas | 100K+ users OR analytics queries impacting write performance | DB replication lag or read query p99 \> 500ms |
+| Microservices split | Individual services need to scale independently | One service consuming disproportionate resources |
+| Multi-region | 1M+ users or regulatory data requirements | Latency \> 300ms for significant user segment |
+
+| PHASE 13 DevOps & CI/CD |
+| :---: |
+
+## **13.1 CI/CD Pipeline**
+
+**GitHub Actions CI/CD Pipeline (Mermaid)**
+
+| graph LR   A\[Git Push / PR\] \--\> B\[GitHub Actions Trigger\]   B \--\> C{Branch?}   C \--\>|feature branch| D\[CI Only\]   C \--\>|main branch| E\[CI \+ CD to Staging\]   C \--\>|release tag| F\[CI \+ CD to Production\]   D \--\> D1\[go test ./...\]   D \--\> D2\[flutter test\]   D \--\> D3\[golangci-lint\]   D \--\> D4\[docker build \--no-push\]   E \--\> E1\[All CI steps\]   E1 \--\> E2\[docker build \+ push to ECR\]   E2 \--\> E3\[kubectl apply to staging\]   E3 \--\> E4\[Run integration tests\]   E4 \--\> E5\[Notify Slack\]   F \--\> F1\[All CI steps\]   F1 \--\> F2\[docker build \+ push prod tag\]   F2 \--\> F3\[kubectl rollout production\]   F3 \--\> F4\[Smoke tests\]   F4 \--\> F5\[Notify team \+ Datadog deploy marker\] |
+| :---- |
+
+## **13.2 Kubernetes Deployment Structure**
+
+k8s/
+
+├── namespaces/
+
+│   ├── production.yaml
+
+│   └── staging.yaml
+
+├── deployments/
+
+│   ├── auth-service.yaml     \# replicas: 2 (prod), 1 (staging)
+
+│   ├── course-service.yaml
+
+│   ├── quiz-service.yaml
+
+│   └── ... (one per service)
+
+├── services/
+
+│   └── ... (ClusterIP per service, LoadBalancer for gateway)
+
+├── ingress/
+
+│   └── api-ingress.yaml     \# nginx-ingress with TLS cert-manager
+
+├── configmaps/
+
+│   └── app-config.yaml      \# Non-secret config
+
+├── secrets/
+
+│   └── app-secrets.yaml     \# DB password, JWT secret (use Secrets Manager)
+
+└── hpa/
+
+    └── autoscaling.yaml     \# HorizontalPodAutoscaler per service
+
+## **13.3 Monitoring & Alerting**
+
+| Tool | Purpose | Key Metrics |
+| :---- | :---- | :---- |
+| Prometheus | Metrics scraping and storage | HTTP request rate, error rate, response time (p50/p95/p99), DB connections |
+| Grafana | Metrics visualization | Service dashboards, SLO tracking, alert panels |
+| ELK Stack | Centralized logging | Error aggregation, request tracing, security events |
+| PagerDuty/OpsGenie | On-call alerting | 5xx error rate \> 1%, p99 latency \> 500ms, DB replication lag \> 30s |
+| Sentry | Error tracking (Flutter \+ Go) | Crash-free session rate, unhandled exceptions |
+
+| PHASE 14 Project Roadmap |
+| :---: |
+
+## **14.1 3-Month Roadmap — MVP Launch**
+
+| Month | Focus | Milestones | Team Size |
+| :---- | :---- | :---- | :---- |
+| Month 1 | Foundation & Architecture | Go backend scaffolding, DB schema, Auth service, Flutter project setup, Design system, CI/CD pipeline | 2 backend, 1 Flutter, 1 DevOps |
+| Month 2 | Core Features | Course \+ Video service, HLS streaming, Flutter video player, Basic quiz engine, Course purchase (Chapa) | 2 backend, 2 Flutter, 1 DevOps |
+| Month 3 | MVP Completion | Mock exam engine, Offline download, Push notifications, Admin dashboard, UAT with 20 beta students | 2 backend, 2 Flutter, 1 QA, 1 PM |
+
+## **14.2 6-Month Roadmap — Growth Phase**
+
+| Month | Focus | Milestones |
+| :---- | :---- | :---- |
+| Month 4 | Analytics & Engagement | Student analytics dashboard, Leaderboard, Study streaks, Course ratings |
+| Month 5 | Monetization Expansion | Subscription plans, Bundle packs, Coupon system, Teacher earnings dashboard |
+| Month 6 | Scale & Quality | Performance optimization, Redis caching, iOS app release, 1,000+ active users target |
+
+## **14.3 12-Month Roadmap — Scale Phase**
+
+| Quarter | Focus | Milestones |
+| :---- | :---- | :---- |
+| Q3 (M7–9) | AI & Advanced Features | AI tutoring chatbot, Adaptive quizzes, Amharic language support, Live sessions (MVP) |
+| Q4 (M10–12) | Scale & Expansion | Microservices migration, 10,000+ users, B2B school licensing, Multi-subject expansion |
+
+## **14.4 Key Risks & Mitigations**
+
+| Risk | Probability | Impact | Mitigation |
+| :---- | :---- | :---- | :---- |
+| Poor mobile internet in Ethiopia | High | High | Offline-first architecture; HLS adaptive bitrate; minimal API payloads |
+| Payment provider API changes | Medium | High | Payment abstraction layer; multiple provider support |
+| Low content quality | Medium | High | Teacher onboarding program; content review process; student ratings |
+| Flutter release delays | Medium | Medium | Focus MVP on Android first; iOS in Month 6 |
+| Scaling costs exceed projections | Low | High | Cost monitoring from day 1; AWS budget alerts; optimize queries early |
+
+| PHASE 15 Technical Learning Roadmap |
+| :---: |
+
+## **15.1 Flutter**
+
+| Skill | Why Needed | Priority | Difficulty | Learn Order |
+| :---- | :---- | :---- | :---- | :---- |
+| Dart language fundamentals | Core language; null safety, async/await, streams | P0 | Easy | 1st |
+| Flutter widgets & layouts | Build all UI screens | P0 | Easy-Medium | 2nd |
+| Riverpod state management | All state management in the app | P0 | Medium | 3rd |
+| GoRouter navigation | Screen routing, auth guards, deep links | P0 | Medium | 4th |
+| Dio HTTP client | API communication, interceptors, JWT refresh | P0 | Easy | 4th |
+| Freezed code generation | Immutable models, union types for state | P1 | Medium | 5th |
+| Hive local database | Offline caching, local data persistence | P0 | Easy | 5th |
+| flutter\_secure\_storage | Secure token storage | P0 | Easy | 5th |
+| video\_player \+ HLS | Core feature — video playback | P0 | Medium-Hard | 6th |
+| Clean Architecture in Flutter | Structure for maintainability | P0 | Hard | Ongoing |
+| Flutter testing (unit \+ widget \+ integration) | Quality assurance | P1 | Medium | Ongoing |
+
+## **15.2 Go Backend**
+
+| Skill | Why Needed | Priority | Difficulty | Learn Order |
+| :---- | :---- | :---- | :---- | :---- |
+| Go fundamentals (goroutines, channels, interfaces) | Core language; concurrency model | P0 | Medium | 1st |
+| Gin or Echo HTTP framework | API routing and middleware | P0 | Easy | 2nd |
+| sqlx / pgx PostgreSQL driver | Database queries | P0 | Easy-Medium | 2nd |
+| Clean Architecture patterns in Go | Maintainable structure | P0 | Hard | 3rd |
+| JWT implementation (golang-jwt) | Authentication | P0 | Easy | 3rd |
+| Docker for Go | Containerization | P0 | Easy | 4th |
+| golang-migrate | Database migrations | P0 | Easy | 4th |
+| Redis client (go-redis) | Caching and sessions | P1 | Easy | 5th |
+| Testing (testing package \+ testify) | Reliability | P1 | Medium | Ongoing |
+| OpenAPI/Swagger documentation | API docs for Flutter team | P1 | Easy | Ongoing |
+
+## **15.3 PostgreSQL**
+
+| Skill | Why Needed | Priority | Difficulty |
+| :---- | :---- | :---- | :---- |
+| SQL fundamentals (SELECT, JOIN, GROUP BY, subqueries) | All data access | P0 | Easy |
+| Schema design & normalization | Database structure decisions | P0 | Medium |
+| Indexes (B-tree, partial, composite) | Query performance | P0 | Medium |
+| JSONB column usage | Flexible metadata storage | P1 | Easy |
+| Transactions and ACID guarantees | Payment and enrollment integrity | P0 | Medium |
+| Query optimization (EXPLAIN ANALYZE) | Performance tuning | P1 | Hard |
+| golang-migrate migrations | Schema version control | P0 | Easy |
+
+## **15.4 System Design**
+
+| Skill | Why Needed | Priority | Difficulty |
+| :---- | :---- | :---- | :---- |
+| REST API design principles | Backend API contract design | P0 | Easy |
+| Microservices patterns (strangler fig, saga) | Multi-service architecture | P1 | Hard |
+| Message queues (SQS/RabbitMQ) | Async video processing, notifications | P1 | Medium |
+| CDN and object storage patterns | Video and file delivery | P0 | Medium |
+| HLS adaptive bitrate streaming | Video lesson delivery | P0 | Medium |
+| Redis patterns (cache-aside, session store) | Performance and sessions | P1 | Medium |
+| Database indexing strategies | Query performance | P0 | Medium |
+
+## **15.5 Cloud (AWS or GCP)**
+
+| Skill | Service | Priority | Difficulty |
+| :---- | :---- | :---- | :---- |
+| Object Storage | S3 / GCS: store videos, PDFs, images | P0 | Easy |
+| CDN | CloudFront / GCP CDN: fast content delivery | P0 | Easy |
+| Compute | EC2 / Cloud Run: host Go services | P0 | Easy |
+| Managed Database | RDS PostgreSQL / Cloud SQL | P0 | Easy |
+| Container Orchestration | EKS / GKE: Kubernetes deployment | P1 | Hard |
+| Message Queue | SQS / Cloud Pub/Sub | P1 | Medium |
+| Video Transcoding | MediaConvert / Transcoder API | P1 | Medium |
+| IAM & Security | Roles, policies, secrets management | P0 | Medium |
+
+## **15.6 DevOps**
+
+| Skill | Why Needed | Priority | Difficulty |
+| :---- | :---- | :---- | :---- |
+| Docker | Containerize all services | P0 | Easy |
+| Docker Compose | Local development environment | P0 | Easy |
+| GitHub Actions | CI/CD automation | P0 | Medium |
+| Kubernetes basics | Production deployment (K8s) | P1 | Hard |
+| Helm charts | K8s application packaging | P1 | Hard |
+| Prometheus \+ Grafana | Monitoring and alerting | P1 | Medium |
+| Nginx configuration | API gateway and reverse proxy | P0 | Medium |
+
+## **15.7 Security**
+
+| Skill | Why Needed | Priority | Difficulty |
+| :---- | :---- | :---- | :---- |
+| JWT & OAuth 2.0 concepts | Auth system design | P0 | Medium |
+| bcrypt password hashing | Secure credential storage | P0 | Easy |
+| HTTPS & TLS configuration | Encrypt all traffic | P0 | Easy |
+| OWASP Top 10 vulnerabilities | Know what to defend against | P0 | Medium |
+| SQL injection prevention | Data breach prevention | P0 | Easy |
+| Rate limiting strategies | DDoS and brute-force mitigation | P0 | Easy |
+| Payment security (PCI-DSS basics) | Handle payment data correctly | P1 | Medium |
+
+## **15.8 Recommended Learning Order (Full Stack Path)**
+
+| Week | Focus Area | Goal |
+| :---- | :---- | :---- |
+| W1–2 | Go fundamentals \+ Dart/Flutter basics | Build simple REST API \+ Flutter screen |
+| W3–4 | PostgreSQL \+ Gin/Echo \+ sqlx | CRUD API with database |
+| W5–6 | Flutter Clean Architecture \+ Riverpod | Feature module with state management |
+| W7–8 | Authentication (JWT \+ refresh tokens) | Full auth flow end-to-end |
+| W9–10 | Docker \+ GitHub Actions CI/CD | Automated build and deploy pipeline |
+| W11–12 | AWS S3 \+ CloudFront \+ video upload | File upload and CDN delivery |
+| W13–16 | Full feature build (quiz \+ payment) | Mini product with core features |
+| W17–20 | Kubernetes \+ monitoring | Production-ready deployment |
+| W21+ | Advanced (AI, scaling, performance) | Iterative improvement |
+
+# **Appendix: Quick Reference**
+
+| Key Technology Decisions Summary Mobile: Flutter (cross-platform Android \+ iOS, single codebase) Backend: Go (high performance, low memory, fast compile) Database: PostgreSQL (ACID, JSONB, excellent scaling path) Cache: Redis (sessions, exam state, leaderboard sorted sets) Video: HLS adaptive bitrate via S3 \+ CloudFront Payments: Chapa (primary) \+ Telebirr \+ Stripe (international) Push: Firebase Cloud Messaging (FCM) Containers: Docker \+ Kubernetes (EKS or GKE) CI/CD: GitHub Actions → ECR → kubectl rolling deploy Monitoring: Prometheus \+ Grafana \+ Sentry |
+| :---- |
+
+| Architecture Non-Negotiables 1\. Correct answers NEVER sent to client — always grade server-side 2\. Exam timer MUST be enforced server-side (client timer is display only) 3\. Pre-signed CDN URLs ONLY for video — no public S3 access 4\. All payments must use idempotency keys — no double-charge risk 5\. Soft deletes on all user-facing data — no hard DELETEs 6\. HTTPS-only — HTTP redirect to HTTPS at gateway 7\. Never log raw passwords, tokens, or payment card data 8\. All DB queries must filter by authenticated user\_id (prevent IDOR) |
+| :---- |
+
