@@ -398,3 +398,203 @@ Indexes: teacher\_id, subject, grade, is\_published, slug (UNIQUE), price, enrol
 | exams.grade | INTEGER | Target grade |
 | exams.duration\_minutes | INTEGER | Total allowed time |
 | exams.total\_marks | INTEGER | Maximum possible score |
+| exams.pass\_marks | INTEGER | Minimum passing marks |
+| exams.instructions | TEXT | Exam instructions text |
+| exams.is\_published | BOOLEAN | Visibility |
+| exam\_attempts.id | UUID | Attempt PK |
+| exam\_attempts.exam\_id | UUID FK | Which exam |
+| exam\_attempts.student\_id | UUID FK | Who took it |
+| exam\_attempts.started\_at | TIMESTAMPTZ | Timer start |
+| exam\_attempts.submitted\_at | TIMESTAMPTZ | Submission time (nullable \= in progress) |
+| exam\_attempts.score | DECIMAL(10,2) | Final score |
+| exam\_attempts.percentage | DECIMAL(5,2) | Score as percentage |
+| exam\_attempts.answers\_snapshot | JSONB | Snapshot of student answers at submission |
+| exam\_attempts.status | ENUM | in\_progress / submitted / graded / expired |
+
+### **4.2.7 Enrollments & Payments**
+
+| Column | Type | Description |
+| :---- | :---- | :---- |
+| enrollments.id | UUID | Enrollment PK |
+| enrollments.student\_id | UUID FK | Enrolled student |
+| enrollments.course\_id | UUID FK | Enrolled course |
+| enrollments.enrolled\_at | TIMESTAMPTZ | Enrollment timestamp |
+| enrollments.expires\_at | TIMESTAMPTZ | Nullable (subscription-based expiry) |
+| enrollments.source | ENUM | purchase / subscription / free / coupon |
+| payments.id | UUID | Payment PK |
+| payments.student\_id | UUID FK | Payer |
+| payments.course\_id | UUID FK | Nullable (null \= subscription) |
+| payments.amount | DECIMAL(10,2) | Amount charged |
+| payments.currency | VARCHAR(3) | ETB or USD |
+| payments.provider | ENUM | stripe / chapa / telebirr |
+| payments.provider\_transaction\_id | VARCHAR(255) | External payment reference |
+| payments.status | ENUM | pending / completed / failed / refunded |
+| payments.coupon\_id | UUID FK | Applied coupon (nullable) |
+| payments.metadata | JSONB | Provider response payload |
+| payments.paid\_at | TIMESTAMPTZ | Payment completion time |
+
+### **4.2.8 Progress Tracking**
+
+| Column | Type | Description |
+| :---- | :---- | :---- |
+| id | UUID | Progress record PK |
+| student\_id | UUID FK | Student reference |
+| lesson\_id | UUID FK | Lesson reference |
+| course\_id | UUID FK | Denormalized for fast course-level queries |
+| is\_completed | BOOLEAN | Lesson completion flag |
+| completed\_at | TIMESTAMPTZ | When lesson was completed |
+| video\_progress\_seconds | INTEGER | How far into the video |
+| last\_accessed\_at | TIMESTAMPTZ | Last session timestamp |
+
+**ER Diagram — Core Entities (Mermaid)**
+
+| erDiagram   USERS ||--o{ ENROLLMENTS : "enrolls"   USERS ||--o{ QUIZ\_ATTEMPTS : "attempts"   USERS ||--o{ EXAM\_ATTEMPTS : "takes"   USERS ||--o{ PAYMENTS : "pays"   USERS ||--o{ PROGRESS : "tracks"   USERS ||--o{ COURSES : "teaches"   COURSES ||--o{ COURSE\_SECTIONS : "contains"   COURSES ||--o{ ENROLLMENTS : "has"   COURSES ||--o{ EXAMS : "includes"   COURSE\_SECTIONS ||--o{ LESSONS : "has"   LESSONS ||--o| VIDEOS : "may have"   LESSONS ||--o| NOTES : "may have"   LESSONS ||--o| QUIZZES : "may have"   LESSONS ||--o{ PROGRESS : "tracked in"   QUIZZES ||--o{ QUESTIONS : "contains"   QUESTIONS ||--o{ ANSWERS : "has options"   QUIZZES ||--o{ QUIZ\_ATTEMPTS : "has"   EXAMS ||--o{ EXAM\_QUESTIONS : "contains"   EXAMS ||--o{ EXAM\_ATTEMPTS : "has"   PAYMENTS ||--o| SUBSCRIPTIONS : "may create"   PAYMENTS }o--o| COUPONS : "may use" |
+| :---- |
+
+| PHASE 5 Backend Architecture — Go Clean Architecture |
+| :---: |
+
+## **5.1 Architectural Principles**
+
+The backend follows Uncle Bob's Clean Architecture with strict dependency inversion. Outer layers depend on inner layers — never the reverse. The Domain layer has zero external dependencies.
+
+**Clean Architecture Dependency Flow**
+
+| graph LR   subgraph Core\["Core (No External Deps)"\]     E\[Domain\<br/\>Entities\]     UC\[Use Cases\<br/\>Business Logic\]   end   subgraph Adapters\["Adapters"\]     R\[Repositories\<br/\>DB Interfaces\]     H\[HTTP Handlers\<br/\>Delivery\]   end   subgraph Infra\["Infrastructure"\]     PG\[PostgreSQL\<br/\>Implementation\]     RD\[Redis\<br/\>Implementation\]     S3I\[S3\<br/\>Implementation\]   end   UC \--\> E   H \--\> UC   R \--\> UC   PG \--\> R   RD \--\> R   S3I \--\> R |
+| :---- |
+
+## **5.2 Folder Structure**
+
+examprep-backend/
+
+├── cmd/
+
+│   ├── api/            \# main.go — entry point, dependency wiring
+
+│   └── migrate/        \# Database migration runner
+
+├── internal/
+
+│   ├── domain/         \# ← INNERMOST LAYER (no external imports)
+
+│   │   ├── entity/     \# User, Course, Quiz, Exam structs
+
+│   │   ├── repository/ \# Repository INTERFACES (contracts)
+
+│   │   └── service/    \# Domain service interfaces
+
+│   ├── usecase/        \# ← BUSINESS LOGIC
+
+│   │   ├── auth/       \# RegisterUser, LoginUser, RefreshToken
+
+│   │   ├── course/     \# CreateCourse, EnrollStudent, GetCourseById
+
+│   │   ├── quiz/       \# SubmitQuizAttempt, GradeQuiz, GetLeaderboard
+
+│   │   ├── exam/       \# StartExam, SubmitExam, GetExamResults
+
+│   │   ├── payment/    \# InitiatePayment, HandleWebhook, IssueRefund
+
+│   │   └── progress/   \# MarkLessonComplete, GetCourseProgress
+
+│   ├── repository/     \# ← REPOSITORY IMPLEMENTATIONS
+
+│   │   ├── postgres/   \# SQL queries per entity
+
+│   │   └── redis/      \# Cache operations
+
+│   ├── delivery/       \# ← HTTP HANDLERS (outermost layer)
+
+│   │   ├── http/       \# Gin/Echo route handlers
+
+│   │   │   ├── auth\_handler.go
+
+│   │   │   ├── course\_handler.go
+
+│   │   │   ├── quiz\_handler.go
+
+│   │   │   ├── exam\_handler.go
+
+│   │   │   └── payment\_handler.go
+
+│   │   └── middleware/ \# Auth, CORS, logging, rate-limit
+
+│   └── infrastructure/ \# ← EXTERNAL CONCERNS
+
+│       ├── database/   \# PostgreSQL connection, migrations
+
+│       ├── cache/      \# Redis client wrapper
+
+│       ├── storage/    \# S3/GCS client wrapper
+
+│       ├── messaging/  \# SQS/RabbitMQ client
+
+│       ├── payment/    \# Stripe, Chapa, Telebirr clients
+
+│       └── notification/ \# FCM, SendGrid wrappers
+
+├── pkg/
+
+│   ├── jwt/            \# JWT creation and validation helpers
+
+│   ├── password/       \# bcrypt helpers
+
+│   ├── validator/      \# Input validation utilities
+
+│   ├── pagination/     \# Cursor-based pagination helpers
+
+│   └── errors/         \# Custom error types and codes
+
+├── config/             \# Config structs, env loading
+
+├── migrations/         \# SQL migration files (golang-migrate)
+
+├── api/                \# OpenAPI/Swagger spec (generated)
+
+├── scripts/
+
+│   ├── seed.go         \# Test data seeder
+
+│   └── generate.go     \# Code generation scripts
+
+├── Dockerfile
+
+├── docker-compose.yml
+
+└── Makefile
+
+## **5.3 Layer Responsibilities**
+
+| Layer | Location | Responsibility | May Import |
+| :---- | :---- | :---- | :---- |
+| Domain Entities | internal/domain/entity | Pure Go structs — User, Course, Quiz. No business logic. No DB tags. | Standard library only |
+| Repository Interfaces | internal/domain/repository | Go interfaces defining DB operations. e.g., UserRepository.FindByEmail() | Domain entities only |
+| Use Cases | internal/usecase | Business logic. Orchestrates repos and services. Stateless functions. | Domain layer only |
+| Repository Impl. | internal/repository | Concrete PostgreSQL/Redis implementations of domain interfaces | Domain \+ infrastructure |
+| HTTP Handlers | internal/delivery/http | Parse HTTP requests, validate input, call use cases, return JSON | Use cases \+ pkg utilities |
+| Middleware | internal/delivery/middleware | JWT auth, CORS, logging, rate limiting, request ID injection | pkg/jwt, pkg/errors |
+| Infrastructure | internal/infrastructure | Thin wrappers around external clients: DB, S3, Redis, FCM | External SDKs only |
+
+## **5.4 API Design Conventions**
+
+| Convention | Rule | Example |
+| :---- | :---- | :---- |
+| Base URL versioning | All routes prefixed with /api/v1 | GET /api/v1/courses |
+| Resource naming | Plural nouns, kebab-case | GET /api/v1/mock-exams |
+| HTTP methods | REST-standard GET/POST/PUT/PATCH/DELETE | POST /api/v1/quiz-attempts |
+| Pagination | Cursor-based with limit/after params | GET /api/v1/courses?limit=20\&after=\<cursor\> |
+| Error format | { "code": "RESOURCE\_NOT\_FOUND", "message": "...", "details": {} } | Standard across all services |
+| Auth header | Bearer token in Authorization header | Authorization: Bearer \<jwt\> |
+| File uploads | Multipart form-data for uploads; pre-signed URLs for large files | POST /api/v1/videos/upload-url |
+
+| PHASE 6 Flutter Architecture |
+| :---: |
+
+## **6.1 Clean Architecture in Flutter**
+
+The Flutter app mirrors the backend's Clean Architecture. Features are self-contained modules. Riverpod manages all state. GoRouter handles declarative navigation with redirect guards.
+
+## **6.2 Folder Structure**
+
+lib/
+
