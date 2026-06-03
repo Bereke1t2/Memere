@@ -15,3 +15,19 @@
 ---
 
 ## 📖 Overview
+
+**Memere (ExamPrep)** is a mobile-first learning platform built specifically for **Grade 12 students in Ethiopia** preparing for university entrance examinations. The platform delivers structured video lessons, study notes, adaptive quizzes, and timed mock examinations — specialized for high-stakes national exam preparation.
+
+This repository contains the **Go backend** powering the platform, built with **Clean Architecture** principles (Uncle Bob) and designed to scale from 1,000 to 1,000,000+ users.
+
+### 🎯 Business Goals
+
+| Goal | Target |
+|------|--------|
+| Market Entry | 500 registered users in Month 1 |
+| Revenue | ETB 50,000 MRR by Month 6 |
+| Student Outcomes | 15% average score improvement |
+| Content Scale | 50+ courses covering all subjects by Month 6 |
+| Retention | DAU/MAU ratio > 40% |
+
+---
