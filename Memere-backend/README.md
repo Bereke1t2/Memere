@@ -50,3 +50,23 @@ This repository contains the **Go backend** powering the platform, built with **
 ### Teacher & Admin Features
 
 - 📤 **Video Upload** — Upload and manage video lessons with automatic HLS transcoding
+- 📄 **Notes Upload** — Upload PDFs and documents
+- 🧩 **Quiz Builder** — Create multiple-choice and short-answer quizzes
+- 🧪 **Exam Builder** — Build timed mock exams with question randomization
+- 📚 **Course Manager** — Create, edit, and publish courses
+- 📈 **Student Analytics** — View per-student performance data
+- 💰 **Payment Dashboard** — Track revenue, payouts, and subscriptions
+- 🎟️ **Coupon Manager** — Create discount coupons and promotional codes
+
+---
+
+## 🛠️ Tech Stack
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| **Language** | Go 1.22+ | High performance, low memory, fast compile |
+| **HTTP Framework** | Gin / Echo | API routing and middleware |
+| **Database** | PostgreSQL 15 | Primary relational data store (ACID, JSONB) |
+| **Cache** | Redis 7 | Sessions, exam state, leaderboard sorted sets |
+| **Object Storage** | AWS S3 / GCS | Video files, PDFs, images, certificates |
+| **CDN** | CloudFront / GCP CDN | Low-latency video and static content delivery |
