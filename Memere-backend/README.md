@@ -121,3 +121,20 @@ The backend follows **Uncle Bob's Clean Architecture** with strict dependency in
 ---
 
 ## 📁 Project Structure
+
+```
+memere-backend/
+├── cmd/
+│   ├── api/                # main.go — entry point, dependency wiring
+│   └── migrate/            # Database migration runner
+├── internal/
+│   ├── domain/             # ← INNERMOST LAYER (no external imports)
+│   │   ├── entity/         # User, Course, Quiz, Exam structs
+│   │   ├── repository/     # Repository INTERFACES (contracts)
+│   │   └── service/        # Domain service interfaces
+│   ├── usecase/            # ← BUSINESS LOGIC
+│   │   ├── auth/           # RegisterUser, LoginUser, RefreshToken
+│   │   ├── course/         # CreateCourse, EnrollStudent, GetCourseById
+│   │   ├── quiz/           # SubmitQuizAttempt, GradeQuiz
+│   │   ├── exam/           # StartExam, SubmitExam, GetExamResults
+│   │   ├── payment/        # InitiatePayment, HandleWebhook
