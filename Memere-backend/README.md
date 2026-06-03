@@ -258,3 +258,36 @@ The API server will start on `http://localhost:8080`.
 | `FCM_SERVER_KEY` | Firebase Cloud Messaging key | `AAAA...` |
 | `SENDGRID_API_KEY` | SendGrid email API key | `SG....` |
 
+---
+
+## 🗄️ Database Schema
+
+The database uses **PostgreSQL** with per-domain schemas and the following design principles:
+
+- **UUID primary keys** for all entities (prevents enumeration attacks)
+- **Soft deletes** (`deleted_at` timestamp) — never hard delete user data
+- **Audit columns** (`created_at` / `updated_at`) on every table
+- **JSONB** for flexible metadata; typed columns for queryable fields
+
+### Core Tables
+
+| Table | Schema | Description |
+|-------|--------|-------------|
+| `users` | `auth` | User accounts with RBAC (student/teacher/admin) |
+| `courses` | `courses` | Course catalog with metadata and pricing |
+| `course_sections` | `courses` | Ordered sections within a course |
+| `lessons` | `courses` | Individual lessons (video/note/quiz/mixed) |
+| `videos` | `courses` | Video metadata and HLS streaming keys |
+| `quizzes` | `courses` | Quiz configuration and settings |
+| `questions` | `courses` | Quiz questions with point values |
+| `answers` | `courses` | Answer options with correctness flags |
+| `exams` | `courses` | Mock exam configuration |
+| `exam_attempts` | `courses` | Student exam attempt records and scores |
+| `enrollments` | `payments` | Student-course enrollment records |
+| `payments` | `payments` | Payment transaction records |
+| `progress` | `progress` | Per-lesson progress tracking |
+
+---
+
+## 🌐 API Overview
+
