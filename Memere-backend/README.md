@@ -31,3 +31,22 @@ This repository contains the **Go backend** powering the platform, built with **
 | Retention | DAU/MAU ratio > 40% |
 
 ---
+
+## ✨ Key Features
+
+### Student-Facing
+
+- 🎥 **Video Lessons** — Stream and download HD video lessons per subject (HLS adaptive bitrate)
+- 📝 **Study Notes** — Access PDF/document notes per lesson
+- ❓ **Quizzes** — Per-lesson quizzes with immediate feedback
+- 📋 **Mock Exams** — Full timed mock exams simulating national exam format
+- 📊 **Progress Tracking** — Dashboard showing completion %, scores, weak areas
+- 💳 **Course Purchase** — Buy individual courses or bundles via Chapa/Telebirr/Stripe
+- 📱 **Offline Mode** — Download videos and notes for offline use
+- 🔔 **Push Notifications** — Reminders, new content alerts, score notifications
+- 🏆 **Leaderboard** — Class ranking based on quiz/exam scores
+- 📜 **Certificates** — Downloadable completion certificates
+
+### Teacher & Admin Features
+
+- 📤 **Video Upload** — Upload and manage video lessons with automatic HLS transcoding
