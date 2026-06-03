@@ -291,3 +291,33 @@ The database uses **PostgreSQL** with per-domain schemas and the following desig
 
 ## 🌐 API Overview
 
+All API endpoints follow REST conventions with the base path `/api/v1`.
+
+### API Conventions
+
+| Convention | Rule |
+|-----------|------|
+| Base URL | `/api/v1` |
+| Resource naming | Plural nouns, kebab-case |
+| Pagination | Cursor-based with `limit` / `after` params |
+| Auth header | `Authorization: Bearer <jwt>` |
+| Error format | `{ "code": "RESOURCE_NOT_FOUND", "message": "...", "details": {} }` |
+
+### Auth Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/auth/register` | Register a new user |
+| `POST` | `/api/v1/auth/login` | Login and receive JWT tokens |
+| `POST` | `/api/v1/auth/refresh` | Refresh access token |
+| `POST` | `/api/v1/auth/logout` | Revoke refresh token |
+| `POST` | `/api/v1/auth/forgot-password` | Request password reset |
+| `POST` | `/api/v1/auth/reset-password` | Reset password with token |
+| `GET` | `/api/v1/auth/verify-email` | Verify email address |
+
+### Course Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/courses` | List all published courses |
+| `GET` | `/api/v1/courses/:id` | Get course detail with sections |
