@@ -489,3 +489,23 @@ The project uses **GitHub Actions** for continuous integration and deployment:
 3. `docker build` — Container build
 4. `docker push` → ECR — Push to container registry
 5. `kubectl apply` — Deploy to Kubernetes cluster
+6. Smoke tests → Verify deployment health
+7. Notify team (Slack/Discord)
+
+---
+
+## 🗺️ Roadmap
+
+### Phase 1 — MVP (Month 1–3)
+
+- [x] Project architecture and design specification
+- [ ] Go backend scaffolding with Clean Architecture
+- [ ] Database schema and migrations
+- [ ] Auth service (JWT + refresh tokens)
+- [ ] Course service (CRUD + video/note metadata)
+- [ ] Video streaming (HLS adaptive bitrate)
+- [ ] Quiz engine with server-side grading
+- [ ] Mock exam engine with timed sessions
+- [ ] Payment integration (Chapa)
+- [ ] Push notifications (FCM)
+- [ ] Offline download support
