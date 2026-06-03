@@ -182,3 +182,17 @@ Before you begin, ensure you have the following installed:
 - **Redis** 7+ — [Install Redis](https://redis.io/docs/getting-started/)
 - **Docker** & **Docker Compose** — [Install Docker](https://docs.docker.com/get-docker/)
 - **golang-migrate** — [Install](https://github.com/golang-migrate/migrate)
+- **Make** — typically pre-installed on Linux/macOS
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Bereke1t2/Memere.git
+cd Memere/Memere-backend
+```
+
+### 2. Set up environment variables
