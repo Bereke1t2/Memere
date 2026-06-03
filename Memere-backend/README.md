@@ -455,3 +455,37 @@ The `k8s/` directory contains all manifests:
 ```
 k8s/
 ├── namespaces/          # production.yaml, staging.yaml
+├── deployments/         # One per service
+├── services/            # ClusterIP per service, LoadBalancer for gateway
+├── ingress/             # nginx-ingress with TLS
+├── configmaps/          # Non-secret configuration
+├── secrets/             # DB password, JWT secret
+└── hpa/                 # HorizontalPodAutoscaler per service
+```
+
+### Scaling Tiers
+
+| Users | Architecture | Est. Monthly Cost |
+|-------|-------------|------------------|
+| 1K | Monolith (single Go binary) | ~$80–120 |
+| 10K | Modular monolith + Redis + CDN | ~$250–350 |
+| 100K | Microservices + Kubernetes | ~$1,200–1,800 |
+| 1M | Full microservices + read replicas | ~$8,000–15,000 |
+
+---
+
+## 🔄 CI/CD Pipeline
+
+The project uses **GitHub Actions** for continuous integration and deployment:
+
+- **Feature branches** → CI only (tests, lint, docker build)
+- **Main branch** → CI + deploy to staging
+- **Release tags** → CI + deploy to production
+
+### Pipeline Steps
+
+1. `go test ./...` — Unit and integration tests
+2. `golangci-lint` — Code quality checks
+3. `docker build` — Container build
+4. `docker push` → ECR — Push to container registry
+5. `kubectl apply` — Deploy to Kubernetes cluster
