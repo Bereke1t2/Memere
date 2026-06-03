@@ -138,3 +138,47 @@ memere-backend/
 │   │   ├── quiz/           # SubmitQuizAttempt, GradeQuiz
 │   │   ├── exam/           # StartExam, SubmitExam, GetExamResults
 │   │   ├── payment/        # InitiatePayment, HandleWebhook
+│   │   └── progress/       # MarkLessonComplete, GetCourseProgress
+│   ├── repository/         # ← REPOSITORY IMPLEMENTATIONS
+│   │   ├── postgres/       # SQL queries per entity
+│   │   └── redis/          # Cache operations
+│   ├── delivery/           # ← HTTP HANDLERS
+│   │   ├── http/           # Gin/Echo route handlers
+│   │   └── middleware/     # Auth, CORS, logging, rate-limit
+│   └── infrastructure/     # ← EXTERNAL CONCERNS
+│       ├── database/       # PostgreSQL connection, migrations
+│       ├── cache/          # Redis client wrapper
+│       ├── storage/        # S3/GCS client wrapper
+│       ├── messaging/      # SQS/RabbitMQ client
+│       ├── payment/        # Stripe, Chapa, Telebirr clients
+│       └── notification/   # FCM, SendGrid wrappers
+├── pkg/
+│   ├── jwt/                # JWT creation and validation helpers
+│   ├── password/           # bcrypt helpers
+│   ├── validator/          # Input validation utilities
+│   ├── pagination/         # Cursor-based pagination helpers
+│   └── errors/             # Custom error types and codes
+├── config/                 # Config structs, env loading
+├── migrations/             # SQL migration files (golang-migrate)
+├── api/                    # OpenAPI/Swagger spec
+├── scripts/
+│   ├── seed.go             # Test data seeder
+│   └── generate.go         # Code generation scripts
+├── docs/                   # Design specification & documentation
+├── Dockerfile
+├── docker-compose.yml
+├── Makefile
+└── README.md
+```
+
+---
+
+## 📋 Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Go** 1.22 or higher — [Install Go](https://go.dev/doc/install)
+- **PostgreSQL** 15+ — [Install PostgreSQL](https://www.postgresql.org/download/)
+- **Redis** 7+ — [Install Redis](https://redis.io/docs/getting-started/)
+- **Docker** & **Docker Compose** — [Install Docker](https://docs.docker.com/get-docker/)
+- **golang-migrate** — [Install](https://github.com/golang-migrate/migrate)
