@@ -363,3 +363,36 @@ All API endpoints follow REST conventions with the base path `/api/v1`.
 1. User logs in → server returns **access token** (15 min TTL) + **refresh token** (30 day TTL)
 2. Access token sent in `Authorization: Bearer <token>` header
 3. On 401 → client silently refreshes using refresh token
+4. Refresh tokens are hashed and stored in Redis + PostgreSQL
+
+### Role-Based Access Control (RBAC)
+
+| Role | Permissions |
+|------|------------|
+| `student` | Read enrolled courses, submit quizzes/exams, view own progress, purchase |
+| `teacher` | All student permissions + create/edit own courses, view student analytics |
+| `admin` | All permissions + manage all users/courses, payment reconciliation |
+
+### Security Measures
+
+- 🔐 **Rate limiting** — 5 login attempts per 15 min per IP
+- 🔐 **Parameterized queries** — SQL injection prevention via sqlx/pgx
+- 🔐 **Pre-signed URLs** — Time-limited CDN URLs for video access (2-hour expiry)
+- 🔐 **Server-side grading** — Correct answers NEVER sent to client
+- 🔐 **Server-side timers** — Exam timers enforced on backend
+- 🔐 **Idempotency keys** — Prevent double-charge on payments
+- 🔐 **HTTPS only** — All traffic encrypted; HTTP redirects to HTTPS
+- 🔐 **Soft deletes** — No hard deletion of user-facing data
+
+---
+
+## 🎥 Video Streaming
+
+### Upload & Processing Pipeline
+
+1. Teacher requests a **pre-signed S3 URL** from the Course Service
+2. Flutter app uploads the video **directly to S3**
+3. S3 event triggers an **SQS message**
+4. Video Processor Worker transcodes to **HLS adaptive bitrate** (360p, 480p, 720p, 1080p)
+5. HLS segments + `.m3u8` manifest uploaded to S3
+6. CDN cache invalidated; teacher notified
