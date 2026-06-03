@@ -509,3 +509,39 @@ The project uses **GitHub Actions** for continuous integration and deployment:
 - [ ] Payment integration (Chapa)
 - [ ] Push notifications (FCM)
 - [ ] Offline download support
+- [ ] Admin dashboard (basic)
+
+### Phase 2 — Growth (Month 4–6)
+
+- [ ] Leaderboard and ranking system
+- [ ] Subscription plans
+- [ ] Advanced student analytics
+- [ ] Coupon and discount system
+- [ ] Completion certificates
+- [ ] Course review/rating system
+- [ ] Teacher earnings dashboard
+
+### Phase 3 — Scale (Month 7–12)
+
+- [ ] AI-powered tutoring chatbot
+- [ ] Adaptive learning paths
+- [ ] Live video sessions
+- [ ] Multi-language support (Amharic-first)
+- [ ] Parent monitoring portal
+- [ ] School/institution licensing
+- [ ] Predictive score analytics (ML)
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Commit Convention
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/):
+
