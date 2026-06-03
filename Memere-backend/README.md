@@ -100,3 +100,24 @@ The backend follows **Uncle Bob's Clean Architecture** with strict dependency in
 │          Repository Interfaces                   │  ← Contracts
 │       (Go interfaces for DB ops)                 │
 ├─────────────────────────────────────────────────┤
+│        Infrastructure Layer                      │  ← External concerns
+│   (PostgreSQL, Redis, S3, FCM clients)           │
+└─────────────────────────────────────────────────┘
+```
+
+### Microservices
+
+| Service | Port | Responsibilities |
+|---------|------|-----------------|
+| API Gateway | `8080` | Rate limiting, routing, auth validation, SSL termination |
+| Auth Service | `8081` | Registration, login, JWT issuance, refresh tokens, password reset |
+| Course Service | `8082` | Course CRUD, section/lesson management, video/note metadata |
+| Quiz Service | `8083` | Quiz creation, question bank, attempt recording, auto-grading |
+| Exam Service | `8084` | Mock exam engine, timer management, exam sessions, scoring |
+| Payment Service | `8085` | Purchase flow, subscription management, webhook handling |
+| Notification Service | `8086` | Push (FCM), email (SendGrid), in-app notifications |
+| Progress Service | `8087` | Completion tracking, streak calculation, analytics |
+
+---
+
+## 📁 Project Structure
