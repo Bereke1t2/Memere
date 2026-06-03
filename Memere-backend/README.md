@@ -226,3 +226,35 @@ make seed
 ### 6. Run the server
 
 ```bash
+make run
+```
+
+The API server will start on `http://localhost:8080`.
+
+---
+
+## 🔐 Environment Variables
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `APP_ENV` | Application environment | `development` / `staging` / `production` |
+| `APP_PORT` | Server port | `8080` |
+| `DB_HOST` | PostgreSQL host | `localhost` |
+| `DB_PORT` | PostgreSQL port | `5432` |
+| `DB_USER` | PostgreSQL user | `memere` |
+| `DB_PASSWORD` | PostgreSQL password | `your_secure_password` |
+| `DB_NAME` | PostgreSQL database name | `memere_db` |
+| `DB_SSL_MODE` | PostgreSQL SSL mode | `disable` / `require` |
+| `REDIS_HOST` | Redis host | `localhost` |
+| `REDIS_PORT` | Redis port | `6379` |
+| `REDIS_PASSWORD` | Redis password | `""` |
+| `JWT_SECRET` | JWT signing secret | `your_jwt_secret_key` |
+| `JWT_ACCESS_TTL` | Access token TTL | `15m` |
+| `JWT_REFRESH_TTL` | Refresh token TTL | `720h` |
+| `AWS_S3_BUCKET` | S3 bucket for media | `memere-media` |
+| `AWS_REGION` | AWS region | `af-south-1` |
+| `CHAPA_SECRET_KEY` | Chapa payment API key | `CHASECK_TEST-...` |
+| `STRIPE_SECRET_KEY` | Stripe API key | `sk_test_...` |
+| `FCM_SERVER_KEY` | Firebase Cloud Messaging key | `AAAA...` |
+| `SENDGRID_API_KEY` | SendGrid email API key | `SG....` |
+
