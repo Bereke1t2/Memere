@@ -396,3 +396,37 @@ All API endpoints follow REST conventions with the base path `/api/v1`.
 4. Video Processor Worker transcodes to **HLS adaptive bitrate** (360p, 480p, 720p, 1080p)
 5. HLS segments + `.m3u8` manifest uploaded to S3
 6. CDN cache invalidated; teacher notified
+
+### Adaptive Bitrate Streaming
+
+| Quality | Resolution | Bitrate | Use Case |
+|---------|-----------|---------|----------|
+| Low | 360p | 400 kbps | 2G / very slow data |
+| Medium | 480p | 800 kbps | 3G connection |
+| High | 720p | 1.5 Mbps | 4G / good WiFi |
+| HD | 1080p | 3 Mbps | Strong WiFi |
+
+### Offline Downloads
+
+- Downloads use time-limited pre-signed URLs (2-hour validity)
+- Content encrypted with AES-256 using a device-bound key
+- Offline content expires after 30 days
+
+---
+
+## 💳 Payment Integration
+
+### Supported Providers
+
+| Provider | Currency | Use Case |
+|----------|----------|----------|
+| **Chapa** | ETB | Primary — mobile money + bank transfer (dominant in Ethiopia) |
+| **Telebirr** | ETB | Ethio Telecom mobile wallet (~30M users) |
+| **Stripe** | USD/EUR | International cards for diaspora users |
+
+### Monetization Models
+
+| Model | Price Range (ETB) |
+|-------|------------------|
+| Per-Course Purchase | 150–500 per course |
+| Monthly Subscription | 200–400/month |
