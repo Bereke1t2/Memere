@@ -430,3 +430,28 @@ All API endpoints follow REST conventions with the base path `/api/v1`.
 |-------|------------------|
 | Per-Course Purchase | 150–500 per course |
 | Monthly Subscription | 200–400/month |
+| Annual Subscription | 1,500–3,000/year |
+| Bundle Packs | 400–800 per bundle |
+| Premium Mock Exams | 50–150 per pack |
+
+---
+
+## 🐳 Deployment
+
+### Docker
+
+```bash
+# Build the image
+docker build -t memere-backend .
+
+# Run with Docker Compose
+docker-compose up -d
+```
+
+### Kubernetes
+
+The `k8s/` directory contains all manifests:
+
+```
+k8s/
+├── namespaces/          # production.yaml, staging.yaml
