@@ -70,3 +70,33 @@ This repository contains the **Go backend** powering the platform, built with **
 | **Cache** | Redis 7 | Sessions, exam state, leaderboard sorted sets |
 | **Object Storage** | AWS S3 / GCS | Video files, PDFs, images, certificates |
 | **CDN** | CloudFront / GCP CDN | Low-latency video and static content delivery |
+| **Video Processing** | FFmpeg / AWS MediaConvert | HLS adaptive bitrate transcoding |
+| **Message Queue** | SQS / RabbitMQ | Async video processing, emails, notifications |
+| **Auth** | JWT + bcrypt | Access tokens (15min) + refresh tokens (30 days) |
+| **Payments** | Chapa + Telebirr + Stripe | ETB mobile money + international cards |
+| **Push Notifications** | Firebase Cloud Messaging | Mobile push notifications |
+| **Email** | SendGrid | Transactional emails |
+| **Containers** | Docker + Kubernetes | Deployment and orchestration |
+| **CI/CD** | GitHub Actions | Automated build, test, and deploy |
+| **Monitoring** | Prometheus + Grafana + Sentry | Metrics, dashboards, and error tracking |
+
+---
+
+## 🏗️ Architecture
+
+The backend follows **Uncle Bob's Clean Architecture** with strict dependency inversion. Outer layers depend on inner layers — never the reverse. The Domain layer has zero external dependencies.
+
+```
+┌─────────────────────────────────────────────────┐
+│                 HTTP Handlers                    │  ← Outermost (delivery)
+│              (Gin/Echo routes)                   │
+├─────────────────────────────────────────────────┤
+│               Use Cases                          │  ← Business Logic
+│         (Stateless orchestrators)                │
+├─────────────────────────────────────────────────┤
+│            Domain Entities                       │  ← Innermost (pure Go)
+│     (User, Course, Quiz, Exam structs)           │
+├─────────────────────────────────────────────────┤
+│          Repository Interfaces                   │  ← Contracts
+│       (Go interfaces for DB ops)                 │
+├─────────────────────────────────────────────────┤
