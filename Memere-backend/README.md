@@ -545,3 +545,29 @@ The project uses **GitHub Actions** for continuous integration and deployment:
 
 This project uses [Conventional Commits](https://www.conventionalcommits.org/):
 
+- `feat:` — New feature
+- `fix:` — Bug fix
+- `docs:` — Documentation changes
+- `refactor:` — Code restructuring
+- `test:` — Adding or updating tests
+- `chore:` — Maintenance tasks
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 📬 Contact
+
+**Bereket Aschalew** — [@Bereke1t2](https://github.com/Bereke1t2)
+
+Project Link: [https://github.com/Bereke1t2/Memere](https://github.com/Bereke1t2/Memere)
+
+---
+
+<p align="center">
+  Built with ❤️ for Ethiopian students 🇪🇹
+</p>
