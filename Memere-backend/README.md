@@ -321,3 +321,45 @@ All API endpoints follow REST conventions with the base path `/api/v1`.
 |--------|----------|-------------|
 | `GET` | `/api/v1/courses` | List all published courses |
 | `GET` | `/api/v1/courses/:id` | Get course detail with sections |
+| `POST` | `/api/v1/courses` | Create a new course (teacher) |
+| `PUT` | `/api/v1/courses/:id` | Update course (teacher/admin) |
+| `DELETE` | `/api/v1/courses/:id` | Soft-delete course (admin) |
+| `POST` | `/api/v1/courses/:id/enroll` | Enroll in a course |
+| `GET` | `/api/v1/courses/:id/progress` | Get course progress |
+
+### Quiz & Exam Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/v1/quizzes/:id` | Get quiz (without answers) |
+| `POST` | `/api/v1/quiz-attempts` | Submit a quiz attempt |
+| `GET` | `/api/v1/mock-exams` | List available mock exams |
+| `POST` | `/api/v1/mock-exams/:id/start` | Start a timed exam session |
+| `POST` | `/api/v1/exam-attempts/:id/submit` | Submit exam answers |
+| `GET` | `/api/v1/exam-attempts/:id/results` | Get exam results & analytics |
+
+### Payment Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/payments/initiate` | Initiate a payment |
+| `GET` | `/api/v1/payments/:id/status` | Check payment status |
+| `POST` | `/api/v1/payments/webhook` | Payment provider webhook |
+
+### Video Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/videos/upload-url` | Get pre-signed upload URL |
+| `GET` | `/api/v1/videos/:id/stream` | Get HLS streaming URL |
+| `GET` | `/api/v1/videos/:id/download-url` | Get offline download URL |
+
+---
+
+## 🔒 Authentication & Security
+
+### JWT Flow
+
+1. User logs in → server returns **access token** (15 min TTL) + **refresh token** (30 day TTL)
+2. Access token sent in `Authorization: Bearer <token>` header
+3. On 401 → client silently refreshes using refresh token
