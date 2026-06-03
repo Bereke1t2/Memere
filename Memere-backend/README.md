@@ -196,3 +196,33 @@ cd Memere/Memere-backend
 ```
 
 ### 2. Set up environment variables
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your configuration (see [Environment Variables](#-environment-variables) below).
+
+### 3. Start infrastructure with Docker Compose
+
+```bash
+docker-compose up -d
+```
+
+This starts PostgreSQL, Redis, and any other required services.
+
+### 4. Run database migrations
+
+```bash
+make migrate-up
+```
+
+### 5. Seed development data (optional)
+
+```bash
+make seed
+```
+
+### 6. Run the server
+
+```bash
