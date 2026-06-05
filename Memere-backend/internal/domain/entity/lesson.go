@@ -40,4 +40,5 @@ type Lesson struct {
 	IsPublished     bool
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+	DeletedAt       *time.Time
 }

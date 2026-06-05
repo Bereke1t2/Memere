@@ -54,3 +54,18 @@ RETURNING *;
 UPDATE courses.courses
 SET deleted_at = now()
 WHERE id = $1 AND deleted_at IS NULL;
+
+-- name: RecomputeCourseCounters :exec
+-- Recompute the denormalized lesson counters from the live (non-deleted)
+-- lessons. Run inside the same transaction as the lesson mutation that
+-- triggered it so the course row stays consistent.
+UPDATE courses.courses c
+SET total_lessons = sub.cnt,
+    total_duration_seconds = sub.dur
+FROM (
+    SELECT COUNT(*)::int AS cnt,
+           COALESCE(SUM(duration_seconds), 0)::int AS dur
+    FROM courses.lessons
+    WHERE course_id = $1 AND deleted_at IS NULL
+) AS sub
+WHERE c.id = $1 AND c.deleted_at IS NULL;

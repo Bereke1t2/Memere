@@ -18,7 +18,7 @@ INSERT INTO courses.lessons (
 ) VALUES (
     $1, $2, $3, $4, $5, $6, $7, $8
 )
-RETURNING id, section_id, course_id, title, type, order_index, is_free_preview, duration_seconds, is_published, created_at, updated_at
+RETURNING id, section_id, course_id, title, type, order_index, is_free_preview, duration_seconds, is_published, created_at, updated_at, deleted_at
 `
 
 type CreateLessonParams struct {
@@ -56,13 +56,14 @@ func (q *Queries) CreateLesson(ctx context.Context, arg CreateLessonParams) (Cou
 		&i.IsPublished,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const getLessonByID = `-- name: GetLessonByID :one
-SELECT id, section_id, course_id, title, type, order_index, is_free_preview, duration_seconds, is_published, created_at, updated_at FROM courses.lessons
-WHERE id = $1
+SELECT id, section_id, course_id, title, type, order_index, is_free_preview, duration_seconds, is_published, created_at, updated_at, deleted_at FROM courses.lessons
+WHERE id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) GetLessonByID(ctx context.Context, id pgtype.UUID) (CoursesLesson, error) {
@@ -80,13 +81,14 @@ func (q *Queries) GetLessonByID(ctx context.Context, id pgtype.UUID) (CoursesLes
 		&i.IsPublished,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const listLessonsByCourse = `-- name: ListLessonsByCourse :many
-SELECT id, section_id, course_id, title, type, order_index, is_free_preview, duration_seconds, is_published, created_at, updated_at FROM courses.lessons
-WHERE course_id = $1
+SELECT id, section_id, course_id, title, type, order_index, is_free_preview, duration_seconds, is_published, created_at, updated_at, deleted_at FROM courses.lessons
+WHERE course_id = $1 AND deleted_at IS NULL
 ORDER BY order_index ASC, created_at ASC
 `
 
@@ -111,6 +113,7 @@ func (q *Queries) ListLessonsByCourse(ctx context.Context, courseID pgtype.UUID)
 			&i.IsPublished,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -123,8 +126,8 @@ func (q *Queries) ListLessonsByCourse(ctx context.Context, courseID pgtype.UUID)
 }
 
 const listLessonsBySection = `-- name: ListLessonsBySection :many
-SELECT id, section_id, course_id, title, type, order_index, is_free_preview, duration_seconds, is_published, created_at, updated_at FROM courses.lessons
-WHERE section_id = $1
+SELECT id, section_id, course_id, title, type, order_index, is_free_preview, duration_seconds, is_published, created_at, updated_at, deleted_at FROM courses.lessons
+WHERE section_id = $1 AND deleted_at IS NULL
 ORDER BY order_index ASC, created_at ASC
 `
 
@@ -149,6 +152,7 @@ func (q *Queries) ListLessonsBySection(ctx context.Context, sectionID pgtype.UUI
 			&i.IsPublished,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -158,4 +162,91 @@ func (q *Queries) ListLessonsBySection(ctx context.Context, sectionID pgtype.UUI
 		return nil, err
 	}
 	return items, nil
+}
+
+const maxLessonOrderIndex = `-- name: MaxLessonOrderIndex :one
+SELECT COALESCE(MAX(order_index), -1)::int AS max_order_index
+FROM courses.lessons
+WHERE section_id = $1 AND deleted_at IS NULL
+`
+
+// Highest order_index among a section's live lessons; -1 when none exist.
+func (q *Queries) MaxLessonOrderIndex(ctx context.Context, sectionID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, maxLessonOrderIndex, sectionID)
+	var max_order_index int32
+	err := row.Scan(&max_order_index)
+	return max_order_index, err
+}
+
+const softDeleteLesson = `-- name: SoftDeleteLesson :exec
+UPDATE courses.lessons
+SET deleted_at = now()
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+func (q *Queries) SoftDeleteLesson(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, softDeleteLesson, id)
+	return err
+}
+
+const softDeleteLessonsBySection = `-- name: SoftDeleteLessonsBySection :exec
+UPDATE courses.lessons
+SET deleted_at = now()
+WHERE section_id = $1 AND deleted_at IS NULL
+`
+
+// Cascade soft-delete: when a section is removed, tombstone its live lessons too.
+func (q *Queries) SoftDeleteLessonsBySection(ctx context.Context, sectionID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, softDeleteLessonsBySection, sectionID)
+	return err
+}
+
+const updateLesson = `-- name: UpdateLesson :one
+UPDATE courses.lessons
+SET title = $2,
+    type = $3,
+    order_index = $4,
+    is_free_preview = $5,
+    duration_seconds = $6,
+    is_published = $7
+WHERE id = $1 AND deleted_at IS NULL
+RETURNING id, section_id, course_id, title, type, order_index, is_free_preview, duration_seconds, is_published, created_at, updated_at, deleted_at
+`
+
+type UpdateLessonParams struct {
+	ID              pgtype.UUID
+	Title           string
+	Type            string
+	OrderIndex      int32
+	IsFreePreview   bool
+	DurationSeconds int32
+	IsPublished     bool
+}
+
+func (q *Queries) UpdateLesson(ctx context.Context, arg UpdateLessonParams) (CoursesLesson, error) {
+	row := q.db.QueryRow(ctx, updateLesson,
+		arg.ID,
+		arg.Title,
+		arg.Type,
+		arg.OrderIndex,
+		arg.IsFreePreview,
+		arg.DurationSeconds,
+		arg.IsPublished,
+	)
+	var i CoursesLesson
+	err := row.Scan(
+		&i.ID,
+		&i.SectionID,
+		&i.CourseID,
+		&i.Title,
+		&i.Type,
+		&i.OrderIndex,
+		&i.IsFreePreview,
+		&i.DurationSeconds,
+		&i.IsPublished,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
 }

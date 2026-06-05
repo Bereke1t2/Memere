@@ -83,6 +83,7 @@ type CoursesCourseSection struct {
 	IsPublished bool
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
+	DeletedAt   pgtype.Timestamptz
 }
 
 type CoursesExam struct {
@@ -126,6 +127,7 @@ type CoursesLesson struct {
 	IsPublished     bool
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
+	DeletedAt       pgtype.Timestamptz
 }
 
 type CoursesQuestion struct {
