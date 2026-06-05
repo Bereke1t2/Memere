@@ -17,6 +17,7 @@ type Config struct {
 	DB    DBConfig
 	Redis RedisConfig
 	JWT   JWTConfig
+	HTTP  HTTPConfig
 
 	// Reserved for later phases (not required to boot in Phase 1).
 	AWS      AWSConfig
@@ -73,6 +74,21 @@ type JWTConfig struct {
 	AccessTTL  time.Duration `envconfig:"JWT_ACCESS_TTL" default:"15m"`
 	RefreshTTL time.Duration `envconfig:"JWT_REFRESH_TTL" default:"720h"`
 	Issuer     string        `envconfig:"JWT_ISSUER" default:"memere"`
+}
+
+// HTTPConfig tunes the delivery layer: CORS and the Redis-backed rate limiters
+// (spec §5.4, §7.3). A permissive CORS default suits development; production
+// should pin CORS_ALLOWED_ORIGINS to the app's domains.
+type HTTPConfig struct {
+	// CORSAllowedOrigins is the list of allowed Origin values; the single value
+	// "*" allows any origin.
+	CORSAllowedOrigins []string `envconfig:"CORS_ALLOWED_ORIGINS" default:"*"`
+	// RateLimitRPM is the global per-IP request budget per minute.
+	RateLimitRPM int `envconfig:"RATE_LIMIT_RPM" default:"120"`
+	// LoginRateLimit / LoginRateWindow are the stricter limiter on /auth/login
+	// (default 5 attempts per 15 minutes per IP, spec §7.3).
+	LoginRateLimit  int           `envconfig:"LOGIN_RATE_LIMIT" default:"5"`
+	LoginRateWindow time.Duration `envconfig:"LOGIN_RATE_WINDOW" default:"15m"`
 }
 
 type AWSConfig struct {

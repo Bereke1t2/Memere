@@ -10,10 +10,19 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
+	redis "github.com/redis/go-redis/v9"
+
 	"github.com/Bereke1t2/Memere/memere-backend/config"
 	delivery_http "github.com/Bereke1t2/Memere/memere-backend/internal/delivery/http"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/infrastructure/cache"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/infrastructure/database"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/repository/postgres"
+	redisrepo "github.com/Bereke1t2/Memere/memere-backend/internal/repository/redis"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/auth"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/course"
+	"github.com/Bereke1t2/Memere/memere-backend/pkg/jwt"
 )
 
 func main() {
@@ -38,8 +47,8 @@ func main() {
 	}
 	defer redisClient.Close()
 
-	// Bootstrap HTTP server
-	router := delivery_http.NewServer(dbPool, redisClient)
+	// Build the fully-wired HTTP router.
+	router := buildRouter(cfg, dbPool, redisClient)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.App.Port,
@@ -70,4 +79,36 @@ func main() {
 	}
 
 	log.Println("Server exiting gracefully")
+}
+
+// buildRouter performs the explicit constructor wiring for the API: repositories
+// over the pool/cache, the JWT manager, the auth and course usecases, the HTTP
+// handlers, and finally the router with its middleware. Plain dependency
+// injection — no DI framework (matches the spec's explicit-wiring intent).
+func buildRouter(cfg *config.Config, pool *pgxpool.Pool, redisClient *redis.Client) *gin.Engine {
+	// Repositories.
+	userRepo := postgres.NewUserRepo(pool)
+	tokenRepo := postgres.NewRefreshTokenRepo(pool)
+	courseRepo := postgres.NewCourseRepo(pool)
+	sectionRepo := postgres.NewSectionRepo(pool)
+	lessonRepo := postgres.NewLessonRepo(pool)
+	txManager := postgres.NewTxManager(pool)
+	sessionRepo := redisrepo.NewSessionRepo(redisClient)
+
+	// JWT manager.
+	jwtManager := jwt.NewManager(cfg.JWT.Secret, cfg.JWT.AccessTTL, cfg.JWT.RefreshTTL, cfg.JWT.Issuer)
+
+	// Usecases.
+	authSvc := auth.NewService(userRepo, tokenRepo, sessionRepo, jwtManager)
+	courseSvc := course.NewService(courseRepo, sectionRepo, lessonRepo, txManager)
+
+	// Handlers + router.
+	return delivery_http.NewRouter(delivery_http.Deps{
+		Config:  cfg,
+		DB:      pool,
+		Cache:   redisClient,
+		JWT:     jwtManager,
+		Auth:    delivery_http.NewAuthHandler(authSvc, userRepo),
+		Courses: delivery_http.NewCourseHandler(courseSvc),
+	})
 }
