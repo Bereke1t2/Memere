@@ -1,6 +1,7 @@
 package apperror
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 )
@@ -73,4 +74,29 @@ func Validation(details map[string]any, err error) *AppError {
 		e.Details = details
 	}
 	return e
+}
+
+// Inspection helpers
+
+// CodeOf returns the AppError code in err's chain, or "" if err is not an
+// AppError.
+func CodeOf(err error) string {
+	var ae *AppError
+	if errors.As(err, &ae) {
+		return ae.Code
+	}
+	return ""
+}
+
+// IsCode reports whether err (anywhere in its chain) is an AppError with the
+// given code.
+func IsCode(err error, code string) bool {
+	return CodeOf(err) == code
+}
+
+// IsNotFound reports whether err is a RESOURCE_NOT_FOUND AppError. Usecases use
+// this to translate a repository "no rows" into a domain-appropriate outcome
+// (e.g. registration treats it as "email available").
+func IsNotFound(err error) bool {
+	return IsCode(err, "RESOURCE_NOT_FOUND")
 }

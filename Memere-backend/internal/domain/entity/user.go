@@ -46,3 +46,16 @@ type User struct {
 	UpdatedAt              time.Time
 	DeletedAt              *time.Time
 }
+
+// Sanitized returns a copy of the user with every secret field cleared
+// (password hash, email-verification and password-reset tokens). Usecases
+// return this to callers that may serialize the user, so a hash or token can
+// never leak to a client (spec §7.3, Non-Negotiable #8). The HTTP DTO in
+// Skill 5 is the belt to this suspenders.
+func (u User) Sanitized() User {
+	u.PasswordHash = ""
+	u.EmailVerificationToken = nil
+	u.PasswordResetToken = nil
+	u.PasswordResetExpiresAt = nil
+	return u
+}
