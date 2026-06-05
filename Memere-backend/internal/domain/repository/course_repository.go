@@ -42,5 +42,9 @@ type CourseRepository interface {
 	List(ctx context.Context, filter CourseFilter, cursor *pagination.Cursor, limit int) ([]*entity.Course, *pagination.Cursor, error)
 	Update(ctx context.Context, c *entity.Course) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
+	// RecomputeCounters refreshes total_lessons / total_duration_seconds from the
+	// course's live lessons. Call it inside a TxManager.WithinTx alongside the
+	// lesson mutation that changed them so the course row stays consistent.
+	RecomputeCounters(ctx context.Context, courseID uuid.UUID) error
 	GetCourseWithSectionsAndLessons(ctx context.Context, courseID uuid.UUID) (*CourseWithContent, error)
 }
