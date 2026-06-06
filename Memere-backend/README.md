@@ -499,10 +499,10 @@ The project uses **GitHub Actions** for continuous integration and deployment:
 ### Phase 1 — MVP (Month 1–3)
 
 - [x] Project architecture and design specification
-- [ ] Go backend scaffolding with Clean Architecture
-- [ ] Database schema and migrations
-- [ ] Auth service (JWT + refresh tokens)
-- [ ] Course service (CRUD + video/note metadata)
+- [x] Go backend scaffolding with Clean Architecture
+- [x] Database schema and migrations
+- [x] Auth service (JWT + refresh tokens)
+- [x] Course service (CRUD + video/note metadata)
 - [ ] Video streaming (HLS adaptive bitrate)
 - [ ] Quiz engine with server-side grading
 - [ ] Mock exam engine with timed sessions
