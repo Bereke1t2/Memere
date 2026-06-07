@@ -28,7 +28,7 @@ func TestErrorsAccumulate(t *testing.T) {
 	}
 
 	e.Required("title", "   ")
-	e.MaxLen("title", "ok", 1)        // already has a problem for title; first wins
+	e.MaxLen("title", "ok", 1) // already has a problem for title; first wins
 	e.NonNegative("price", -5)
 	e.InRange("grade", 99, 1, 12)
 	e.OneOf("level", "wizard", "beginner", "intermediate", "advanced")
