@@ -1,5 +1,13 @@
 .PHONY: run build tidy lint test up down migrate-up migrate-down migrate-create sqlc
 
+# Auto-load .env so config.Load() (which reads the process environment) sees
+# DB_HOST, JWT_SECRET, etc. without the caller exporting them by hand. The
+# variables are exported into the environment of every recipe below.
+ifneq (,$(wildcard ./.env))
+include .env
+export
+endif
+
 run:
 	go run ./cmd/api
 
