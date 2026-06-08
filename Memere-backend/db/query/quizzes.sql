@@ -9,11 +9,11 @@ RETURNING *;
 
 -- name: GetQuizByID :one
 SELECT * FROM courses.quizzes
-WHERE id = $1;
+WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: ListQuizzesByCourse :many
 SELECT * FROM courses.quizzes
-WHERE course_id = $1
+WHERE course_id = $1 AND deleted_at IS NULL
 ORDER BY created_at DESC, id DESC;
 
 -- name: UpdateQuiz :one
@@ -23,9 +23,12 @@ SET title = $2,
     pass_percentage = $4,
     randomize_questions = $5,
     max_attempts = $6
-WHERE id = $1
+WHERE id = $1 AND deleted_at IS NULL
 RETURNING *;
 
--- name: DeleteQuiz :exec
-DELETE FROM courses.quizzes
-WHERE id = $1;
+-- name: SoftDeleteQuiz :exec
+-- Non-Negotiable #5: tombstone, never physically DELETE. Attempts referencing
+-- the quiz are preserved as historical records.
+UPDATE courses.quizzes
+SET deleted_at = now()
+WHERE id = $1 AND deleted_at IS NULL;
