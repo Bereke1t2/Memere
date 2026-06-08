@@ -99,6 +99,7 @@ type CoursesExam struct {
 	IsPublished     bool
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
+	DeletedAt       pgtype.Timestamptz
 }
 
 type CoursesExamAttempt struct {
@@ -113,6 +114,14 @@ type CoursesExamAttempt struct {
 	Status          string
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
+}
+
+type CoursesExamQuestion struct {
+	ID         pgtype.UUID
+	ExamID     pgtype.UUID
+	QuestionID pgtype.UUID
+	OrderIndex int32
+	Marks      int32
 }
 
 type CoursesLesson struct {
@@ -140,6 +149,8 @@ type CoursesQuestion struct {
 	OrderIndex  int32
 	CreatedAt   pgtype.Timestamptz
 	UpdatedAt   pgtype.Timestamptz
+	Subject     *string
+	Topic       *string
 }
 
 type CoursesQuiz struct {
@@ -153,6 +164,25 @@ type CoursesQuiz struct {
 	MaxAttempts        *int32
 	CreatedAt          pgtype.Timestamptz
 	UpdatedAt          pgtype.Timestamptz
+	DeletedAt          pgtype.Timestamptz
+}
+
+type CoursesQuizAttempt struct {
+	ID              pgtype.UUID
+	QuizID          pgtype.UUID
+	StudentID       pgtype.UUID
+	AttemptNumber   int32
+	StartedAt       pgtype.Timestamptz
+	SubmittedAt     pgtype.Timestamptz
+	Score           pgtype.Numeric
+	Percentage      pgtype.Numeric
+	AnswersSnapshot []byte
+	Status          string
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+	QuestionOrder   []byte
+	ExpiresAt       pgtype.Timestamptz
+	Passed          *bool
 }
 
 type CoursesVideo struct {
