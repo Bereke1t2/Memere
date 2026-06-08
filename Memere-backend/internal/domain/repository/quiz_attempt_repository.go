@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -13,9 +14,20 @@ import (
 // IDOR (Non-Negotiable #7).
 type QuizAttemptRepository interface {
 	Create(ctx context.Context, a *entity.QuizAttempt) error
-	FindByID(ctx context.Context, id uuid.UUID) (*entity.QuizAttempt, error)
+	// FindByID scopes the lookup to studentID so a student can never read another
+	// student's attempt (IDOR, Non-Negotiable #7).
+	FindByID(ctx context.Context, id, studentID uuid.UUID) (*entity.QuizAttempt, error)
+	// GetActive returns the student's current in-progress attempt at a quiz, or
+	// apperror.NotFound if none — used to resume and to block concurrent starts.
+	GetActive(ctx context.Context, studentID, quizID uuid.UUID) (*entity.QuizAttempt, error)
 	ListByStudentAndQuiz(ctx context.Context, studentID, quizID uuid.UUID) ([]*entity.QuizAttempt, error)
 	CountByStudentAndQuiz(ctx context.Context, studentID, quizID uuid.UUID) (int, error)
-	// Grade persists the final score/percentage and flips status to graded.
+	// ListExpired returns in-progress, timed attempts past their deadline, so the
+	// sweeper can auto-grade them (spec §9.1 time enforcement, Non-Negotiable #2).
+	ListExpired(ctx context.Context, now time.Time, limit int) ([]*entity.QuizAttempt, error)
+	// Update persists auto-save state and status transitions (answers snapshot,
+	// status, submitted_at) without touching the immutable timer columns.
+	Update(ctx context.Context, a *entity.QuizAttempt) error
+	// Grade persists the final score/percentage/passed and flips status to graded.
 	Grade(ctx context.Context, a *entity.QuizAttempt) error
 }
