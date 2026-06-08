@@ -1,0 +1,350 @@
+package exam
+
+import (
+	"context"
+	"encoding/json"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
+	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
+)
+
+type harness struct {
+	svc      *Service
+	exams    *fakeExamRepo
+	attempts *fakeExamAttemptRepo
+	courses  *fakeCourseRepo
+	state    *fakeState
+	clock    time.Time
+}
+
+func newHarness(t *testing.T) *harness {
+	t.Helper()
+	exams := newFakeExamRepo()
+	attempts := newFakeExamAttemptRepo()
+	courses := newFakeCourseRepo()
+	state := newFakeState()
+	svc := NewService(exams, attempts, courses, state, fakeTxManager{})
+
+	h := &harness{svc: svc, exams: exams, attempts: attempts, courses: courses, state: state}
+	h.clock = time.Date(2026, 6, 8, 12, 0, 0, 0, time.UTC)
+	svc.now = func() time.Time { return h.clock }
+	return h
+}
+
+func (h *harness) advance(d time.Duration) { h.clock = h.clock.Add(d) }
+
+func teacher() *Actor { return &Actor{UserID: uuid.New(), Role: entity.RoleTeacher} }
+func student() *Actor { return &Actor{UserID: uuid.New(), Role: entity.RoleStudent} }
+func admin() *Actor   { return &Actor{UserID: uuid.New(), Role: entity.RoleAdmin} }
+
+func ptrStr(s string) *string { return &s }
+
+// seedPublishedExam builds a published, 60-minute exam with two MC questions
+// (5 marks + 3 marks) and returns it.
+func (h *harness) seedPublishedExam(t *testing.T) *entity.Exam {
+	t.Helper()
+	owner := teacher()
+	course := &entity.Course{ID: uuid.New(), TeacherID: owner.UserID, IsPublished: true}
+	h.courses.add(course)
+
+	exam, err := h.svc.CreateExam(context.Background(), owner, CreateExamInput{
+		CourseID:        &course.ID,
+		Title:           "Midterm",
+		Subject:         "Math",
+		Grade:           12,
+		DurationMinutes: 60,
+		PassMarks:       5,
+	})
+	if err != nil {
+		t.Fatalf("CreateExam: %v", err)
+	}
+
+	q1 := &entity.Question{Text: "2+2?", Type: entity.QuestionMultipleChoice, OrderIndex: 0, Subject: ptrStr("Arithmetic")}
+	h.exams.addBankQuestion(q1, []*entity.Answer{
+		{Text: "4", IsCorrect: true, OrderIndex: 0},
+		{Text: "5", IsCorrect: false, OrderIndex: 1},
+	})
+	q2 := &entity.Question{Text: "Capital of France?", Type: entity.QuestionShortAnswer, OrderIndex: 1, Subject: ptrStr("Geography")}
+	h.exams.addBankQuestion(q2, []*entity.Answer{{Text: "Paris", IsCorrect: true}})
+
+	if _, err := h.svc.AddExamQuestion(context.Background(), owner, exam.ID, q1.ID, 5, 0); err != nil {
+		t.Fatalf("AddExamQuestion q1: %v", err)
+	}
+	if _, err := h.svc.AddExamQuestion(context.Background(), owner, exam.ID, q2.ID, 3, 1); err != nil {
+		t.Fatalf("AddExamQuestion q2: %v", err)
+	}
+	if _, err := h.svc.PublishExam(context.Background(), owner, exam.ID); err != nil {
+		t.Fatalf("PublishExam: %v", err)
+	}
+	reloaded, _ := h.exams.FindByID(context.Background(), exam.ID)
+	return reloaded
+}
+
+// --- total_marks recompute ----------------------------------------------------
+
+func TestAddExamQuestion_RecomputesTotalMarks(t *testing.T) {
+	h := newHarness(t)
+	exam := h.seedPublishedExam(t)
+	if exam.TotalMarks != 8 {
+		t.Errorf("total_marks = %d, want 8 (5+3)", exam.TotalMarks)
+	}
+}
+
+// --- answer-key leak ----------------------------------------------------------
+
+func TestStartExam_ClientViewHasNoAnswerKey(t *testing.T) {
+	h := newHarness(t)
+	exam := h.seedPublishedExam(t)
+
+	view, err := h.svc.StartExam(context.Background(), student(), exam.ID)
+	if err != nil {
+		t.Fatalf("StartExam: %v", err)
+	}
+	b, _ := json.Marshal(view)
+	for _, banned := range []string{"is_correct", "IsCorrect", "correct_answer", "CorrectAnswer"} {
+		if strings.Contains(string(b), banned) {
+			t.Fatalf("exam client view leaks answer key (%q): %s", banned, b)
+		}
+	}
+	if view.TotalMarks != 8 || len(view.Questions) != 2 {
+		t.Errorf("view total=%d questions=%d, want 8/2", view.TotalMarks, len(view.Questions))
+	}
+	if view.RemainingSeconds == nil || *view.RemainingSeconds != 3600 {
+		t.Errorf("remaining seconds = %v, want 3600", view.RemainingSeconds)
+	}
+}
+
+// --- idempotent resume --------------------------------------------------------
+
+func TestStartExam_ResumesInProgress(t *testing.T) {
+	h := newHarness(t)
+	exam := h.seedPublishedExam(t)
+	stu := student()
+
+	v1, err := h.svc.StartExam(context.Background(), stu, exam.ID)
+	if err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	h.advance(10 * time.Minute)
+	v2, err := h.svc.StartExam(context.Background(), stu, exam.ID)
+	if err != nil {
+		t.Fatalf("resume: %v", err)
+	}
+	if v1.AttemptID != v2.AttemptID {
+		t.Errorf("resume created a new attempt (%v != %v)", v1.AttemptID, v2.AttemptID)
+	}
+	if v2.RemainingSeconds == nil || *v2.RemainingSeconds != 3000 {
+		t.Errorf("remaining after 10m = %v, want 3000", v2.RemainingSeconds)
+	}
+}
+
+// --- submit before expiry → submitted→graded ---------------------------------
+
+func TestSubmitExam_BeforeExpiryGradesServerSide(t *testing.T) {
+	h := newHarness(t)
+	exam := h.seedPublishedExam(t)
+	stu := student()
+	v, _ := h.svc.StartExam(context.Background(), stu, exam.ID)
+
+	q1 := h.questionByText(v, "2+2?")
+	c1 := h.correctOption(exam.ID, q1.QuestionID)
+	q2 := h.questionByText(v, "Capital of France?")
+
+	res, err := h.svc.SubmitExam(context.Background(), stu, v.AttemptID, map[string]any{
+		q1.QuestionID.String(): map[string]any{"selected": []any{c1.String()}},
+		q2.QuestionID.String(): map[string]any{"text": " paris "},
+		"score":                999, // client-supplied score must be ignored
+	})
+	if err != nil {
+		t.Fatalf("submit: %v", err)
+	}
+	if res.Status != entity.AttemptGraded {
+		t.Errorf("status = %v, want graded", res.Status)
+	}
+	if res.Score != 8 || res.TotalMarks != 8 || !res.Passed {
+		t.Errorf("want full marks 8/8 passed; got score=%v total=%v passed=%v", res.Score, res.TotalMarks, res.Passed)
+	}
+	if len(res.SubjectBreakdown) != 2 {
+		t.Errorf("subject breakdown size = %d, want 2", len(res.SubjectBreakdown))
+	}
+}
+
+// --- submit after expiry → expired→graded ------------------------------------
+
+func TestSubmitExam_AfterExpiryGradesAsExpired(t *testing.T) {
+	h := newHarness(t)
+	exam := h.seedPublishedExam(t)
+	stu := student()
+	v, _ := h.svc.StartExam(context.Background(), stu, exam.ID)
+
+	q1 := h.questionByText(v, "2+2?")
+	c1 := h.correctOption(exam.ID, q1.QuestionID)
+	if err := h.svc.SaveExamProgress(context.Background(), stu, v.AttemptID, map[string]any{
+		q1.QuestionID.String(): map[string]any{"selected": []any{c1.String()}},
+	}); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+
+	h.advance(2 * time.Hour) // past the 60-minute window
+
+	res, err := h.svc.SubmitExam(context.Background(), stu, v.AttemptID, map[string]any{})
+	if err != nil {
+		t.Fatalf("submit after expiry: %v", err)
+	}
+	if res.Status != entity.AttemptGraded {
+		t.Errorf("final status = %v, want graded", res.Status)
+	}
+	if res.Score != 5 {
+		t.Errorf("auto-saved partial answer should score 5; got %v", res.Score)
+	}
+	// The persisted attempt passed through EXPIRED on its way to graded.
+	stored, _ := h.attempts.FindByID(context.Background(), v.AttemptID, stu.UserID)
+	if stored.Status != entity.AttemptGraded {
+		t.Errorf("stored status = %v, want graded", stored.Status)
+	}
+}
+
+// --- state machine: illegal transition ---------------------------------------
+
+func TestSubmitExam_AlreadyGradedIsInvalidState(t *testing.T) {
+	h := newHarness(t)
+	exam := h.seedPublishedExam(t)
+	stu := student()
+	v, _ := h.svc.StartExam(context.Background(), stu, exam.ID)
+	if _, err := h.svc.SubmitExam(context.Background(), stu, v.AttemptID, map[string]any{}); err != nil {
+		t.Fatalf("first submit: %v", err)
+	}
+	// Second submit on a graded attempt is an illegal transition.
+	_, err := h.svc.SubmitExam(context.Background(), stu, v.AttemptID, map[string]any{})
+	if !apperror.IsCode(err, "INVALID_ATTEMPT_STATE") {
+		t.Fatalf("re-submit should be INVALID_ATTEMPT_STATE, got %v", err)
+	}
+}
+
+func TestGetExamResult_InProgressIsInvalidState(t *testing.T) {
+	h := newHarness(t)
+	exam := h.seedPublishedExam(t)
+	stu := student()
+	v, _ := h.svc.StartExam(context.Background(), stu, exam.ID)
+
+	_, err := h.svc.GetExamResult(context.Background(), stu, v.AttemptID)
+	if !apperror.IsCode(err, "INVALID_ATTEMPT_STATE") {
+		t.Fatalf("result while in progress should be INVALID_ATTEMPT_STATE, got %v", err)
+	}
+}
+
+// --- lazy expiry on GetExamResult --------------------------------------------
+
+func TestGetExamResult_PastExpiryFinalizes(t *testing.T) {
+	h := newHarness(t)
+	exam := h.seedPublishedExam(t)
+	stu := student()
+	v, _ := h.svc.StartExam(context.Background(), stu, exam.ID)
+
+	h.advance(2 * time.Hour)
+	res, err := h.svc.GetExamResult(context.Background(), stu, v.AttemptID)
+	if err != nil {
+		t.Fatalf("get result past expiry: %v", err)
+	}
+	if res.Status != entity.AttemptGraded {
+		t.Errorf("status = %v, want graded after lazy expiry", res.Status)
+	}
+}
+
+// --- IDOR ---------------------------------------------------------------------
+
+func TestSubmitExam_OtherStudentForbidden(t *testing.T) {
+	h := newHarness(t)
+	exam := h.seedPublishedExam(t)
+	owner := student()
+	v, _ := h.svc.StartExam(context.Background(), owner, exam.ID)
+
+	_, err := h.svc.SubmitExam(context.Background(), student(), v.AttemptID, map[string]any{})
+	if !apperror.IsNotFound(err) {
+		t.Fatalf("another student's attempt must not be found (IDOR), got %v", err)
+	}
+}
+
+// --- pass/fail vs pass_marks --------------------------------------------------
+
+func TestSubmitExam_FailBelowPassMarks(t *testing.T) {
+	h := newHarness(t)
+	exam := h.seedPublishedExam(t)
+	stu := student()
+	v, _ := h.svc.StartExam(context.Background(), stu, exam.ID)
+
+	// Answer only the 3-mark short-answer correctly → score 3 < pass_marks 5.
+	q2 := h.questionByText(v, "Capital of France?")
+	res, err := h.svc.SubmitExam(context.Background(), stu, v.AttemptID, map[string]any{
+		q2.QuestionID.String(): map[string]any{"text": "Paris"},
+	})
+	if err != nil {
+		t.Fatalf("submit: %v", err)
+	}
+	if res.Score != 3 || res.Passed {
+		t.Errorf("score 3 < pass_marks 5 should fail; got score=%v passed=%v", res.Score, res.Passed)
+	}
+}
+
+// --- authoring authz ----------------------------------------------------------
+
+func TestCreateExam_NonTeacherForbidden(t *testing.T) {
+	h := newHarness(t)
+	_, err := h.svc.CreateExam(context.Background(), student(), CreateExamInput{
+		Title: "x", Subject: "Math", Grade: 12, DurationMinutes: 60, PassMarks: 1,
+	})
+	if !apperror.IsCode(err, "FORBIDDEN") {
+		t.Fatalf("student creating an exam should be FORBIDDEN, got %v", err)
+	}
+}
+
+func TestListExams_StudentSeesPublishedOnly(t *testing.T) {
+	h := newHarness(t)
+	_ = h.seedPublishedExam(t) // published
+	// An unpublished exam by an admin.
+	if _, err := h.svc.CreateExam(context.Background(), admin(), CreateExamInput{
+		Title: "Hidden", Subject: "Sci", Grade: 12, DurationMinutes: 30, PassMarks: 1,
+	}); err != nil {
+		t.Fatalf("create hidden: %v", err)
+	}
+	got, _, err := h.svc.ListExams(context.Background(), student(), repository.ExamFilter{}, nil, 50)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	for _, e := range got {
+		if !e.IsPublished {
+			t.Errorf("student listing returned an unpublished exam %q", e.Title)
+		}
+	}
+}
+
+// --- helpers ------------------------------------------------------------------
+
+func (h *harness) questionByText(v *ExamAttemptClientView, text string) QuestionClientView {
+	for _, q := range v.Questions {
+		if q.Text == text {
+			return q
+		}
+	}
+	return QuestionClientView{}
+}
+
+func (h *harness) correctOption(examID, questionID uuid.UUID) uuid.UUID {
+	tree, _ := h.exams.GetExamWithQuestions(context.Background(), examID)
+	for _, qa := range tree.Questions {
+		if qa.Question.ID == questionID {
+			for _, a := range qa.Answers {
+				if a.IsCorrect {
+					return a.ID
+				}
+			}
+		}
+	}
+	return uuid.Nil
+}
