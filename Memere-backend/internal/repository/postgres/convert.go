@@ -29,6 +29,24 @@ func fromPgUUID(v pgtype.UUID) uuid.UUID {
 	return v.Bytes
 }
 
+// toPgUUIDPtr wraps a *uuid.UUID; a nil pointer maps to SQL NULL. Used for
+// nullable FKs (quizzes.lesson_id, exams.course_id).
+func toPgUUIDPtr(id *uuid.UUID) pgtype.UUID {
+	if id == nil {
+		return pgtype.UUID{Valid: false}
+	}
+	return pgtype.UUID{Bytes: *id, Valid: true}
+}
+
+// fromPgUUIDPtr unwraps a nullable pgtype.UUID to a *uuid.UUID (nil when NULL).
+func fromPgUUIDPtr(v pgtype.UUID) *uuid.UUID {
+	if !v.Valid {
+		return nil
+	}
+	id := uuid.UUID(v.Bytes)
+	return &id
+}
+
 // toPgTimestamptz wraps a non-nil time as a valid timestamptz; a nil pointer
 // maps to SQL NULL.
 func toPgTimestamptz(t *time.Time) pgtype.Timestamptz {
@@ -84,6 +102,43 @@ func fromPgNumeric(v pgtype.Numeric) float64 {
 		return 0
 	}
 	return f.Float64
+}
+
+// fromPgNumericPtr unwraps a nullable numeric to a *float64 (nil when NULL).
+// Used for attempt score/percentage, which stay NULL until grading completes.
+func fromPgNumericPtr(v pgtype.Numeric) *float64 {
+	if !v.Valid {
+		return nil
+	}
+	f := fromPgNumeric(v)
+	return &f
+}
+
+// toPgNumericPtr converts a *float64 to a pgtype.Numeric; a nil pointer maps to
+// SQL NULL.
+func toPgNumericPtr(f *float64) pgtype.Numeric {
+	if f == nil {
+		return pgtype.Numeric{Valid: false}
+	}
+	return toPgNumeric(*f)
+}
+
+// toPgInt4Ptr converts a *int to a nullable int4; nil maps to SQL NULL.
+func toPgInt4Ptr(i *int) *int32 {
+	if i == nil {
+		return nil
+	}
+	v := int32(*i)
+	return &v
+}
+
+// fromPgInt4Ptr unwraps a nullable int4 to a *int (nil when NULL).
+func fromPgInt4Ptr(v *int32) *int {
+	if v == nil {
+		return nil
+	}
+	i := int(*v)
+	return &i
 }
 
 // toJSONB marshals a metadata map to the []byte sqlc expects for a JSONB column.
