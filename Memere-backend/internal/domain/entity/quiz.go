@@ -38,4 +38,5 @@ type Quiz struct {
 	MaxAttempts        *int
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+	DeletedAt          *time.Time
 }
