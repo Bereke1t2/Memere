@@ -9,13 +9,14 @@ RETURNING *;
 
 -- name: GetExamByID :one
 SELECT * FROM courses.exams
-WHERE id = $1;
+WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: ListExams :many
 -- Keyset (cursor) pagination ordered by (created_at, id) DESC. Nullable filter
--- args are ignored when NULL.
+-- args are ignored when NULL. Soft-deleted exams are excluded.
 SELECT * FROM courses.exams
-WHERE (sqlc.narg('subject')::text IS NULL OR subject = sqlc.narg('subject'))
+WHERE deleted_at IS NULL
+  AND (sqlc.narg('subject')::text IS NULL OR subject = sqlc.narg('subject'))
   AND (sqlc.narg('grade')::int IS NULL OR grade = sqlc.narg('grade'))
   AND (sqlc.narg('is_published')::bool IS NULL OR is_published = sqlc.narg('is_published'))
   AND (
@@ -35,18 +36,11 @@ SET title = $2,
     pass_marks = $7,
     instructions = $8,
     is_published = $9
-WHERE id = $1
+WHERE id = $1 AND deleted_at IS NULL
 RETURNING *;
 
--- name: AddExamQuestion :one
-INSERT INTO courses.exam_questions (
-    exam_id, question_id, order_index, marks
-) VALUES (
-    $1, $2, $3, $4
-)
-RETURNING *;
-
--- name: ListExamQuestions :many
-SELECT * FROM courses.exam_questions
-WHERE exam_id = $1
-ORDER BY order_index ASC, id ASC;
+-- name: SoftDeleteExam :exec
+-- Non-Negotiable #5: tombstone, never physically DELETE.
+UPDATE courses.exams
+SET deleted_at = now()
+WHERE id = $1 AND deleted_at IS NULL;
