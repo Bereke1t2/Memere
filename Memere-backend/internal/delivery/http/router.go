@@ -15,12 +15,15 @@ import (
 // manager (for per-route auth), the Redis client (for rate limiting), the
 // HTTP config, and the DB/cache handles for the health probe.
 type Deps struct {
-	Config  *config.Config
-	DB      *pgxpool.Pool
-	Cache   *redis.Client
-	JWT     *jwt.Manager
-	Auth    *AuthHandler
-	Courses *CourseHandler
+	Config    *config.Config
+	DB        *pgxpool.Pool
+	Cache     *redis.Client
+	JWT       *jwt.Manager
+	Auth      *AuthHandler
+	Courses   *CourseHandler
+	Quizzes   *QuizHandler
+	Exams     *ExamHandler
+	Analytics *AnalyticsHandler
 }
 
 // NewRouter assembles the Gin engine: the global middleware stack (in order),
@@ -80,6 +83,49 @@ func NewRouter(deps Deps) *gin.Engine {
 		sections.GET("/:id/lessons", optionalAuth, deps.Courses.ListLessons)
 		sections.POST("/:id/lessons", requireAuth, teacherOrAdmin, deps.Courses.AddLesson)
 	}
+
+	// Quiz/exam authoring nested under a course (teacher/admin).
+	courses.POST("/:id/quizzes", requireAuth, teacherOrAdmin, deps.Quizzes.CreateQuiz)
+	courses.POST("/:id/exams", requireAuth, teacherOrAdmin, deps.Exams.CreateExam)
+
+	// Quiz authoring + taking. Authoring is teacher/admin; taking requires auth,
+	// with ownership enforced in the usecase (not middleware).
+	quizzes := v1.Group("/quizzes")
+	{
+		quizzes.POST("/:id/questions", requireAuth, teacherOrAdmin, deps.Quizzes.AddQuestion)
+		quizzes.PUT("/:id", requireAuth, teacherOrAdmin, deps.Quizzes.UpdateQuiz)
+		quizzes.GET("/:id", requireAuth, deps.Quizzes.GetQuiz)
+		quizzes.POST("/:id/attempts", requireAuth, deps.Quizzes.StartAttempt)
+	}
+	quizAttempts := v1.Group("/quiz-attempts")
+	{
+		quizAttempts.PATCH("/:id", requireAuth, deps.Quizzes.SaveProgress)
+		quizAttempts.POST("/:id/submit", requireAuth, deps.Quizzes.Submit)
+		quizAttempts.GET("/:id/result", requireAuth, deps.Quizzes.GetResult)
+	}
+
+	// Exam authoring + analytics stats (teacher/admin) and the mock-exam catalog.
+	exams := v1.Group("/exams")
+	{
+		exams.POST("/:id/questions", requireAuth, teacherOrAdmin, deps.Exams.AddQuestion)
+		exams.POST("/:id/publish", requireAuth, teacherOrAdmin, deps.Exams.Publish)
+		exams.GET("/:id/stats", requireAuth, teacherOrAdmin, deps.Analytics.ExamStats)
+	}
+	mockExams := v1.Group("/mock-exams")
+	{
+		mockExams.GET("", optionalAuth, deps.Exams.ListMockExams)
+		mockExams.POST("/:id/start", requireAuth, deps.Exams.Start)
+	}
+	examAttempts := v1.Group("/exam-attempts")
+	{
+		examAttempts.PATCH("/:id", requireAuth, deps.Exams.SaveProgress)
+		examAttempts.POST("/:id/submit", requireAuth, deps.Exams.Submit)
+		examAttempts.GET("/:id/results", requireAuth, deps.Exams.GetResult)
+		examAttempts.GET("/:id/analytics", requireAuth, deps.Analytics.AttemptAnalytics)
+	}
+
+	// Student self-analytics.
+	v1.GET("/me/trend", requireAuth, deps.Analytics.Trend)
 
 	return r
 }
