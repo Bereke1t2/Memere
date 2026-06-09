@@ -29,11 +29,20 @@ func newHarness(t *testing.T) *harness {
 	attempts := newFakeExamAttemptRepo()
 	courses := newFakeCourseRepo()
 	state := newFakeState()
-	svc := NewService(exams, attempts, courses, state, fakeTxManager{})
+	svc := NewService(exams, attempts, courses, state, nil, fakeTxManager{})
 
 	h := &harness{svc: svc, exams: exams, attempts: attempts, courses: courses, state: state}
 	h.clock = time.Date(2026, 6, 8, 12, 0, 0, 0, time.UTC)
 	svc.now = func() time.Time { return h.clock }
+	// Let the fake attempt repo derive deadlines from exam durations, mirroring the
+	// real query's JOIN on exams.duration_minutes.
+	expiryLookup = func(examID uuid.UUID) (time.Duration, bool) {
+		e, ok := exams.exams[examID]
+		if !ok {
+			return 0, false
+		}
+		return time.Duration(e.DurationMinutes) * time.Minute, true
+	}
 	return h
 }
 
@@ -212,18 +221,23 @@ func TestSubmitExam_AfterExpiryGradesAsExpired(t *testing.T) {
 
 // --- state machine: illegal transition ---------------------------------------
 
-func TestSubmitExam_AlreadyGradedIsInvalidState(t *testing.T) {
+func TestSubmitExam_ReSubmitIsIdempotent(t *testing.T) {
 	h := newHarness(t)
 	exam := h.seedPublishedExam(t)
 	stu := student()
 	v, _ := h.svc.StartExam(context.Background(), stu, exam.ID)
-	if _, err := h.svc.SubmitExam(context.Background(), stu, v.AttemptID, map[string]any{}); err != nil {
+	first, err := h.svc.SubmitExam(context.Background(), stu, v.AttemptID, map[string]any{})
+	if err != nil {
 		t.Fatalf("first submit: %v", err)
 	}
-	// Second submit on a graded attempt is an illegal transition.
-	_, err := h.svc.SubmitExam(context.Background(), stu, v.AttemptID, map[string]any{})
-	if !apperror.IsCode(err, "INVALID_ATTEMPT_STATE") {
-		t.Fatalf("re-submit should be INVALID_ATTEMPT_STATE, got %v", err)
+	// A second submit on an already-graded attempt is benign: it returns the same
+	// graded result rather than erroring or re-grading.
+	second, err := h.svc.SubmitExam(context.Background(), stu, v.AttemptID, map[string]any{})
+	if err != nil {
+		t.Fatalf("re-submit should be idempotent, got %v", err)
+	}
+	if second.Status != entity.AttemptGraded || second.Score != first.Score {
+		t.Errorf("re-submit result differs: first=%v second=%v", first, second)
 	}
 }
 
@@ -321,6 +335,59 @@ func TestListExams_StudentSeesPublishedOnly(t *testing.T) {
 		if !e.IsPublished {
 			t.Errorf("student listing returned an unpublished exam %q", e.Title)
 		}
+	}
+}
+
+// --- sweeper + race guard -----------------------------------------------------
+
+func TestSweepExpired_GradesAbandonedExam(t *testing.T) {
+	h := newHarness(t)
+	exam := h.seedPublishedExam(t)
+	stu := student()
+	v, _ := h.svc.StartExam(context.Background(), stu, exam.ID)
+
+	q1 := h.questionByText(v, "2+2?")
+	c1 := h.correctOption(exam.ID, q1.QuestionID)
+	_ = h.svc.SaveExamProgress(context.Background(), stu, v.AttemptID, map[string]any{
+		q1.QuestionID.String(): map[string]any{"selected": []any{c1.String()}},
+	})
+
+	h.advance(2 * time.Hour) // abandoned past the 60-minute window
+
+	n, err := h.svc.SweepExpired(context.Background(), h.clock, 100)
+	if err != nil {
+		t.Fatalf("SweepExpired: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("want 1 swept, got %d", n)
+	}
+	stored, _ := h.attempts.FindByID(context.Background(), v.AttemptID, stu.UserID)
+	if stored.Status != entity.AttemptGraded {
+		t.Errorf("status = %v, want graded", stored.Status)
+	}
+	if stored.Score == nil || *stored.Score != 5 {
+		t.Errorf("auto-saved answer should score 5; got %v", stored.Score)
+	}
+}
+
+func TestSubmitVsSweep_ExamGradesExactlyOnce(t *testing.T) {
+	h := newHarness(t)
+	exam := h.seedPublishedExam(t)
+	stu := student()
+	v, _ := h.svc.StartExam(context.Background(), stu, exam.ID)
+	h.advance(2 * time.Hour)
+
+	n, err := h.svc.SweepExpired(context.Background(), h.clock, 100)
+	if err != nil || n != 1 {
+		t.Fatalf("sweep: n=%d err=%v", n, err)
+	}
+	// Late submit returns the graded result, does not re-grade or error.
+	res, err := h.svc.SubmitExam(context.Background(), stu, v.AttemptID, map[string]any{})
+	if err != nil {
+		t.Fatalf("late submit should return graded result; got %v", err)
+	}
+	if res.Status != entity.AttemptGraded {
+		t.Errorf("late submit status = %v, want graded", res.Status)
 	}
 }
 
