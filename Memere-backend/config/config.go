@@ -13,11 +13,12 @@ import (
 // (AWS, Chapa, Stripe, FCM, SendGrid) are declared now so the shape is stable;
 // they are not required until the phase that uses them.
 type Config struct {
-	App   AppConfig
-	DB    DBConfig
-	Redis RedisConfig
-	JWT   JWTConfig
-	HTTP  HTTPConfig
+	App     AppConfig
+	DB      DBConfig
+	Redis   RedisConfig
+	JWT     JWTConfig
+	HTTP    HTTPConfig
+	Sweeper SweeperConfig
 
 	// Reserved for later phases (not required to boot in Phase 1).
 	AWS      AWSConfig
@@ -89,6 +90,14 @@ type HTTPConfig struct {
 	// (default 5 attempts per 15 minutes per IP, spec §7.3).
 	LoginRateLimit  int           `envconfig:"LOGIN_RATE_LIMIT" default:"5"`
 	LoginRateWindow time.Duration `envconfig:"LOGIN_RATE_WINDOW" default:"15m"`
+}
+
+// SweeperConfig tunes the background expiry sweeper (Phase 2 §9.2). Interval is
+// how often it scans for abandoned attempts past their deadline; Enabled lets a
+// deployment (or test) turn it off.
+type SweeperConfig struct {
+	Enabled  bool          `envconfig:"SWEEPER_ENABLED" default:"true"`
+	Interval time.Duration `envconfig:"SWEEPER_INTERVAL" default:"60s"`
 }
 
 type AWSConfig struct {
