@@ -251,6 +251,8 @@ The API server will start on `http://localhost:8080`.
 | `JWT_SECRET` | JWT signing secret | `your_jwt_secret_key` |
 | `JWT_ACCESS_TTL` | Access token TTL | `15m` |
 | `JWT_REFRESH_TTL` | Refresh token TTL | `720h` |
+| `SWEEPER_ENABLED` | Enable the background attempt-expiry sweeper | `true` |
+| `SWEEPER_INTERVAL` | How often the sweeper scans for expired attempts | `60s` |
 | `AWS_S3_BUCKET` | S3 bucket for media | `memere-media` |
 | `AWS_REGION` | AWS region | `af-south-1` |
 | `CHAPA_SECRET_KEY` | Chapa payment API key | `CHASECK_TEST-...` |
@@ -327,16 +329,47 @@ All API endpoints follow REST conventions with the base path `/api/v1`.
 | `POST` | `/api/v1/courses/:id/enroll` | Enroll in a course |
 | `GET` | `/api/v1/courses/:id/progress` | Get course progress |
 
-### Quiz & Exam Endpoints
+### Quiz Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/v1/quizzes/:id` | Get quiz (without answers) |
-| `POST` | `/api/v1/quiz-attempts` | Submit a quiz attempt |
-| `GET` | `/api/v1/mock-exams` | List available mock exams |
-| `POST` | `/api/v1/mock-exams/:id/start` | Start a timed exam session |
-| `POST` | `/api/v1/exam-attempts/:id/submit` | Submit exam answers |
-| `GET` | `/api/v1/exam-attempts/:id/results` | Get exam results & analytics |
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/api/v1/courses/:id/quizzes` | teacher/admin | Create a quiz under a course |
+| `POST` | `/api/v1/quizzes/:id/questions` | teacher/admin | Add a question (answer options inline) |
+| `PUT` | `/api/v1/quizzes/:id` | teacher/admin | Update quiz settings |
+| `GET` | `/api/v1/quizzes/:id` | student | Quiz metadata + question count (**no answer keys**) |
+| `POST` | `/api/v1/quizzes/:id/attempts` | student | Start an attempt → questions + `remaining_seconds` |
+| `PATCH` | `/api/v1/quiz-attempts/:id` | owner | Auto-save answers (`204`) |
+| `POST` | `/api/v1/quiz-attempts/:id/submit` | owner | Submit → server-graded result + feedback |
+| `GET` | `/api/v1/quiz-attempts/:id/result` | owner | Graded result (post-submission only) |
+
+> Quizzes have no separate publish step — they become visible to students once
+> their parent **course** is published. Answer options are created inline with the
+> question, so there is no standalone `POST /questions/:id/answers` route.
+
+### Exam Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/api/v1/courses/:id/exams` | teacher/admin | Create an exam under a course |
+| `POST` | `/api/v1/exams/:id/questions` | teacher/admin | Attach an existing question with per-exam marks |
+| `POST` | `/api/v1/exams/:id/publish` | teacher/admin | Publish exam (required for the catalog) |
+| `GET` | `/api/v1/mock-exams` | optional | List published mock exams |
+| `POST` | `/api/v1/mock-exams/:id/start` | student | Start a timed exam session |
+| `PATCH` | `/api/v1/exam-attempts/:id` | owner | Auto-save answers (`204`) |
+| `POST` | `/api/v1/exam-attempts/:id/submit` | owner | Submit → server-graded result |
+| `GET` | `/api/v1/exam-attempts/:id/results` | owner | Graded exam result (post-submission only) |
+
+### Analytics Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/v1/exam-attempts/:id/analytics` | owner | Subject breakdown, weak areas, percentile |
+| `GET` | `/api/v1/me/trend?subject=` | student | Score trend over attempts for a subject |
+| `GET` | `/api/v1/exams/:id/stats` | teacher/admin | Cohort stats: count, average, pass rate |
+
+> A background **expiry sweeper** (configurable via `SWEEPER_ENABLED` /
+> `SWEEPER_INTERVAL`) auto-grades abandoned in-progress attempts past their
+> deadline, enforcing the server-side timer even when no client request arrives.
 
 ### Payment Endpoints
 
