@@ -23,16 +23,20 @@ type Service struct {
 	attempts repository.ExamAttemptRepository
 	courses  repository.CourseRepository
 	state    repository.AttemptStateStore
+	ranking  repository.ScoreRanking
 	tx       repository.TxManager
 	now      func() time.Time
 }
 
-// NewService wires the exam usecase with its dependencies.
+// NewService wires the exam usecase with its dependencies. ranking may be nil
+// (e.g. in tests that don't exercise percentile); finalize records the graded
+// percentage only when it is set.
 func NewService(
 	exams repository.ExamRepository,
 	attempts repository.ExamAttemptRepository,
 	courses repository.CourseRepository,
 	state repository.AttemptStateStore,
+	ranking repository.ScoreRanking,
 	tx repository.TxManager,
 ) *Service {
 	return &Service{
@@ -40,6 +44,7 @@ func NewService(
 		attempts: attempts,
 		courses:  courses,
 		state:    state,
+		ranking:  ranking,
 		tx:       tx,
 		now:      time.Now,
 	}
@@ -138,12 +143,17 @@ func (s *Service) SubmitExam(ctx context.Context, actor *Actor, attemptID uuid.U
 	if err != nil {
 		return nil, err
 	}
-	if attempt.Status != entity.AttemptInProgress {
-		return nil, invalidState("attempt is not in progress")
-	}
 	exam, err := s.exams.FindByID(ctx, attempt.ExamID)
 	if err != nil {
 		return nil, err
+	}
+	// Already finalized (e.g. the sweeper graded it first): return the existing
+	// result rather than erroring, so a late client submit is benign.
+	if attempt.Status == entity.AttemptGraded {
+		return s.gradeView(ctx, exam, attempt)
+	}
+	if attempt.Status != entity.AttemptInProgress {
+		return nil, invalidState("attempt is not in progress")
 	}
 
 	saved, _ := s.state.GetAnswers(ctx, attemptID)
@@ -153,7 +163,8 @@ func (s *Service) SubmitExam(ctx context.Context, actor *Actor, attemptID uuid.U
 	if s.expired(exam, attempt) {
 		target = entity.AttemptExpired
 	}
-	return s.finalize(ctx, exam, attempt, merged, target)
+	res, _, err := s.finalize(ctx, exam, attempt, merged, target)
+	return res, err
 }
 
 // GetExamResult returns the graded result for one of the actor's own attempts.
@@ -193,20 +204,25 @@ func (s *Service) ListMyExamAttempts(ctx context.Context, actor *Actor, examID u
 // expired→graded using whatever answers were auto-saved.
 func (s *Service) finalizeExpired(ctx context.Context, exam *entity.Exam, attempt *entity.ExamAttempt) (*ExamResult, error) {
 	saved, _ := s.state.GetAnswers(ctx, attempt.ID)
-	return s.finalize(ctx, exam, attempt, mergeAnswers(saved, nil), entity.AttemptExpired)
+	res, _, err := s.finalize(ctx, exam, attempt, mergeAnswers(saved, nil), entity.AttemptExpired)
+	return res, err
 }
 
-// finalize performs the in_progress → {submitted|expired} → graded sequence,
-// validating each step against the state machine, grading server-side, and
-// persisting the snapshot and score. Redis state is cleared at the end.
-func (s *Service) finalize(ctx context.Context, exam *entity.Exam, attempt *entity.ExamAttempt, answers map[string]any, target entity.AttemptStatus) (*ExamResult, error) {
+// finalize performs the in_progress → {submitted|expired} → graded sequence.
+// Each transition is validated against the §9.2 state machine, and the move out
+// of in_progress goes through the guarded ClaimForGrading so a race between a
+// client submit and the background sweeper grades exactly once: the first writer
+// to flip the row wins (claimed=true); the loser returns the winner's already-
+// graded result with claimed=false. Grading is server-side; Redis state is
+// cleared at the end.
+func (s *Service) finalize(ctx context.Context, exam *entity.Exam, attempt *entity.ExamAttempt, answers map[string]any, target entity.AttemptStatus) (*ExamResult, bool, error) {
 	if err := guard(attempt.Status, target); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	gradables, err := s.loadGradables(ctx, exam.ID)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	sub := parseSubmitted(gradables, answers)
 	core := grading.Grade(gradables, sub)
@@ -215,27 +231,69 @@ func (s *Service) finalize(ctx context.Context, exam *entity.Exam, attempt *enti
 	attempt.Status = target
 	attempt.SubmittedAt = &now
 	attempt.AnswersSnapshot = snapshotFor(answers, core)
-	if err := s.attempts.Update(ctx, attempt); err != nil {
-		return nil, err
+
+	claimed, err := s.attempts.ClaimForGrading(ctx, attempt)
+	if err != nil {
+		return nil, false, err
+	}
+	if !claimed {
+		// Lost the race — return the winner's graded result.
+		fresh, ferr := s.attempts.FindByID(ctx, attempt.ID, attempt.StudentID)
+		if ferr != nil {
+			return nil, false, ferr
+		}
+		res, gerr := s.gradeView(ctx, exam, fresh)
+		return res, false, gerr
 	}
 
 	if err := guard(attempt.Status, entity.AttemptGraded); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	score := core.Score
 	pct := core.Percentage
 	attempt.Score = &score
 	attempt.Percentage = &pct
 	if err := s.attempts.Grade(ctx, attempt); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	attempt.Status = entity.AttemptGraded
 
+	if s.ranking != nil {
+		_ = s.ranking.RecordExamScore(ctx, exam.ID, attempt.StudentID, core.Percentage)
+	}
 	_ = s.state.DeleteAttemptState(ctx, attempt.ID)
 
 	res := s.result(exam, attempt, core)
 	res.SubmittedAt = &now
-	return res, nil
+	return res, true, nil
+}
+
+// SweepExpired finalizes abandoned (in-progress, past-deadline) exam attempts so
+// the §9.2 server timer fires even without a client request. Called by the
+// background worker (Skill 4). Each is graded with its last Redis-saved answers;
+// the guarded claim makes a race with a late submit grade exactly once. Returns
+// the number of attempts graded this pass.
+func (s *Service) SweepExpired(ctx context.Context, now time.Time, limit int) (int, error) {
+	expired, err := s.attempts.ListExpired(ctx, now, limit)
+	if err != nil {
+		return 0, err
+	}
+	graded := 0
+	for _, attempt := range expired {
+		exam, err := s.exams.FindByID(ctx, attempt.ExamID)
+		if err != nil {
+			return graded, err
+		}
+		saved, _ := s.state.GetAnswers(ctx, attempt.ID)
+		_, claimed, err := s.finalize(ctx, exam, attempt, saved, entity.AttemptExpired)
+		if err != nil {
+			return graded, err
+		}
+		if claimed {
+			graded++
+		}
+	}
+	return graded, nil
 }
 
 // guard validates a state transition, returning INVALID_ATTEMPT_STATE on an
