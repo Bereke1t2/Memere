@@ -280,8 +280,35 @@ func (f *fakeExamAttemptRepo) ListByStudent(_ context.Context, studentID uuid.UU
 	return out, nil
 }
 
+// expiryLookup lets the fake compute deadlines from exam durations; set by the
+// harness so ListExpired can mirror the real JOIN on exams.duration_minutes.
+var expiryLookup func(examID uuid.UUID) (time.Duration, bool)
+
 func (f *fakeExamAttemptRepo) ListExpired(_ context.Context, now time.Time, limit int) ([]*entity.ExamAttempt, error) {
-	return nil, nil
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []*entity.ExamAttempt
+	for _, id := range f.order {
+		a := f.byID[id]
+		if a.Status != entity.AttemptInProgress {
+			continue
+		}
+		if expiryLookup == nil {
+			continue
+		}
+		dur, ok := expiryLookup(a.ExamID)
+		if !ok {
+			continue
+		}
+		if now.After(a.StartedAt.Add(dur)) {
+			cp := *a
+			out = append(out, &cp)
+			if len(out) >= limit {
+				break
+			}
+		}
+	}
+	return out, nil
 }
 
 func (f *fakeExamAttemptRepo) Update(_ context.Context, a *entity.ExamAttempt) error {
@@ -294,6 +321,33 @@ func (f *fakeExamAttemptRepo) Update(_ context.Context, a *entity.ExamAttempt) e
 	cp := *a
 	f.byID[a.ID] = &cp
 	return nil
+}
+
+func (f *fakeExamAttemptRepo) ClaimForGrading(_ context.Context, a *entity.ExamAttempt) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cur, ok := f.byID[a.ID]
+	if !ok {
+		return false, apperror.NotFound("exam attempt not found", nil)
+	}
+	if cur.Status != entity.AttemptInProgress {
+		return false, nil
+	}
+	cur.Status = a.Status
+	cur.AnswersSnapshot = a.AnswersSnapshot
+	cur.SubmittedAt = a.SubmittedAt
+	cur.UpdatedAt = time.Now()
+	cp := *cur
+	*a = cp
+	return true, nil
+}
+
+func (f *fakeExamAttemptRepo) ListGradedBySubject(context.Context, uuid.UUID, string) ([]*entity.ExamAttempt, error) {
+	return nil, nil
+}
+
+func (f *fakeExamAttemptRepo) Stats(context.Context, uuid.UUID) (repository.ExamAttemptStats, error) {
+	return repository.ExamAttemptStats{}, nil
 }
 
 func (f *fakeExamAttemptRepo) Grade(_ context.Context, a *entity.ExamAttempt) error {
