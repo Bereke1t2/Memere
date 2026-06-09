@@ -18,8 +18,11 @@
 #   bash scripts/smoke_phase2.sh
 #
 # Requires: curl, jq. Override target with BASE_URL (default :8080).
-# SWEEP_WAIT (default 80) is how long to poll for the sweeper to grade the
-# abandoned exam — must exceed the exam duration (1 min) + sweeper interval.
+# SWEEP_WAIT (default 80) is how long to wait QUIETLY (no reads) for the sweeper
+# to grade the abandoned exam — must exceed the exam duration (1 min) + the
+# sweeper interval. Run the server with SWEEPER_INTERVAL=5s to keep this short.
+# Set SERVER_LOG=<path to server stdout> for an airtight assertion that the
+# background sweeper (not the lazy-on-read path) graded the abandoned attempt.
 
 set -euo pipefail
 
@@ -173,7 +176,7 @@ req GET "/exams/${EXAM_ID}/stats" "" "$STUDENT_A"
 [[ "$HTTP_CODE" == "403" ]] || fail "student stats expected 403, got $HTTP_CODE ($BODY)"
 pass "student barred from exam stats (403)"
 
-echo "[15] SERVER TIMER via SWEEPER: abandon a 1-min exam, never submit"
+echo "[15] SERVER TIMER via SWEEPER: abandon a 1-min exam, never submit, never read"
 req POST "/courses/${COURSE_ID}/exams" "$(jq -nc '{title:"E2-timed", subject:"Math", grade:12, duration_minutes:1, pass_marks:1}')" "$TEACHER"
 [[ "$HTTP_CODE" == "201" ]] || fail "create timed exam expected 201, got $HTTP_CODE ($BODY)"
 TIMED_EXAM="$(jq -r '.id' <<<"$BODY")"
@@ -184,16 +187,29 @@ req POST "/exams/${TIMED_EXAM}/publish" "" "$TEACHER"
 req POST "/mock-exams/${TIMED_EXAM}/start" "" "$STUDENT_B"
 [[ "$HTTP_CODE" == "201" ]] || fail "start timed exam expected 201, got $HTTP_CODE ($BODY)"
 TIMED_ATTEMPT="$(jq -r '.attempt_id' <<<"$BODY")"
-note "abandoning attempt $TIMED_ATTEMPT; polling up to ${SWEEP_WAIT}s for the sweeper"
-graded=0
-for _ in $(seq 1 "$SWEEP_WAIT"); do
-  sleep 1
-  req GET "/exam-attempts/${TIMED_ATTEMPT}/results" "" "$STUDENT_B"
-  st="$(jq -r '.status' <<<"$BODY" 2>/dev/null || echo '')"
-  if [[ "$HTTP_CODE" == "200" && ( "$st" == "graded" || "$st" == "expired" ) ]]; then graded=1; break; fi
-done
-[[ "$graded" == "1" ]] || fail "sweeper did not auto-grade the abandoned attempt within ${SWEEP_WAIT}s"
-pass "sweeper auto-graded abandoned attempt (status=$st) with NO client submit"
+# CRITICAL: do NOT read the attempt while waiting. GetExamResult lazily finalizes
+# an expired in-progress attempt on read, which would grade it via the client
+# request path and mask whether the BACKGROUND sweeper actually fired. We wait
+# quietly past (duration + sweeper interval), so by the time we read it the only
+# thing that could have graded it with zero client calls is the sweeper.
+note "abandoning attempt $TIMED_ATTEMPT; waiting ${SWEEP_WAIT}s quietly (no reads)"
+sleep "$SWEEP_WAIT"
+# Optional airtight proof: if SERVER_LOG points at the server's stdout, assert the
+# sweeper logged the grading (the lazy-read path can't fire — we never read it).
+if [[ -n "${SERVER_LOG:-}" && -r "${SERVER_LOG}" ]]; then
+  grep -qi "graded .* expired attempt" "${SERVER_LOG}" \
+    && pass "server log confirms the sweeper graded expired attempt(s)" \
+    || fail "no sweeper grading line in ${SERVER_LOG} — sweeper did not fire"
+else
+  note "set SERVER_LOG=<path> to assert the sweeper grading line in the server log"
+fi
+# Confirm the attempt is now terminal. After the quiet wait the sweeper has run,
+# so this read is a confirmation, not the grader.
+req GET "/exam-attempts/${TIMED_ATTEMPT}/results" "" "$STUDENT_B"
+st="$(jq -r '.status' <<<"$BODY" 2>/dev/null || echo '')"
+[[ "$HTTP_CODE" == "200" && ( "$st" == "graded" || "$st" == "expired" ) ]] \
+  || fail "abandoned attempt not terminal after ${SWEEP_WAIT}s (code=$HTTP_CODE status=$st)"
+pass "abandoned attempt auto-graded (status=$st) with NO submit and NO read while waiting"
 
 echo ""
 echo "==> ALL PHASE 2 SMOKE CHECKS PASSED"
