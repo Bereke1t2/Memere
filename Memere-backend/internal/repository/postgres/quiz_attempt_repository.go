@@ -122,6 +122,26 @@ func (r *QuizAttemptRepo) Update(ctx context.Context, a *entity.QuizAttempt) err
 	return nil
 }
 
+// ClaimForGrading runs the conditional UPDATE ... WHERE status='in_progress'.
+// pgx.ErrNoRows means the row was already moved by another writer — reported as
+// claimed=false, not an error.
+func (r *QuizAttemptRepo) ClaimForGrading(ctx context.Context, a *entity.QuizAttempt) (bool, error) {
+	row, err := queriesFor(ctx, r.q).ClaimQuizAttemptForGrading(ctx, sqlcgen.ClaimQuizAttemptForGradingParams{
+		ID:              toPgUUID(a.ID),
+		Status:          string(a.Status),
+		AnswersSnapshot: toJSONB(a.AnswersSnapshot),
+		SubmittedAt:     toPgTimestamptz(a.SubmittedAt),
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, apperror.Internal(err)
+	}
+	*a = *quizAttemptFromRow(row)
+	return true, nil
+}
+
 func (r *QuizAttemptRepo) Grade(ctx context.Context, a *entity.QuizAttempt) error {
 	row, err := queriesFor(ctx, r.q).GradeQuizAttempt(ctx, sqlcgen.GradeQuizAttemptParams{
 		ID:         toPgUUID(a.ID),
