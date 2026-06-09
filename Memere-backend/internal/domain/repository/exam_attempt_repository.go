@@ -27,5 +27,23 @@ type ExamAttemptRepository interface {
 	// Update persists auto-save state and status transitions without touching the
 	// immutable started_at timer column.
 	Update(ctx context.Context, a *entity.ExamAttempt) error
+	// ClaimForGrading atomically transitions the attempt out of in_progress to
+	// a.Status (submitted/expired) ONLY if it is still in_progress, reporting
+	// claimed=false when a racing submit or the sweeper already moved it (race
+	// guard, spec §9.2).
+	ClaimForGrading(ctx context.Context, a *entity.ExamAttempt) (claimed bool, err error)
 	Grade(ctx context.Context, a *entity.ExamAttempt) error
+	// ListGradedBySubject returns the student's graded attempts for a subject,
+	// oldest first, for the §9.3 score trend.
+	ListGradedBySubject(ctx context.Context, studentID uuid.UUID, subject string) ([]*entity.ExamAttempt, error)
+	// Stats returns aggregate analytics for an exam (§9.3): graded attempt count,
+	// average percentage, and pass count (score >= the exam's pass_marks).
+	Stats(ctx context.Context, examID uuid.UUID) (ExamAttemptStats, error)
+}
+
+// ExamAttemptStats is the aggregate result behind GetExamStats (§9.3).
+type ExamAttemptStats struct {
+	TotalAttempts int
+	AvgPercentage float64
+	PassedCount   int
 }
