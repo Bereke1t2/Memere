@@ -39,7 +39,6 @@ func newHarness(t *testing.T) *harness {
 
 func (h *harness) advance(d time.Duration) { h.clock = h.clock.Add(d) }
 
-func teacher() *Actor { return &Actor{UserID: uuid.New(), Role: entity.RoleTeacher} }
 func student() *Actor { return &Actor{UserID: uuid.New(), Role: entity.RoleStudent} }
 
 func ptrInt(i int) *int       { return &i }

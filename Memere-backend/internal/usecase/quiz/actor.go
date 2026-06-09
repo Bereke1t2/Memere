@@ -24,10 +24,6 @@ type Actor struct {
 	Role   entity.Role
 }
 
-func (a *Actor) isAdmin() bool {
-	return a != nil && a.Role == entity.RoleAdmin
-}
-
 func (a *Actor) isTeacherOrAdmin() bool {
 	return a != nil && (a.Role == entity.RoleTeacher || a.Role == entity.RoleAdmin)
 }
