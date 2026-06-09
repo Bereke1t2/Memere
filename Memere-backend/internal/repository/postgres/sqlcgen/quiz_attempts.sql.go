@@ -11,6 +11,54 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const claimQuizAttemptForGrading = `-- name: ClaimQuizAttemptForGrading :one
+UPDATE courses.quiz_attempts
+SET status = $2,
+    answers_snapshot = $3,
+    submitted_at = $4
+WHERE id = $1 AND status = 'in_progress'
+RETURNING id, quiz_id, student_id, attempt_number, started_at, submitted_at, score, percentage, answers_snapshot, status, created_at, updated_at, question_order, expires_at, passed
+`
+
+type ClaimQuizAttemptForGradingParams struct {
+	ID              pgtype.UUID
+	Status          string
+	AnswersSnapshot []byte
+	SubmittedAt     pgtype.Timestamptz
+}
+
+// Race-safe transition out of in_progress (Non-Negotiable #2 server timer): the
+// WHERE status='in_progress' predicate means only the first writer (a late client
+// submit OR the background sweeper) flips the row; the loser matches no row and
+// no-ops. $2 is the target status ('submitted' or 'expired').
+func (q *Queries) ClaimQuizAttemptForGrading(ctx context.Context, arg ClaimQuizAttemptForGradingParams) (CoursesQuizAttempt, error) {
+	row := q.db.QueryRow(ctx, claimQuizAttemptForGrading,
+		arg.ID,
+		arg.Status,
+		arg.AnswersSnapshot,
+		arg.SubmittedAt,
+	)
+	var i CoursesQuizAttempt
+	err := row.Scan(
+		&i.ID,
+		&i.QuizID,
+		&i.StudentID,
+		&i.AttemptNumber,
+		&i.StartedAt,
+		&i.SubmittedAt,
+		&i.Score,
+		&i.Percentage,
+		&i.AnswersSnapshot,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.QuestionOrder,
+		&i.ExpiresAt,
+		&i.Passed,
+	)
+	return i, err
+}
+
 const countQuizAttempts = `-- name: CountQuizAttempts :one
 SELECT count(*) FROM courses.quiz_attempts
 WHERE student_id = $1 AND quiz_id = $2
