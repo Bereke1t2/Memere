@@ -105,6 +105,25 @@ func (r *ExamAttemptRepo) Update(ctx context.Context, a *entity.ExamAttempt) err
 	return nil
 }
 
+// ClaimForGrading runs the conditional UPDATE ... WHERE status='in_progress'.
+// pgx.ErrNoRows means another writer already moved the row — claimed=false.
+func (r *ExamAttemptRepo) ClaimForGrading(ctx context.Context, a *entity.ExamAttempt) (bool, error) {
+	row, err := queriesFor(ctx, r.q).ClaimExamAttemptForGrading(ctx, sqlcgen.ClaimExamAttemptForGradingParams{
+		ID:              toPgUUID(a.ID),
+		Status:          string(a.Status),
+		AnswersSnapshot: toJSONB(a.AnswersSnapshot),
+		SubmittedAt:     toPgTimestamptz(a.SubmittedAt),
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, apperror.Internal(err)
+	}
+	*a = *examAttemptFromRow(row)
+	return true, nil
+}
+
 func (r *ExamAttemptRepo) Grade(ctx context.Context, a *entity.ExamAttempt) error {
 	row, err := queriesFor(ctx, r.q).GradeExamAttempt(ctx, sqlcgen.GradeExamAttemptParams{
 		ID:         toPgUUID(a.ID),
@@ -116,6 +135,33 @@ func (r *ExamAttemptRepo) Grade(ctx context.Context, a *entity.ExamAttempt) erro
 	}
 	*a = *examAttemptFromRow(row)
 	return nil
+}
+
+func (r *ExamAttemptRepo) ListGradedBySubject(ctx context.Context, studentID uuid.UUID, subject string) ([]*entity.ExamAttempt, error) {
+	rows, err := queriesFor(ctx, r.q).ListGradedExamAttemptsBySubject(ctx, sqlcgen.ListGradedExamAttemptsBySubjectParams{
+		StudentID: toPgUUID(studentID),
+		Subject:   subject,
+	})
+	if err != nil {
+		return nil, apperror.Internal(err)
+	}
+	attempts := make([]*entity.ExamAttempt, len(rows))
+	for i, row := range rows {
+		attempts[i] = examAttemptFromRow(row)
+	}
+	return attempts, nil
+}
+
+func (r *ExamAttemptRepo) Stats(ctx context.Context, examID uuid.UUID) (repository.ExamAttemptStats, error) {
+	row, err := queriesFor(ctx, r.q).GetExamAttemptStats(ctx, toPgUUID(examID))
+	if err != nil {
+		return repository.ExamAttemptStats{}, apperror.Internal(err)
+	}
+	return repository.ExamAttemptStats{
+		TotalAttempts: int(row.TotalAttempts),
+		AvgPercentage: row.AvgPercentage,
+		PassedCount:   int(row.PassedCount),
+	}, nil
 }
 
 func mapExamAttemptErr(err error) error {
