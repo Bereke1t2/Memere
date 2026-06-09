@@ -28,6 +28,12 @@ type QuizAttemptRepository interface {
 	// Update persists auto-save state and status transitions (answers snapshot,
 	// status, submitted_at) without touching the immutable timer columns.
 	Update(ctx context.Context, a *entity.QuizAttempt) error
+	// ClaimForGrading atomically transitions the attempt out of in_progress to
+	// a.Status (submitted/expired), persisting its answers snapshot, ONLY if it is
+	// still in_progress. It reports claimed=false (without error) when another path
+	// — a racing client submit or the sweeper — already moved it, so callers can
+	// no-op rather than double-grade (race guard, spec §9.2).
+	ClaimForGrading(ctx context.Context, a *entity.QuizAttempt) (claimed bool, err error)
 	// Grade persists the final score/percentage/passed and flips status to graded.
 	Grade(ctx context.Context, a *entity.QuizAttempt) error
 }
