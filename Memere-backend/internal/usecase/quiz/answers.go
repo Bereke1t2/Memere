@@ -105,3 +105,15 @@ func snapshotFor(answers map[string]any, result AttemptResult) map[string]any {
 		"subject_breakdown": breakdown,
 	}
 }
+
+// answersFromSnapshot extracts the raw answers map persisted under "answers" in
+// answers_snapshot (the inverse of snapshotFor).
+func answersFromSnapshot(snapshot map[string]any) map[string]any {
+	if snapshot == nil {
+		return nil
+	}
+	if a, ok := snapshot["answers"].(map[string]any); ok {
+		return a
+	}
+	return nil
+}
