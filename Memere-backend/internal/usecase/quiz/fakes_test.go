@@ -303,6 +303,26 @@ func (f *fakeAttemptRepo) Update(_ context.Context, a *entity.QuizAttempt) error
 	return nil
 }
 
+func (f *fakeAttemptRepo) ClaimForGrading(_ context.Context, a *entity.QuizAttempt) (bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	cur, ok := f.byID[a.ID]
+	if !ok {
+		return false, apperror.NotFound("quiz attempt not found", nil)
+	}
+	// Guarded transition: only succeeds while the stored row is still in_progress.
+	if cur.Status != entity.AttemptInProgress {
+		return false, nil
+	}
+	cur.Status = a.Status
+	cur.AnswersSnapshot = a.AnswersSnapshot
+	cur.SubmittedAt = a.SubmittedAt
+	cur.UpdatedAt = time.Now()
+	cp := *cur
+	*a = cp
+	return true, nil
+}
+
 func (f *fakeAttemptRepo) Grade(_ context.Context, a *entity.QuizAttempt) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
