@@ -203,7 +203,8 @@ func (s *Service) SaveProgress(ctx context.Context, actor *Actor, attemptID uuid
 // using the server-only grading tree (never the client-reported score), persists
 // the snapshot + score/percentage/passed, transitions status to graded, and
 // clears the Redis state. If the deadline has already passed the attempt is
-// marked expired and graded with whatever answers exist (§9.2).
+// marked expired and graded with whatever answers exist (§9.2). If the background
+// sweeper finalized it first, the already-graded result is returned.
 func (s *Service) SubmitAttempt(ctx context.Context, actor *Actor, attemptID uuid.UUID, answers map[string]any) (*AttemptResult, error) {
 	if actor == nil {
 		return nil, apperror.Unauthorized("authentication required", nil)
@@ -212,41 +213,61 @@ func (s *Service) SubmitAttempt(ctx context.Context, actor *Actor, attemptID uui
 	if err != nil {
 		return nil, err
 	}
+	// Already finalized (e.g. the sweeper graded an expired attempt first): return
+	// the existing result rather than erroring, so a late client submit is benign.
 	if attempt.Status != entity.AttemptInProgress {
-		return nil, apperror.Conflict("attempt is not in progress", nil)
+		return s.GetAttemptResult(ctx, actor, attemptID)
 	}
 
-	quiz, err := s.quizzes.FindByID(ctx, attempt.QuizID)
+	saved, _ := s.state.GetAnswers(ctx, attemptID)
+	merged := mergeAnswers(saved, answers)
+
+	result, claimed, err := s.finalize(ctx, attempt, merged)
 	if err != nil {
 		return nil, err
+	}
+	if !claimed {
+		// The sweeper (or a concurrent submit) graded it first — return that result.
+		return s.GetAttemptResult(ctx, actor, attemptID)
+	}
+	return result, nil
+}
+
+// finalize grades an in-progress attempt and transitions it to graded, guarded so
+// that only one caller (this submit OR the sweeper) ever grades it. The first
+// writer to flip the row out of in_progress (ClaimForGrading) wins; a loser
+// returns claimed=false and grades nothing. Returns the result on success.
+func (s *Service) finalize(ctx context.Context, attempt *entity.QuizAttempt, answers map[string]any) (*AttemptResult, bool, error) {
+	quiz, err := s.quizzes.FindByID(ctx, attempt.QuizID)
+	if err != nil {
+		return nil, false, err
 	}
 	tree, err := s.quizzes.GetQuizWithQuestions(ctx, attempt.QuizID)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	// Merge Redis-saved answers (older) under the submit payload (newer).
-	saved, _ := s.state.GetAnswers(ctx, attemptID)
-	merged := mergeAnswers(saved, answers)
-	sub := parseSubmitted(tree.Questions, merged)
-
+	sub := parseSubmitted(tree.Questions, answers)
 	result := gradeQuiz(quiz, tree.Questions, sub)
 	result.AttemptID = attempt.ID
 	result.AttemptNumber = attempt.AttemptNumber
 
-	// Past the deadline → expired; otherwise a normal submission. Both end graded.
+	target := entity.AttemptSubmitted
 	if s.expired(attempt) {
-		result.Status = entity.AttemptExpired
-	} else {
-		result.Status = entity.AttemptSubmitted
+		target = entity.AttemptExpired
 	}
 
 	now := s.now()
-	attempt.AnswersSnapshot = snapshotFor(merged, result)
+	attempt.AnswersSnapshot = snapshotFor(answers, result)
 	attempt.SubmittedAt = &now
-	attempt.Status = result.Status
-	if err := s.attempts.Update(ctx, attempt); err != nil {
-		return nil, err
+	attempt.Status = target
+
+	claimed, err := s.attempts.ClaimForGrading(ctx, attempt)
+	if err != nil {
+		return nil, false, err
+	}
+	if !claimed {
+		return nil, false, nil
 	}
 
 	score := result.Score
@@ -256,13 +277,38 @@ func (s *Service) SubmitAttempt(ctx context.Context, actor *Actor, attemptID uui
 	attempt.Percentage = &pct
 	attempt.Passed = &passed
 	if err := s.attempts.Grade(ctx, attempt); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	result.Status = entity.AttemptGraded
 	result.SubmittedAt = attempt.SubmittedAt
 
-	_ = s.state.DeleteAttemptState(ctx, attemptID)
-	return &result, nil
+	_ = s.state.DeleteAttemptState(ctx, attempt.ID)
+	return &result, true, nil
+}
+
+// SweepExpired finalizes abandoned (in-progress, past-deadline) attempts so the
+// §9.2 "server timer fires" rule holds even when no client request arrives. It
+// is called by the background worker (Skill 4). Each attempt is graded with its
+// last Redis-saved answers (the PG snapshot is empty until finalize). Already-
+// finalized rows are skipped via the guarded claim, so a race with a late client
+// submit grades exactly once. Returns the number of attempts graded this pass.
+func (s *Service) SweepExpired(ctx context.Context, now time.Time, limit int) (int, error) {
+	expired, err := s.attempts.ListExpired(ctx, now, limit)
+	if err != nil {
+		return 0, err
+	}
+	graded := 0
+	for _, attempt := range expired {
+		saved, _ := s.state.GetAnswers(ctx, attempt.ID)
+		_, claimed, err := s.finalize(ctx, attempt, saved)
+		if err != nil {
+			return graded, err
+		}
+		if claimed {
+			graded++
+		}
+	}
+	return graded, nil
 }
 
 // GetAttemptResult returns the graded result for one of the actor's own
@@ -287,7 +333,9 @@ func (s *Service) GetAttemptResult(ctx context.Context, actor *Actor, attemptID 
 	if err != nil {
 		return nil, err
 	}
-	sub := parseSubmitted(tree.Questions, attempt.AnswersSnapshot)
+	// The persisted snapshot wraps the answers under "answers"; grade those, not
+	// the wrapper.
+	sub := parseSubmitted(tree.Questions, answersFromSnapshot(attempt.AnswersSnapshot))
 	result := gradeQuiz(quiz, tree.Questions, sub)
 	result.AttemptID = attempt.ID
 	result.AttemptNumber = attempt.AttemptNumber
