@@ -11,6 +11,49 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const claimExamAttemptForGrading = `-- name: ClaimExamAttemptForGrading :one
+UPDATE courses.exam_attempts
+SET status = $2,
+    answers_snapshot = $3,
+    submitted_at = $4
+WHERE id = $1 AND status = 'in_progress'
+RETURNING id, exam_id, student_id, started_at, submitted_at, score, percentage, answers_snapshot, status, created_at, updated_at
+`
+
+type ClaimExamAttemptForGradingParams struct {
+	ID              pgtype.UUID
+	Status          string
+	AnswersSnapshot []byte
+	SubmittedAt     pgtype.Timestamptz
+}
+
+// Race-safe transition out of in_progress (spec §9.2): WHERE status='in_progress'
+// ensures only the first writer (late client submit OR sweeper) flips the row;
+// the loser matches no row and no-ops. $2 is 'submitted' or 'expired'.
+func (q *Queries) ClaimExamAttemptForGrading(ctx context.Context, arg ClaimExamAttemptForGradingParams) (CoursesExamAttempt, error) {
+	row := q.db.QueryRow(ctx, claimExamAttemptForGrading,
+		arg.ID,
+		arg.Status,
+		arg.AnswersSnapshot,
+		arg.SubmittedAt,
+	)
+	var i CoursesExamAttempt
+	err := row.Scan(
+		&i.ID,
+		&i.ExamID,
+		&i.StudentID,
+		&i.StartedAt,
+		&i.SubmittedAt,
+		&i.Score,
+		&i.Percentage,
+		&i.AnswersSnapshot,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createExamAttempt = `-- name: CreateExamAttempt :one
 INSERT INTO courses.exam_attempts (
     exam_id, student_id, answers_snapshot, status
@@ -162,6 +205,31 @@ func (q *Queries) GetExamAttemptByID(ctx context.Context, arg GetExamAttemptByID
 	return i, err
 }
 
+const getExamAttemptStats = `-- name: GetExamAttemptStats :one
+SELECT
+    count(*)                                                   AS total_attempts,
+    coalesce(avg(a.percentage), 0)::float8                     AS avg_percentage,
+    count(*) FILTER (WHERE a.score >= e.pass_marks)            AS passed_count
+FROM courses.exam_attempts a
+JOIN courses.exams e ON e.id = a.exam_id
+WHERE a.exam_id = $1 AND a.status = 'graded'
+`
+
+type GetExamAttemptStatsRow struct {
+	TotalAttempts int64
+	AvgPercentage float64
+	PassedCount   int64
+}
+
+// Teacher/admin exam stats (§9.3): how many graded attempts, the average
+// percentage, and how many passed (score >= the exam's pass_marks).
+func (q *Queries) GetExamAttemptStats(ctx context.Context, examID pgtype.UUID) (GetExamAttemptStatsRow, error) {
+	row := q.db.QueryRow(ctx, getExamAttemptStats, examID)
+	var i GetExamAttemptStatsRow
+	err := row.Scan(&i.TotalAttempts, &i.AvgPercentage, &i.PassedCount)
+	return i, err
+}
+
 const gradeExamAttempt = `-- name: GradeExamAttempt :one
 UPDATE courses.exam_attempts
 SET score = $2,
@@ -205,6 +273,54 @@ ORDER BY started_at DESC
 
 func (q *Queries) ListExamAttemptsByStudent(ctx context.Context, studentID pgtype.UUID) ([]CoursesExamAttempt, error) {
 	rows, err := q.db.Query(ctx, listExamAttemptsByStudent, studentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CoursesExamAttempt{}
+	for rows.Next() {
+		var i CoursesExamAttempt
+		if err := rows.Scan(
+			&i.ID,
+			&i.ExamID,
+			&i.StudentID,
+			&i.StartedAt,
+			&i.SubmittedAt,
+			&i.Score,
+			&i.Percentage,
+			&i.AnswersSnapshot,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listGradedExamAttemptsBySubject = `-- name: ListGradedExamAttemptsBySubject :many
+SELECT a.id, a.exam_id, a.student_id, a.started_at, a.submitted_at, a.score, a.percentage, a.answers_snapshot, a.status, a.created_at, a.updated_at FROM courses.exam_attempts a
+JOIN courses.exams e ON e.id = a.exam_id
+WHERE a.student_id = $1
+  AND e.subject = $2
+  AND a.status = 'graded'
+ORDER BY a.submitted_at ASC, a.started_at ASC
+`
+
+type ListGradedExamAttemptsBySubjectParams struct {
+	StudentID pgtype.UUID
+	Subject   string
+}
+
+// Score trend (§9.3): a student's graded attempts for a subject, oldest first, so
+// the caller can plot score over consecutive attempts. Joins exams for subject.
+func (q *Queries) ListGradedExamAttemptsBySubject(ctx context.Context, arg ListGradedExamAttemptsBySubjectParams) ([]CoursesExamAttempt, error) {
+	rows, err := q.db.Query(ctx, listGradedExamAttemptsBySubject, arg.StudentID, arg.Subject)
 	if err != nil {
 		return nil, err
 	}
