@@ -377,6 +377,84 @@ func TestRedisState_SetOnStart_SavedOnSave_ClearedOnSubmit(t *testing.T) {
 	}
 }
 
+// --- sweeper + race guard -----------------------------------------------------
+
+func TestSweepExpired_GradesAbandonedAttempt(t *testing.T) {
+	h := newHarness(t)
+	quiz := h.seedQuiz(ptrInt(60), nil, false) // 60s limit
+	stu := student()
+
+	v, _ := h.svc.StartAttempt(context.Background(), stu, quiz.ID)
+	// Student auto-saved a correct answer, then abandoned the app.
+	c0 := h.correctAnswerID(quiz.ID, 0)
+	_ = h.svc.SaveProgress(context.Background(), stu, v.AttemptID, map[string]any{
+		v.Questions[idxOf(v, c0)].ID.String(): selected(c0),
+	})
+
+	h.advance(2 * time.Minute) // deadline passes; no client request arrives
+
+	n, err := h.svc.SweepExpired(context.Background(), h.clock, 100)
+	if err != nil {
+		t.Fatalf("SweepExpired: %v", err)
+	}
+	if n != 1 {
+		t.Fatalf("want 1 attempt swept, got %d", n)
+	}
+	stored, _ := h.attempts.FindByID(context.Background(), v.AttemptID, stu.UserID)
+	if stored.Status != entity.AttemptGraded {
+		t.Errorf("abandoned attempt status = %v, want graded", stored.Status)
+	}
+	if stored.Score == nil || *stored.Score != 1 {
+		t.Errorf("auto-saved answer should score 1; got %v", stored.Score)
+	}
+}
+
+func TestSweepExpired_SkipsAlreadyGraded(t *testing.T) {
+	h := newHarness(t)
+	quiz := h.seedQuiz(ptrInt(60), nil, false)
+	stu := student()
+	v, _ := h.svc.StartAttempt(context.Background(), stu, quiz.ID)
+	if _, err := h.svc.SubmitAttempt(context.Background(), stu, v.AttemptID, map[string]any{}); err != nil {
+		t.Fatalf("submit: %v", err)
+	}
+	h.advance(2 * time.Minute)
+
+	n, err := h.svc.SweepExpired(context.Background(), h.clock, 100)
+	if err != nil {
+		t.Fatalf("SweepExpired: %v", err)
+	}
+	if n != 0 {
+		t.Errorf("already-graded attempt must not be re-swept; graded %d", n)
+	}
+}
+
+func TestSubmitVsSweep_GradesExactlyOnce(t *testing.T) {
+	h := newHarness(t)
+	quiz := h.seedQuiz(ptrInt(60), nil, false)
+	stu := student()
+	v, _ := h.svc.StartAttempt(context.Background(), stu, quiz.ID)
+	h.advance(2 * time.Minute) // both paths now see it as expired
+
+	// The sweeper finalizes it first.
+	n, err := h.svc.SweepExpired(context.Background(), h.clock, 100)
+	if err != nil || n != 1 {
+		t.Fatalf("sweep: n=%d err=%v", n, err)
+	}
+	// A late client submit must NOT re-grade — it returns the existing result.
+	res, err := h.svc.SubmitAttempt(context.Background(), stu, v.AttemptID, map[string]any{})
+	if err != nil {
+		t.Fatalf("late submit should return the graded result, got error %v", err)
+	}
+	if res.Status != entity.AttemptGraded {
+		t.Errorf("late submit status = %v, want graded", res.Status)
+	}
+	// Exactly one grading: the attempt is graded once and the count never doubled.
+	stored, _ := h.attempts.FindByID(context.Background(), v.AttemptID, stu.UserID)
+	if stored.Status != entity.AttemptGraded {
+		t.Errorf("stored status = %v, want graded", stored.Status)
+	}
+}
+
 // --- helpers ------------------------------------------------------------------
 
 func (h *harness) wrongAnswerID(quizID uuid.UUID, qi int) uuid.UUID {
