@@ -51,6 +51,18 @@ SET answers_snapshot = $2,
 WHERE id = $1
 RETURNING *;
 
+-- name: ClaimQuizAttemptForGrading :one
+-- Race-safe transition out of in_progress (Non-Negotiable #2 server timer): the
+-- WHERE status='in_progress' predicate means only the first writer (a late client
+-- submit OR the background sweeper) flips the row; the loser matches no row and
+-- no-ops. $2 is the target status ('submitted' or 'expired').
+UPDATE courses.quiz_attempts
+SET status = $2,
+    answers_snapshot = $3,
+    submitted_at = $4
+WHERE id = $1 AND status = 'in_progress'
+RETURNING *;
+
 -- name: GradeQuizAttempt :one
 UPDATE courses.quiz_attempts
 SET score = $2,
