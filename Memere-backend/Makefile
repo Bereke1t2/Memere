@@ -1,4 +1,4 @@
-.PHONY: run build tidy lint test up down migrate-up migrate-down migrate-create sqlc
+.PHONY: run build tidy lint test up down migrate-up migrate-down migrate-create sqlc minio-bucket
 
 # Auto-load .env so config.Load() (which reads the process environment) sees
 # DB_HOST, JWT_SECRET, etc. without the caller exporting them by hand. The
@@ -54,3 +54,10 @@ migrate-create:
 # global install is required.
 sqlc:
 	go tool sqlc generate
+
+# minio-bucket creates the dev media bucket in the running MinIO (make up first)
+# and ensures it is private (no anonymous access — Non-Negotiable #3).
+minio-bucket:
+	docker run --rm --network host --entrypoint sh minio/mc -c \
+	 'mc alias set local http://localhost:9000 $(AWS_ACCESS_KEY_ID) $(AWS_SECRET_ACCESS_KEY) && \
+	  mc mb -p local/$(AWS_S3_BUCKET) && mc anonymous set none local/$(AWS_S3_BUCKET)'
