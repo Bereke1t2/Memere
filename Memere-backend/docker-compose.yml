@@ -35,6 +35,26 @@ services:
       timeout: 5s
       retries: 5
 
+  # MinIO — S3-compatible object store for local video dev (Phase 3). Production
+  # uses real AWS S3 + CloudFront. Create the bucket once with `make minio-bucket`.
+  minio:
+    image: minio/minio:latest
+    container_name: memere_minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    # No healthcheck: the minio/minio server image ships neither curl nor a
+    # preconfigured mc alias, so the usual probes false-report "unhealthy".
+    # Readiness is confirmed out-of-band by `make minio-bucket`.
+
 volumes:
   pgdata:
   redisdata:
+  minio_data:
