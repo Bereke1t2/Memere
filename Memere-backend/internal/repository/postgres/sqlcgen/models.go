@@ -199,6 +199,10 @@ type CoursesVideo struct {
 	FileSizeBytes      int64
 	CreatedAt          pgtype.Timestamptz
 	UpdatedAt          pgtype.Timestamptz
+	CourseID           pgtype.UUID
+	ProcessingError    *string
+	ProcessedAt        pgtype.Timestamptz
+	DeletedAt          pgtype.Timestamptz
 }
 
 type PaymentsCoupon struct {
