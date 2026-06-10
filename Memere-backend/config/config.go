@@ -19,6 +19,7 @@ type Config struct {
 	JWT     JWTConfig
 	HTTP    HTTPConfig
 	Sweeper SweeperConfig
+	Storage StorageConfig
 
 	// Reserved for later phases (not required to boot in Phase 1).
 	AWS      AWSConfig
@@ -98,6 +99,29 @@ type HTTPConfig struct {
 type SweeperConfig struct {
 	Enabled  bool          `envconfig:"SWEEPER_ENABLED" default:"true"`
 	Interval time.Duration `envconfig:"SWEEPER_INTERVAL" default:"60s"`
+}
+
+// StorageConfig groups object-storage settings for the Phase 3 video pipeline
+// (spec §3.3, §8). The same shape serves AWS S3 in production and MinIO in local
+// dev (Endpoint + UsePathStyle set). Bucket is intentionally NOT required so the
+// API still boots when video is unconfigured; the S3 store validates it at
+// construction and the upload usecase fails clearly if it is empty.
+type StorageConfig struct {
+	Provider        string `envconfig:"STORAGE_PROVIDER" default:"s3"` // s3 | minio
+	Endpoint        string `envconfig:"S3_ENDPOINT"`                   // empty for AWS; set for MinIO
+	Region          string `envconfig:"AWS_REGION" default:"af-south-1"`
+	Bucket          string `envconfig:"AWS_S3_BUCKET" default:"memere-media"`
+	AccessKeyID     string `envconfig:"AWS_ACCESS_KEY_ID"`
+	SecretAccessKey string `envconfig:"AWS_SECRET_ACCESS_KEY"`
+	UsePathStyle    bool   `envconfig:"S3_USE_PATH_STYLE" default:"false"` // true for MinIO
+
+	UploadURLTTL   time.Duration `envconfig:"UPLOAD_URL_TTL" default:"15m"`
+	StreamURLTTL   time.Duration `envconfig:"STREAM_URL_TTL" default:"2h"` // spec §8.3: 2h
+	DownloadURLTTL time.Duration `envconfig:"DOWNLOAD_URL_TTL" default:"2h"`
+
+	CDNDomain        string `envconfig:"CDN_DOMAIN"`          // e.g. dxxxx.cloudfront.net
+	CDNKeyPairID     string `envconfig:"CDN_KEY_PAIR_ID"`     // CloudFront signing
+	CDNPrivateKeyPEM string `envconfig:"CDN_PRIVATE_KEY_PEM"` // PEM contents (or path)
 }
 
 type AWSConfig struct {
