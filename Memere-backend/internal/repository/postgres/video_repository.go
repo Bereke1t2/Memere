@@ -32,7 +32,12 @@ func (r *VideoRepo) Create(ctx context.Context, v *entity.Video) error {
 	if status == "" {
 		status = entity.VideoPending
 	}
+	id := v.ID
+	if id == uuid.Nil {
+		id = uuid.New()
+	}
 	row, err := queriesFor(ctx, r.q).CreateVideo(ctx, sqlcgen.CreateVideoParams{
+		ID:               toPgUUID(id),
 		LessonID:         toPgUUID(v.LessonID),
 		CourseID:         toPgUUID(v.CourseID),
 		ProcessingStatus: string(status),

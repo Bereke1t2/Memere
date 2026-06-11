@@ -13,11 +13,12 @@ import (
 
 const createVideo = `-- name: CreateVideo :one
 INSERT INTO courses.videos (id, lesson_id, course_id, processing_status, original_file_key, file_size_bytes)
-VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id, lesson_id, original_file_key, hls_master_key, processing_status, duration_seconds, resolution_480p_key, resolution_720p_key, resolution_1080p_key, thumbnail_key, file_size_bytes, created_at, updated_at, course_id, processing_error, processed_at, deleted_at
 `
 
 type CreateVideoParams struct {
+	ID               pgtype.UUID
 	LessonID         pgtype.UUID
 	CourseID         pgtype.UUID
 	ProcessingStatus string
@@ -25,8 +26,13 @@ type CreateVideoParams struct {
 	FileSizeBytes    int64
 }
 
+// CreateVideo inserts a pending video. The id is supplied by the application
+// (not gen_random_uuid()) because the upload usecase must embed it in the
+// storage-key path before the row exists; honoring it keeps the returned id, the
+// key path, and the row consistent.
 func (q *Queries) CreateVideo(ctx context.Context, arg CreateVideoParams) (CoursesVideo, error) {
 	row := q.db.QueryRow(ctx, createVideo,
+		arg.ID,
 		arg.LessonID,
 		arg.CourseID,
 		arg.ProcessingStatus,

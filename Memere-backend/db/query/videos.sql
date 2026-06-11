@@ -1,6 +1,10 @@
+-- CreateVideo inserts a pending video. The id is supplied by the application
+-- (not gen_random_uuid()) because the upload usecase must embed it in the
+-- storage-key path before the row exists; honoring it keeps the returned id, the
+-- key path, and the row consistent.
 -- name: CreateVideo :one
 INSERT INTO courses.videos (id, lesson_id, course_id, processing_status, original_file_key, file_size_bytes)
-VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *;
 
 -- name: GetVideoByID :one
