@@ -133,6 +133,11 @@ type VideoConfig struct {
 	MaxUploadBytes int64 `envconfig:"MAX_UPLOAD_BYTES" default:"2147483648"` // 2 GiB
 	QueueBuffer    int   `envconfig:"TRANSCODE_QUEUE_BUFFER" default:"64"`
 	MaxAttempts    int   `envconfig:"TRANSCODE_MAX_ATTEMPTS" default:"3"`
+	// Concurrency bounds parallel ffmpeg runs; 0 means the worker picks
+	// min(2, NumCPU). WorkDir is the scratch space for downloads/outputs; empty
+	// means os.TempDir()/memere-transcode.
+	Concurrency int    `envconfig:"TRANSCODE_CONCURRENCY" default:"0"`
+	WorkDir     string `envconfig:"TRANSCODE_WORKDIR"`
 }
 
 type AWSConfig struct {
