@@ -16,6 +16,10 @@ type VideoRepository interface {
 	GetByLessonID(ctx context.Context, lessonID uuid.UUID) (*entity.Video, error)
 	// SetReady writes the transcode outputs and flips status to ready.
 	SetReady(ctx context.Context, v *entity.Video) error
+	// SetError records a (truncated, secret-free) processing error message for a
+	// video whose transcode failed. It does not change status; the caller flips
+	// to failed via the guarded UpdateStatus.
+	SetError(ctx context.Context, id uuid.UUID, msg string) error
 	// UpdateStatus is a guarded transition: it only flips when the current
 	// status still equals from, returning false (not an error) otherwise so two
 	// workers can race for the same row safely.

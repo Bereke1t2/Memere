@@ -85,6 +85,16 @@ func (r *VideoRepo) SetReady(ctx context.Context, v *entity.Video) error {
 	return nil
 }
 
+func (r *VideoRepo) SetError(ctx context.Context, id uuid.UUID, msg string) error {
+	if err := queriesFor(ctx, r.q).SetVideoError(ctx, sqlcgen.SetVideoErrorParams{
+		ID:              toPgUUID(id),
+		ProcessingError: &msg,
+	}); err != nil {
+		return apperror.Internal(err)
+	}
+	return nil
+}
+
 // UpdateStatus runs the guarded transition. A 0-row result means another writer
 // already moved the row — reported as ok=false, not an error.
 func (r *VideoRepo) UpdateStatus(ctx context.Context, id uuid.UUID, from, to entity.VideoStatus) (bool, error) {
