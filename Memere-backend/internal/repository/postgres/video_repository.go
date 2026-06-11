@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
@@ -39,6 +40,12 @@ func (r *VideoRepo) Create(ctx context.Context, v *entity.Video) error {
 		FileSizeBytes:    v.FileSizeBytes,
 	})
 	if err != nil {
+		// The partial unique index videos_lesson_id_uniq enforces one live
+		// video per lesson; a violation means the lesson already has one.
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == uniqueViolation {
+			return apperror.Conflict("VIDEO_EXISTS", err)
+		}
 		return apperror.Internal(err)
 	}
 	*v = *videoFromRow(row)
