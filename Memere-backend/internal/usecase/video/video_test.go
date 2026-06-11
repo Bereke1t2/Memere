@@ -16,8 +16,11 @@ type harness struct {
 	svc     *Service
 	videos  *fakeVideoRepo
 	courses *fakeCourseRepo
+	lessons *fakeLessonRepo
 	store   *fakeStore
 	queue   *fakeQueue
+	signer  *fakeSigner
+	tokens  *fakeTokens
 
 	teacherID uuid.UUID
 	courseID  uuid.UUID
@@ -38,12 +41,21 @@ func newHarness() *harness {
 	videos := newFakeVideoRepo()
 	store := newFakeStore()
 	queue := &fakeQueue{}
+	signer := newFakeSigner()
+	tokens := newFakeTokens()
 
-	cfg := Config{UploadURLTTL: 15 * time.Minute, MaxUploadBytes: 100, MaxAttempts: 3}
-	svc := NewService(videos, lessons, courses, store, queue, cfg)
+	cfg := Config{
+		UploadURLTTL:   15 * time.Minute,
+		MaxUploadBytes: 100,
+		MaxAttempts:    3,
+		StreamURLTTL:   2 * time.Hour,
+		DownloadURLTTL: 2 * time.Hour,
+	}
+	svc := NewService(videos, lessons, courses, store, queue, signer, tokens, cfg)
 
 	return &harness{
-		svc: svc, videos: videos, courses: courses, store: store, queue: queue,
+		svc: svc, videos: videos, courses: courses, lessons: lessons, store: store, queue: queue,
+		signer: signer, tokens: tokens,
 		teacherID: teacherID, courseID: courseID, lessonID: lessonID,
 	}
 }

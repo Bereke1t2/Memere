@@ -22,6 +22,8 @@ type Config struct {
 	UploadURLTTL   time.Duration // pre-signed PUT lifetime
 	MaxUploadBytes int64         // reject larger requests before any DB write
 	MaxAttempts    int           // transcode retry budget carried on the job
+	StreamURLTTL   time.Duration // signed HLS master lifetime (spec §8.3: ~2h)
+	DownloadURLTTL time.Duration // signed download lifetime + token TTL (~2h)
 }
 
 // Service orchestrates the video upload pipeline over domain ports.
@@ -31,19 +33,35 @@ type Service struct {
 	courses repository.CourseRepository
 	store   service.ObjectStore
 	queue   service.JobQueue
+	signer  service.URLSigner
+	tokens  service.DownloadTokens
 	cfg     Config
 }
 
-// NewService wires the video usecase with its dependencies.
+// NewService wires the video usecase with its dependencies. signer and tokens
+// power the secure-delivery flow (Skill 4); they may be nil in setups that only
+// exercise the upload pipeline, in which case the delivery methods return an
+// internal error rather than panicking.
 func NewService(
 	videos repository.VideoRepository,
 	lessons repository.LessonRepository,
 	courses repository.CourseRepository,
 	store service.ObjectStore,
 	queue service.JobQueue,
+	signer service.URLSigner,
+	tokens service.DownloadTokens,
 	cfg Config,
 ) *Service {
-	return &Service{videos: videos, lessons: lessons, courses: courses, store: store, queue: queue, cfg: cfg}
+	return &Service{
+		videos:  videos,
+		lessons: lessons,
+		courses: courses,
+		store:   store,
+		queue:   queue,
+		signer:  signer,
+		tokens:  tokens,
+		cfg:     cfg,
+	}
 }
 
 // allowedVideoTypes is the whitelist of source container types a teacher may

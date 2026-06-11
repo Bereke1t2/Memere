@@ -3,6 +3,8 @@ package video
 import (
 	"context"
 	"errors"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -237,3 +239,68 @@ func (f *fakeQueue) count() int {
 }
 
 var errEnqueue = errors.New("queue unavailable")
+
+// fakeSigner records the (key, ttl) of every SignGet and returns a deterministic
+// URL embedding both, so tests can assert which key was signed and that the
+// expiry matches the configured TTL. signErr forces a failure.
+type fakeSigner struct {
+	mu      sync.Mutex
+	signed  []signedCall
+	signErr error
+}
+
+type signedCall struct {
+	key string
+	ttl time.Duration
+}
+
+func newFakeSigner() *fakeSigner { return &fakeSigner{} }
+
+func (f *fakeSigner) SignGet(_ context.Context, key string, ttl time.Duration) (string, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.signErr != nil {
+		return "", f.signErr
+	}
+	f.signed = append(f.signed, signedCall{key: key, ttl: ttl})
+	return "https://cdn.test/" + key + "?Expires=" + strconv.Itoa(int(ttl.Seconds())), nil
+}
+
+func (f *fakeSigner) lastTTL() time.Duration {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(f.signed) == 0 {
+		return 0
+	}
+	return f.signed[len(f.signed)-1].ttl
+}
+
+// fakeTokens is an in-memory DownloadTokens. Consume mirrors Redis GETDEL: it
+// returns the bound pair once, then misses on every later call.
+type fakeTokens struct {
+	mu     sync.Mutex
+	byTok  map[string]string // token -> "videoID|userID"
+	issued int
+}
+
+func newFakeTokens() *fakeTokens { return &fakeTokens{byTok: map[string]string{}} }
+
+func (f *fakeTokens) Issue(_ context.Context, token, videoID, userID string, _ time.Duration) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.byTok[token] = videoID + "|" + userID
+	f.issued++
+	return nil
+}
+
+func (f *fakeTokens) Consume(_ context.Context, token string) (string, string, bool, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	val, ok := f.byTok[token]
+	if !ok {
+		return "", "", false, nil
+	}
+	delete(f.byTok, token)
+	vid, uid, _ := strings.Cut(val, "|")
+	return vid, uid, true, nil
+}
