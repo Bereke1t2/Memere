@@ -86,6 +86,15 @@ func (f *fakeVideoRepo) SetReady(_ context.Context, v *entity.Video) error {
 	return nil
 }
 
+func (f *fakeVideoRepo) SetError(_ context.Context, id uuid.UUID, msg string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if v, ok := f.byID[id]; ok {
+		v.ProcessingError = &msg
+	}
+	return nil
+}
+
 func (f *fakeVideoRepo) UpdateStatus(_ context.Context, id uuid.UUID, from, to entity.VideoStatus) (bool, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
