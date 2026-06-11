@@ -163,13 +163,29 @@ func (q *Queries) ListVideosByStatus(ctx context.Context, arg ListVideosByStatus
 	return items, nil
 }
 
+const setVideoError = `-- name: SetVideoError :exec
+UPDATE courses.videos
+SET processing_error = $2, updated_at = now()
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+type SetVideoErrorParams struct {
+	ID              pgtype.UUID
+	ProcessingError *string
+}
+
+func (q *Queries) SetVideoError(ctx context.Context, arg SetVideoErrorParams) error {
+	_, err := q.db.Exec(ctx, setVideoError, arg.ID, arg.ProcessingError)
+	return err
+}
+
 const setVideoReady = `-- name: SetVideoReady :one
 UPDATE courses.videos
 SET processing_status = 'ready',
     hls_master_key = $2, resolution_480p_key = $3, resolution_720p_key = $4,
     resolution_1080p_key = $5, thumbnail_key = $6, duration_seconds = $7,
     processed_at = now(), updated_at = now()
-WHERE id = $1 AND deleted_at IS NULL
+WHERE id = $1 AND processing_status = 'processing' AND deleted_at IS NULL
 RETURNING id, lesson_id, original_file_key, hls_master_key, processing_status, duration_seconds, resolution_480p_key, resolution_720p_key, resolution_1080p_key, thumbnail_key, file_size_bytes, created_at, updated_at, course_id, processing_error, processed_at, deleted_at
 `
 
@@ -183,6 +199,10 @@ type SetVideoReadyParams struct {
 	DurationSeconds    int32
 }
 
+// SetVideoReady is guarded on the processing status so a video can only reach
+// ready (atomically, with all its keys) from processing. A second/duplicate
+// worker finds 0 rows (RETURNING empty -> ErrNoRows) and cannot double-ready or
+// overwrite a finalized row.
 func (q *Queries) SetVideoReady(ctx context.Context, arg SetVideoReadyParams) (CoursesVideo, error) {
 	row := q.db.QueryRow(ctx, setVideoReady,
 		arg.ID,

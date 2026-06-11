@@ -17,14 +17,23 @@ UPDATE courses.videos
 SET processing_status = @to_status, updated_at = now()
 WHERE id = @id AND processing_status = @from_status AND deleted_at IS NULL;
 
+-- SetVideoReady is guarded on the processing status so a video can only reach
+-- ready (atomically, with all its keys) from processing. A second/duplicate
+-- worker finds 0 rows (RETURNING empty -> ErrNoRows) and cannot double-ready or
+-- overwrite a finalized row.
 -- name: SetVideoReady :one
 UPDATE courses.videos
 SET processing_status = 'ready',
     hls_master_key = $2, resolution_480p_key = $3, resolution_720p_key = $4,
     resolution_1080p_key = $5, thumbnail_key = $6, duration_seconds = $7,
     processed_at = now(), updated_at = now()
-WHERE id = $1 AND deleted_at IS NULL
+WHERE id = $1 AND processing_status = 'processing' AND deleted_at IS NULL
 RETURNING *;
+
+-- name: SetVideoError :exec
+UPDATE courses.videos
+SET processing_error = $2, updated_at = now()
+WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: ListVideosByStatus :many
 SELECT * FROM courses.videos
