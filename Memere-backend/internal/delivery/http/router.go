@@ -24,6 +24,7 @@ type Deps struct {
 	Quizzes   *QuizHandler
 	Exams     *ExamHandler
 	Analytics *AnalyticsHandler
+	Video     *VideoHandler
 }
 
 // NewRouter assembles the Gin engine: the global middleware stack (in order),
@@ -126,6 +127,24 @@ func NewRouter(deps Deps) *gin.Engine {
 
 	// Student self-analytics.
 	v1.GET("/me/trend", requireAuth, deps.Analytics.Trend)
+
+	// Video pipeline (Phase 3). Reads (status/stream/download) require an
+	// authenticated caller; access control (owner/admin or free/preview student)
+	// is enforced in the usecase. Mutations are gated to teacher/admin by role,
+	// with course ownership checked in the usecase.
+	if deps.Video != nil {
+		videos := v1.Group("/videos")
+		{
+			videos.GET("/:id/status", requireAuth, deps.Video.Status)
+			videos.GET("/:id/stream", requireAuth, deps.Video.Stream)
+			videos.GET("/:id/download-url", requireAuth, deps.Video.DownloadURL)
+			videos.GET("/download/:token", requireAuth, deps.Video.ConsumeDownload)
+
+			videos.POST("/:id/confirm", requireAuth, teacherOrAdmin, deps.Video.Confirm)
+			videos.POST("/:id/retry", requireAuth, teacherOrAdmin, deps.Video.Retry)
+		}
+		v1.POST("/lessons/:id/videos/upload-url", requireAuth, teacherOrAdmin, deps.Video.RequestUpload)
+	}
 
 	return r
 }

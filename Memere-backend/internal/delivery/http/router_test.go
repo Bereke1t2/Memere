@@ -60,3 +60,42 @@ func TestNewRouter_RegistersPhase2Routes(t *testing.T) {
 		}
 	}
 }
+
+// TestNewRouter_RegistersPhase3VideoRoutes verifies the video pipeline routes
+// assemble without a panic — in particular that the static segment "download"
+// and the ":id" param coexist at the same /videos level — and are registered.
+func TestNewRouter_RegistersPhase3VideoRoutes(t *testing.T) {
+	deps := Deps{
+		Config:    &config.Config{},
+		JWT:       jwt.NewManager("test-secret", time.Minute, time.Hour, "memere-test"),
+		Auth:      &AuthHandler{},
+		Courses:   &CourseHandler{},
+		Quizzes:   &QuizHandler{},
+		Exams:     &ExamHandler{},
+		Analytics: &AnalyticsHandler{},
+		Video:     &VideoHandler{},
+	}
+
+	r := NewRouter(deps)
+
+	want := map[string]bool{
+		"POST /api/v1/lessons/:id/videos/upload-url": false,
+		"POST /api/v1/videos/:id/confirm":            false,
+		"GET /api/v1/videos/:id/status":              false,
+		"POST /api/v1/videos/:id/retry":              false,
+		"GET /api/v1/videos/:id/stream":              false,
+		"GET /api/v1/videos/:id/download-url":        false,
+		"GET /api/v1/videos/download/:token":         false,
+	}
+	for _, route := range r.Routes() {
+		key := route.Method + " " + route.Path
+		if _, ok := want[key]; ok {
+			want[key] = true
+		}
+	}
+	for key, found := range want {
+		if !found {
+			t.Errorf("route not registered: %s", key)
+		}
+	}
+}
