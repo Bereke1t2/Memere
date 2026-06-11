@@ -20,6 +20,7 @@ type Config struct {
 	HTTP    HTTPConfig
 	Sweeper SweeperConfig
 	Storage StorageConfig
+	Video   VideoConfig
 
 	// Reserved for later phases (not required to boot in Phase 1).
 	AWS      AWSConfig
@@ -122,6 +123,16 @@ type StorageConfig struct {
 	CDNDomain        string `envconfig:"CDN_DOMAIN"`          // e.g. dxxxx.cloudfront.net
 	CDNKeyPairID     string `envconfig:"CDN_KEY_PAIR_ID"`     // CloudFront signing
 	CDNPrivateKeyPEM string `envconfig:"CDN_PRIVATE_KEY_PEM"` // PEM contents (or path)
+}
+
+// VideoConfig tunes the upload + transcode pipeline (Phase 3 §8.1). MaxUpload
+// bounds the size a client may request a pre-signed URL for (rejected before any
+// DB write); QueueBuffer sizes the in-process transcode channel; MaxAttempts
+// caps how many times a failed transcode is retried before it stays failed.
+type VideoConfig struct {
+	MaxUploadBytes int64 `envconfig:"MAX_UPLOAD_BYTES" default:"2147483648"` // 2 GiB
+	QueueBuffer    int   `envconfig:"TRANSCODE_QUEUE_BUFFER" default:"64"`
+	MaxAttempts    int   `envconfig:"TRANSCODE_MAX_ATTEMPTS" default:"3"`
 }
 
 type AWSConfig struct {
