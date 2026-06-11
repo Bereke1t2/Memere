@@ -209,7 +209,22 @@ Edit `.env` with your configuration (see [Environment Variables](#-environment-v
 docker-compose up -d
 ```
 
-This starts PostgreSQL, Redis, and any other required services.
+This starts PostgreSQL, Redis, and MinIO (S3-compatible object storage for the
+video pipeline).
+
+### 3b. Create the media bucket (video pipeline)
+
+```bash
+make minio-bucket
+```
+
+Creates the private `memere-media` bucket in the running MinIO (no anonymous
+access — Non-Negotiable #3). Re-running is harmless if it already exists.
+
+> **FFmpeg required for video.** The transcode worker shells out to `ffmpeg` and
+> `ffprobe` (HLS adaptive-bitrate transcoding). Install them and ensure they are
+> on `PATH` before uploading videos: `apt-get install ffmpeg` (Debian/Ubuntu) or
+> `brew install ffmpeg` (macOS).
 
 ### 4. Run database migrations
 
@@ -381,11 +396,24 @@ All API endpoints follow REST conventions with the base path `/api/v1`.
 
 ### Video Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/v1/videos/upload-url` | Get pre-signed upload URL |
-| `GET` | `/api/v1/videos/:id/stream` | Get HLS streaming URL |
-| `GET` | `/api/v1/videos/:id/download-url` | Get offline download URL |
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/api/v1/lessons/:id/videos/upload-url` | teacher/admin | Get a pre-signed PUT URL; creates a `pending` video |
+| `POST` | `/api/v1/videos/:id/confirm` | teacher/admin | Verify the upload landed → `processing` + enqueue transcode |
+| `GET` | `/api/v1/videos/:id/status` | bearer | Processing state + metadata (no raw keys; error shown only to owner/admin) |
+| `POST` | `/api/v1/videos/:id/retry` | teacher/admin | Re-run a failed transcode (`failed → processing`) |
+| `GET` | `/api/v1/videos/:id/stream` | bearer (allowed) | Short-lived signed HLS master URL (~2h) |
+| `GET` | `/api/v1/videos/:id/download-url` | bearer (allowed) | Signed URL + single-use download token |
+| `GET` | `/api/v1/videos/download/:token` | bearer (allowed) | Consume the token → 302 redirect to the signed manifest (single-use) |
+
+Access control resolves the video → lesson → course server-side: the owning
+teacher/admin always; other authenticated students only for a free course or a
+free-preview lesson (paid-enrollment checks arrive in Phase 4). No endpoint ever
+returns a raw storage key, and all delivery URLs are signed and expiring.
+
+Run the full pipeline end-to-end against the local stack with
+`bash scripts/smoke_phase3.sh` (after `make up && make minio-bucket &&
+make migrate-up && make run`).
 
 ---
 
@@ -536,7 +564,7 @@ The project uses **GitHub Actions** for continuous integration and deployment:
 - [x] Database schema and migrations
 - [x] Auth service (JWT + refresh tokens)
 - [x] Course service (CRUD + video/note metadata)
-- [ ] Video streaming (HLS adaptive bitrate)
+- [x] Video streaming (HLS adaptive bitrate)
 - [ ] Quiz engine with server-side grading
 - [ ] Mock exam engine with timed sessions
 - [ ] Payment integration (Chapa)
