@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/shopspring/decimal"
 )
 
 // toPgUUID wraps a domain uuid.UUID as a valid pgtype.UUID.
@@ -139,6 +140,48 @@ func fromPgInt4Ptr(v *int32) *int {
 	}
 	i := int(*v)
 	return &i
+}
+
+// toPgDecimal converts an exact decimal.Decimal to a pgtype.Numeric for money
+// columns (payments.amount, coupons.discount_value). Routing through the decimal
+// string keeps the value exact — no binary-float drift (Phase 4 money rule).
+func toPgDecimal(d decimal.Decimal) pgtype.Numeric {
+	var n pgtype.Numeric
+	// Scan never errors for a well-formed decimal string.
+	_ = n.Scan(d.String())
+	return n
+}
+
+// fromPgDecimal converts a pgtype.Numeric money column to an exact
+// decimal.Decimal. A NULL/unset value yields decimal.Zero.
+func fromPgDecimal(v pgtype.Numeric) decimal.Decimal {
+	if !v.Valid {
+		return decimal.Zero
+	}
+	// Numeric.Value() renders the exact decimal as a string for a NaN-free value.
+	val, err := v.Value()
+	if err != nil {
+		return decimal.Zero
+	}
+	s, ok := val.(string)
+	if !ok {
+		return decimal.Zero
+	}
+	d, err := decimal.NewFromString(s)
+	if err != nil {
+		return decimal.Zero
+	}
+	return d
+}
+
+// derefString returns the pointed-to string, or "" for a nil pointer. Used where
+// a domain *string maps to a NOT NULL column (e.g. payments.idempotency_key,
+// which 0006 made required) — the caller is responsible for supplying it.
+func derefString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 // toJSONB marshals a metadata map to the []byte sqlc expects for a JSONB column.
