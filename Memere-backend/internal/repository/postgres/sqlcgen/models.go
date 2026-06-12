@@ -245,6 +245,33 @@ type PaymentsPayment struct {
 	PaidAt                pgtype.Timestamptz
 	CreatedAt             pgtype.Timestamptz
 	UpdatedAt             pgtype.Timestamptz
+	ProviderCheckoutID    *string
+	SubscriptionID        pgtype.UUID
+	FailureReason         *string
+}
+
+type PaymentsSubscription struct {
+	ID                     pgtype.UUID
+	StudentID              pgtype.UUID
+	Plan                   string
+	Status                 string
+	CurrentPeriodStart     pgtype.Timestamptz
+	CurrentPeriodEnd       pgtype.Timestamptz
+	Provider               string
+	ProviderSubscriptionID *string
+	CreatedAt              pgtype.Timestamptz
+	UpdatedAt              pgtype.Timestamptz
+	CanceledAt             pgtype.Timestamptz
+}
+
+type PaymentsWebhookEvent struct {
+	ID              pgtype.UUID
+	Provider        string
+	ProviderEventID string
+	EventType       string
+	Payload         []byte
+	ProcessedAt     pgtype.Timestamptz
+	CreatedAt       pgtype.Timestamptz
 }
 
 type ProgressProgress struct {
