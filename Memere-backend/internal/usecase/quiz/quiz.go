@@ -8,6 +8,7 @@ import (
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/access"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 )
 
@@ -22,6 +23,13 @@ const (
 	answerSalt   = 2
 )
 
+// CourseAccess is the access gate for graded work. *access.Service satisfies
+// it; the quiz engine requires FullAccess (preview is for watching sample
+// lessons, never for graded attempts).
+type CourseAccess interface {
+	RequireFullAccess(ctx context.Context, actor access.Actor, courseID uuid.UUID) error
+}
+
 // Service implements the quiz-engine usecases over the domain repositories plus
 // the Redis attempt-state store. now is injectable so tests can drive the
 // server-side timer with a fake clock.
@@ -32,6 +40,7 @@ type Service struct {
 	courses   repository.CourseRepository
 	state     repository.AttemptStateStore
 	tx        repository.TxManager
+	access    CourseAccess
 	now       func() time.Time
 }
 
@@ -43,6 +52,7 @@ func NewService(
 	courses repository.CourseRepository,
 	state repository.AttemptStateStore,
 	tx repository.TxManager,
+	accessSvc CourseAccess,
 ) *Service {
 	return &Service{
 		quizzes:   quizzes,
@@ -51,16 +61,14 @@ func NewService(
 		courses:   courses,
 		state:     state,
 		tx:        tx,
+		access:    accessSvc,
 		now:       time.Now,
 	}
 }
 
 // GetQuizForStudent returns quiz metadata and the question count (not the
-// questions). Access is gated on the parent course being published, or the actor
-// owning it (teacher/admin).
-//
-// TODO(phase4): replace the published-or-owner gate with a real enrollment check
-// once enrollments exist.
+// questions). Access is gated on FullAccess to the parent course (owner/admin,
+// free course, active enrollment, or active subscription) via access.Service.
 func (s *Service) GetQuizForStudent(ctx context.Context, actor *Actor, quizID uuid.UUID) (*QuizClientView, error) {
 	if actor == nil {
 		return nil, apperror.Unauthorized("authentication required", nil)
@@ -352,17 +360,12 @@ func (s *Service) ListMyAttempts(ctx context.Context, actor *Actor, quizID uuid.
 	return s.attempts.ListByStudentAndQuiz(ctx, actor.UserID, quizID)
 }
 
-// assertCourseAccess enforces the published-or-owner gate.
-// TODO(phase4): replace with an enrollment check.
+// assertCourseAccess gates graded quiz work on FullAccess to the parent course
+// (owner/admin, free course, active enrollment, or active subscription) via the
+// shared access.Service. PreviewAccess is deliberately insufficient: previews
+// are for watching sample lessons, never for graded attempts.
 func (s *Service) assertCourseAccess(ctx context.Context, actor *Actor, courseID uuid.UUID) error {
-	course, err := s.courses.FindByID(ctx, courseID)
-	if err != nil {
-		return err
-	}
-	if course.IsPublished || actor.ownsCourse(course) {
-		return nil
-	}
-	return apperror.Forbidden("you do not have access to this quiz", nil)
+	return s.access.RequireFullAccess(ctx, access.Actor{UserID: actor.UserID, Role: actor.Role}, courseID)
 }
 
 // expired reports whether a timed attempt is past its server-side deadline.
