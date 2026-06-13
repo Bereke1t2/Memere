@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/access"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 )
 
@@ -21,6 +22,7 @@ type harness struct {
 	queue   *fakeQueue
 	signer  *fakeSigner
 	tokens  *fakeTokens
+	enroll  *fakeEnrollRepo
 
 	teacherID uuid.UUID
 	courseID  uuid.UUID
@@ -43,6 +45,7 @@ func newHarness() *harness {
 	queue := &fakeQueue{}
 	signer := newFakeSigner()
 	tokens := newFakeTokens()
+	enroll := newFakeEnrollRepo()
 
 	cfg := Config{
 		UploadURLTTL:   15 * time.Minute,
@@ -51,11 +54,14 @@ func newHarness() *harness {
 		StreamURLTTL:   2 * time.Hour,
 		DownloadURLTTL: 2 * time.Hour,
 	}
-	svc := NewService(videos, lessons, courses, store, queue, signer, tokens, cfg)
+	// Video access routes through the real access.Service so paid content unlocks
+	// for genuinely enrolled students, not just owner/admin.
+	accessSvc := access.NewService(enroll, newFakeSubRepo(), courses, nil)
+	svc := NewService(videos, lessons, courses, store, queue, signer, tokens, accessSvc, cfg)
 
 	return &harness{
 		svc: svc, videos: videos, courses: courses, lessons: lessons, store: store, queue: queue,
-		signer: signer, tokens: tokens,
+		signer: signer, tokens: tokens, enroll: enroll,
 		teacherID: teacherID, courseID: courseID, lessonID: lessonID,
 	}
 }
