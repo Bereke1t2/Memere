@@ -394,13 +394,72 @@ func (fakeTxManager) WithinTx(ctx context.Context, fn func(ctx context.Context) 
 	return fn(ctx)
 }
 
+// ---- fake enrollment / subscription repos (drive access.Service) -------------
+//
+// The quiz engine doesn't touch these directly; they back the real
+// access.Service wired into the harness so the FullAccess gate can be exercised.
+
+type fakeEnrollRepo struct {
+	active map[[2]uuid.UUID]*entity.Enrollment // (student,course) -> active enrollment
+}
+
+func newFakeEnrollRepo() *fakeEnrollRepo {
+	return &fakeEnrollRepo{active: map[[2]uuid.UUID]*entity.Enrollment{}}
+}
+
+func (f *fakeEnrollRepo) enroll(studentID, courseID uuid.UUID) {
+	f.active[[2]uuid.UUID{studentID, courseID}] = &entity.Enrollment{StudentID: studentID, CourseID: courseID}
+}
+
+func (f *fakeEnrollRepo) Create(context.Context, *entity.Enrollment) error { return nil }
+func (f *fakeEnrollRepo) Exists(_ context.Context, s, c uuid.UUID) (bool, error) {
+	_, ok := f.active[[2]uuid.UUID{s, c}]
+	return ok, nil
+}
+func (f *fakeEnrollRepo) GetActiveForStudent(_ context.Context, s, c uuid.UUID) (*entity.Enrollment, error) {
+	if e, ok := f.active[[2]uuid.UUID{s, c}]; ok {
+		return e, nil
+	}
+	return nil, apperror.NotFound("enrollment not found", nil)
+}
+func (f *fakeEnrollRepo) ListByStudent(context.Context, uuid.UUID, int) ([]*entity.Enrollment, error) {
+	return nil, nil
+}
+
+type fakeSubRepo struct {
+	active map[uuid.UUID]*entity.Subscription
+}
+
+func newFakeSubRepo() *fakeSubRepo {
+	return &fakeSubRepo{active: map[uuid.UUID]*entity.Subscription{}}
+}
+
+func (f *fakeSubRepo) Create(context.Context, *entity.Subscription) error { return nil }
+func (f *fakeSubRepo) GetByID(context.Context, uuid.UUID) (*entity.Subscription, error) {
+	return nil, apperror.NotFound("subscription not found", nil)
+}
+func (f *fakeSubRepo) GetActiveForStudent(_ context.Context, s uuid.UUID) (*entity.Subscription, error) {
+	if sub, ok := f.active[s]; ok {
+		return sub, nil
+	}
+	return nil, apperror.NotFound("subscription not found", nil)
+}
+func (f *fakeSubRepo) UpdateStatus(context.Context, uuid.UUID, entity.SubscriptionStatus) error {
+	return nil
+}
+func (f *fakeSubRepo) ListExpiring(context.Context, int) ([]*entity.Subscription, error) {
+	return nil, nil
+}
+
 // ---- compile-time interface checks -------------------------------------------
 
 var (
-	_ repository.CourseRepository      = (*fakeCourseRepo)(nil)
-	_ repository.QuizRepository        = (*fakeQuizRepo)(nil)
-	_ repository.QuestionRepository    = (*fakeQuestionRepo)(nil)
-	_ repository.QuizAttemptRepository = (*fakeAttemptRepo)(nil)
-	_ repository.AttemptStateStore     = (*fakeState)(nil)
-	_ repository.TxManager             = fakeTxManager{}
+	_ repository.CourseRepository       = (*fakeCourseRepo)(nil)
+	_ repository.QuizRepository         = (*fakeQuizRepo)(nil)
+	_ repository.QuestionRepository     = (*fakeQuestionRepo)(nil)
+	_ repository.QuizAttemptRepository  = (*fakeAttemptRepo)(nil)
+	_ repository.AttemptStateStore      = (*fakeState)(nil)
+	_ repository.TxManager              = fakeTxManager{}
+	_ repository.EnrollmentRepository   = (*fakeEnrollRepo)(nil)
+	_ repository.SubscriptionRepository = (*fakeSubRepo)(nil)
 )
