@@ -100,6 +100,18 @@ func TestGetStreamURL_StudentAllowedForPreviewLesson(t *testing.T) {
 	}
 }
 
+// An enrolled student reaches paid (non-free, non-preview) content — the Phase 4
+// gate now unlocks purchased videos, not just owner/admin.
+func TestGetStreamURL_EnrolledStudentAllowedForPaidContent(t *testing.T) {
+	h := newHarness()
+	id := h.readyVideo(t) // paid course, non-preview lesson
+	enrolled := &Actor{UserID: uuid.New(), Role: entity.RoleStudent}
+	h.enroll.enroll(enrolled.UserID, h.courseID)
+	if _, err := h.svc.GetStreamURL(context.Background(), enrolled, id); err != nil {
+		t.Fatalf("enrolled student should stream paid content: %v", err)
+	}
+}
+
 func TestGetStreamURL_NotReady(t *testing.T) {
 	h := newHarness()
 	// Seed a video stuck in processing (no master key).
