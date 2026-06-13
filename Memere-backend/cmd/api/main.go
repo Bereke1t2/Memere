@@ -24,6 +24,7 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/internal/infrastructure/transcode"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/repository/postgres"
 	redisrepo "github.com/Bereke1t2/Memere/memere-backend/internal/repository/redis"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/access"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/analytics"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/auth"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/course"
@@ -181,10 +182,13 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	// Usecases.
 	authSvc := auth.NewService(userRepo, tokenRepo, sessionRepo, jwtManager)
 	courseSvc := course.NewService(courseRepo, sectionRepo, lessonRepo, txManager)
-	quizSvc := quiz.NewService(quizRepo, questionRepo, quizAttemptRepo, courseRepo, attemptStateRepo, txManager)
-	examSvc := exam.NewService(examRepo, examAttemptRepo, courseRepo, attemptStateRepo, scoreRankingRepo, txManager)
+	// access.Service is the single authority on "can this caller reach this
+	// course/lesson?" — quiz/exam taking and paid video all route through it.
+	accessSvc := access.NewService(enrollmentRepo, subscriptionRepo, courseRepo, nil)
+	quizSvc := quiz.NewService(quizRepo, questionRepo, quizAttemptRepo, courseRepo, attemptStateRepo, txManager, accessSvc)
+	examSvc := exam.NewService(examRepo, examAttemptRepo, courseRepo, attemptStateRepo, scoreRankingRepo, txManager, accessSvc)
 	analyticsSvc := analytics.NewService(examRepo, examAttemptRepo, courseRepo, scoreRankingRepo)
-	videoSvc := video.NewService(videoRepo, lessonRepo, courseRepo, store, queue, signer, downloadTokens, video.Config{
+	videoSvc := video.NewService(videoRepo, lessonRepo, courseRepo, store, queue, signer, downloadTokens, accessSvc, video.Config{
 		UploadURLTTL:   cfg.Storage.UploadURLTTL,
 		MaxUploadBytes: cfg.Video.MaxUploadBytes,
 		MaxAttempts:    cfg.Video.MaxAttempts,
