@@ -9,11 +9,19 @@ import (
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/access"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/grading"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 )
 
 const stateGrace = 60 * time.Second
+
+// CourseAccess is the access gate for graded exam work. *access.Service
+// satisfies it; an exam tied to a course requires FullAccess (preview is for
+// watching sample lessons, never for a graded sitting).
+type CourseAccess interface {
+	RequireFullAccess(ctx context.Context, actor access.Actor, courseID uuid.UUID) error
+}
 
 // Service implements the exam-engine usecases over the domain repositories plus
 // the shared Redis attempt-state store. now is injectable so tests drive the
@@ -25,6 +33,7 @@ type Service struct {
 	state    repository.AttemptStateStore
 	ranking  repository.ScoreRanking
 	tx       repository.TxManager
+	access   CourseAccess
 	now      func() time.Time
 }
 
@@ -38,6 +47,7 @@ func NewService(
 	state repository.AttemptStateStore,
 	ranking repository.ScoreRanking,
 	tx repository.TxManager,
+	accessSvc CourseAccess,
 ) *Service {
 	return &Service{
 		exams:    exams,
@@ -46,6 +56,7 @@ func NewService(
 		state:    state,
 		ranking:  ranking,
 		tx:       tx,
+		access:   accessSvc,
 		now:      time.Now,
 	}
 }
@@ -320,21 +331,17 @@ func (s *Service) stateTTL(exam *entity.Exam) time.Duration {
 	return time.Duration(exam.DurationMinutes)*time.Minute + stateGrace
 }
 
-// assertExamAccess enforces the published-or-owner gate.
-// TODO(phase4): replace with an enrollment check.
+// assertExamAccess gates a graded exam sitting. An exam tied to a course routes
+// through the shared access.Service and requires FullAccess (owner/admin, free
+// course, active enrollment, or active subscription) — being merely published is
+// no longer enough, so paid-course mock exams need a real entitlement. Standalone
+// exams (no course to enrol in) keep the published-or-admin rule: a published one
+// is open to any authenticated student, an unpublished one is admin-only.
 func (s *Service) assertExamAccess(ctx context.Context, actor *Actor, exam *entity.Exam) error {
-	if exam.IsPublished {
-		return nil
-	}
 	if exam.CourseID != nil {
-		course, err := s.courses.FindByID(ctx, *exam.CourseID)
-		if err != nil {
-			return err
-		}
-		if actor.ownsCourse(course) {
-			return nil
-		}
-	} else if actor.Role == entity.RoleAdmin {
+		return s.access.RequireFullAccess(ctx, access.Actor{UserID: actor.UserID, Role: actor.Role}, *exam.CourseID)
+	}
+	if exam.IsPublished || actor.Role == entity.RoleAdmin {
 		return nil
 	}
 	return apperror.Forbidden("you do not have access to this exam", nil)
