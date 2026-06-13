@@ -12,6 +12,7 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/service"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/access"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 )
 
@@ -26,6 +27,13 @@ type Config struct {
 	DownloadURLTTL time.Duration // signed download lifetime + token TTL (~2h)
 }
 
+// LessonAccess decides whether the caller may watch a lesson's video.
+// *access.Service satisfies it; routing through it means paid content now
+// unlocks for genuinely enrolled/subscribed students, not just owner/admin.
+type LessonAccess interface {
+	CanAccessLesson(ctx context.Context, actor access.Actor, lesson *entity.Lesson) (bool, error)
+}
+
 // Service orchestrates the video upload pipeline over domain ports.
 type Service struct {
 	videos  repository.VideoRepository
@@ -35,6 +43,7 @@ type Service struct {
 	queue   service.JobQueue
 	signer  service.URLSigner
 	tokens  service.DownloadTokens
+	access  LessonAccess
 	cfg     Config
 }
 
@@ -50,6 +59,7 @@ func NewService(
 	queue service.JobQueue,
 	signer service.URLSigner,
 	tokens service.DownloadTokens,
+	accessSvc LessonAccess,
 	cfg Config,
 ) *Service {
 	return &Service{
@@ -60,6 +70,7 @@ func NewService(
 		queue:   queue,
 		signer:  signer,
 		tokens:  tokens,
+		access:  accessSvc,
 		cfg:     cfg,
 	}
 }
