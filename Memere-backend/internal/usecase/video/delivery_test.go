@@ -122,11 +122,14 @@ func TestGetStreamURL_SignerKeyChangesSignature(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stream 1: %v", err)
 	}
-	// A second video has a different master key -> a different signed URL.
+	// A second video (under its own lesson in the same course) has a different
+	// master key -> a different signed URL.
+	lessonID2 := uuid.New()
+	h.lessons.byID[lessonID2] = &entity.Lesson{ID: lessonID2, CourseID: h.courseID, Type: entity.LessonTypeVideo}
 	id2 := uuid.New()
 	master := "hls/" + id2.String() + "/master.m3u8"
 	if err := h.videos.Create(context.Background(), &entity.Video{
-		ID: id2, LessonID: uuid.New(), CourseID: h.courseID,
+		ID: id2, LessonID: lessonID2, CourseID: h.courseID,
 		Status: entity.VideoReady, HLSMasterKey: &master,
 	}); err != nil {
 		t.Fatalf("seed 2: %v", err)
