@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/access"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 )
 
@@ -19,6 +20,7 @@ type harness struct {
 	attempts *fakeAttemptRepo
 	courses  *fakeCourseRepo
 	state    *fakeState
+	enroll   *fakeEnrollRepo
 	clock    time.Time
 }
 
@@ -28,10 +30,14 @@ func newHarness(t *testing.T) *harness {
 	attempts := newFakeAttemptRepo()
 	courses := newFakeCourseRepo()
 	state := newFakeState()
+	enroll := newFakeEnrollRepo()
 	questions := &fakeQuestionRepo{quizzes: quizzes}
-	svc := NewService(quizzes, questions, attempts, courses, state, fakeTxManager{})
+	// The quiz engine gates graded work through the real access.Service so the
+	// FullAccess policy is exercised end to end, not mocked.
+	accessSvc := access.NewService(enroll, newFakeSubRepo(), courses, nil)
+	svc := NewService(quizzes, questions, attempts, courses, state, fakeTxManager{}, accessSvc)
 
-	h := &harness{svc: svc, quizzes: quizzes, attempts: attempts, courses: courses, state: state}
+	h := &harness{svc: svc, quizzes: quizzes, attempts: attempts, courses: courses, state: state, enroll: enroll}
 	h.clock = time.Date(2026, 6, 8, 12, 0, 0, 0, time.UTC)
 	svc.now = func() time.Time { return h.clock }
 	return h
@@ -44,17 +50,32 @@ func student() *Actor { return &Actor{UserID: uuid.New(), Role: entity.RoleStude
 func ptrInt(i int) *int       { return &i }
 func ptrStr(s string) *string { return &s }
 
-// publishedCourse registers a published course and returns its ID.
+// publishedCourse registers a published, free course and returns its ID. It is
+// free so the FullAccess gate admits any student: the attempt-lifecycle tests
+// exercise the engine, not the paywall (which has its own gate tests below).
 func (h *harness) publishedCourse() uuid.UUID {
 	id := uuid.New()
-	h.courses.add(&entity.Course{ID: id, TeacherID: uuid.New(), IsPublished: true})
+	h.courses.add(&entity.Course{ID: id, TeacherID: uuid.New(), IsPublished: true, IsFree: true})
+	return id
+}
+
+// paidCourse registers a published, paid course and returns its ID. A student
+// reaches its quizzes only with an enrollment or subscription.
+func (h *harness) paidCourse() uuid.UUID {
+	id := uuid.New()
+	h.courses.add(&entity.Course{ID: id, TeacherID: uuid.New(), IsPublished: true, IsFree: false})
 	return id
 }
 
 // seedQuiz creates a quiz with two multiple-choice questions (one correct option
-// each) under a published course. Returns the quiz.
+// each) under a published, free course. Returns the quiz.
 func (h *harness) seedQuiz(timeLimit, maxAttempts *int, randomize bool) *entity.Quiz {
-	courseID := h.publishedCourse()
+	return h.seedQuizUnder(h.publishedCourse(), timeLimit, maxAttempts, randomize)
+}
+
+// seedQuizUnder is seedQuiz against an explicit course (used by the access-gate
+// tests, which need a paid course).
+func (h *harness) seedQuizUnder(courseID uuid.UUID, timeLimit, maxAttempts *int, randomize bool) *entity.Quiz {
 	q := &entity.Quiz{
 		CourseID:           courseID,
 		Title:              "Sample",
@@ -503,4 +524,36 @@ func sameSet(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+// --- access gate (Phase 4) ----------------------------------------------------
+
+// A student with no entitlement to a paid course is blocked from graded work
+// with NOT_ENROLLED — the gate now routes through access.Service.
+func TestStartAttempt_NonEnrolledBlocked(t *testing.T) {
+	h := newHarness(t)
+	quiz := h.seedQuizUnder(h.paidCourse(), nil, nil, false)
+	stu := &Actor{UserID: uuid.New(), Role: entity.RoleStudent}
+
+	_, err := h.svc.StartAttempt(context.Background(), stu, quiz.ID)
+	if !apperror.IsCode(err, "NOT_ENROLLED") {
+		t.Fatalf("non-enrolled student should be blocked with NOT_ENROLLED, got %v", err)
+	}
+}
+
+// Once the same student holds an active enrollment, the gate admits them.
+func TestStartAttempt_EnrolledAllowed(t *testing.T) {
+	h := newHarness(t)
+	courseID := h.paidCourse()
+	quiz := h.seedQuizUnder(courseID, nil, nil, false)
+	stu := &Actor{UserID: uuid.New(), Role: entity.RoleStudent}
+	h.enroll.enroll(stu.UserID, courseID)
+
+	view, err := h.svc.StartAttempt(context.Background(), stu, quiz.ID)
+	if err != nil {
+		t.Fatalf("enrolled student should start an attempt: %v", err)
+	}
+	if view == nil || len(view.Questions) == 0 {
+		t.Fatalf("expected a started attempt with questions, got %+v", view)
+	}
 }
