@@ -11,6 +11,7 @@ import (
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/access"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 )
 
@@ -20,6 +21,7 @@ type harness struct {
 	attempts *fakeExamAttemptRepo
 	courses  *fakeCourseRepo
 	state    *fakeState
+	enroll   *fakeEnrollRepo
 	clock    time.Time
 }
 
@@ -29,9 +31,13 @@ func newHarness(t *testing.T) *harness {
 	attempts := newFakeExamAttemptRepo()
 	courses := newFakeCourseRepo()
 	state := newFakeState()
-	svc := NewService(exams, attempts, courses, state, nil, fakeTxManager{})
+	enroll := newFakeEnrollRepo()
+	// Course-linked exams gate through the real access.Service so the FullAccess
+	// policy is exercised end to end, not mocked.
+	accessSvc := access.NewService(enroll, newFakeSubRepo(), courses, nil)
+	svc := NewService(exams, attempts, courses, state, nil, fakeTxManager{}, accessSvc)
 
-	h := &harness{svc: svc, exams: exams, attempts: attempts, courses: courses, state: state}
+	h := &harness{svc: svc, exams: exams, attempts: attempts, courses: courses, state: state, enroll: enroll}
 	h.clock = time.Date(2026, 6, 8, 12, 0, 0, 0, time.UTC)
 	svc.now = func() time.Time { return h.clock }
 	// Let the fake attempt repo derive deadlines from exam durations, mirroring the
@@ -48,18 +54,27 @@ func newHarness(t *testing.T) *harness {
 
 func (h *harness) advance(d time.Duration) { h.clock = h.clock.Add(d) }
 
-func teacher() *Actor { return &Actor{UserID: uuid.New(), Role: entity.RoleTeacher} }
 func student() *Actor { return &Actor{UserID: uuid.New(), Role: entity.RoleStudent} }
 func admin() *Actor   { return &Actor{UserID: uuid.New(), Role: entity.RoleAdmin} }
 
 func ptrStr(s string) *string { return &s }
 
 // seedPublishedExam builds a published, 60-minute exam with two MC questions
-// (5 marks + 3 marks) and returns it.
+// (5 marks + 3 marks) under a free course (so the FullAccess gate admits any
+// student: the lifecycle tests exercise the engine, not the paywall) and returns
+// it.
 func (h *harness) seedPublishedExam(t *testing.T) *entity.Exam {
 	t.Helper()
-	owner := teacher()
-	course := &entity.Course{ID: uuid.New(), TeacherID: owner.UserID, IsPublished: true}
+	course := &entity.Course{ID: uuid.New(), TeacherID: uuid.New(), IsPublished: true, IsFree: true}
+	return h.seedExamForCourse(t, course)
+}
+
+// seedExamForCourse seeds the standard two-question exam under an explicit course
+// (used by the access-gate tests, which need a paid course). The course's
+// teacher authors and publishes the exam.
+func (h *harness) seedExamForCourse(t *testing.T, course *entity.Course) *entity.Exam {
+	t.Helper()
+	owner := &Actor{UserID: course.TeacherID, Role: entity.RoleTeacher}
 	h.courses.add(course)
 
 	exam, err := h.svc.CreateExam(context.Background(), owner, CreateExamInput{
@@ -414,4 +429,37 @@ func (h *harness) correctOption(examID, questionID uuid.UUID) uuid.UUID {
 		}
 	}
 	return uuid.Nil
+}
+
+// --- access gate (Phase 4) ----------------------------------------------------
+
+// A student with no entitlement to a paid course is blocked from a graded sitting
+// with NOT_ENROLLED — the gate now routes through access.Service.
+func TestStartExam_NonEnrolledBlocked(t *testing.T) {
+	h := newHarness(t)
+	course := &entity.Course{ID: uuid.New(), TeacherID: uuid.New(), IsPublished: true, IsFree: false}
+	exam := h.seedExamForCourse(t, course)
+	stu := &Actor{UserID: uuid.New(), Role: entity.RoleStudent}
+
+	_, err := h.svc.StartExam(context.Background(), stu, exam.ID)
+	if !apperror.IsCode(err, "NOT_ENROLLED") {
+		t.Fatalf("non-enrolled student should be blocked with NOT_ENROLLED, got %v", err)
+	}
+}
+
+// Once the same student holds an active enrollment, the gate admits them.
+func TestStartExam_EnrolledAllowed(t *testing.T) {
+	h := newHarness(t)
+	course := &entity.Course{ID: uuid.New(), TeacherID: uuid.New(), IsPublished: true, IsFree: false}
+	exam := h.seedExamForCourse(t, course)
+	stu := &Actor{UserID: uuid.New(), Role: entity.RoleStudent}
+	h.enroll.enroll(stu.UserID, course.ID)
+
+	view, err := h.svc.StartExam(context.Background(), stu, exam.ID)
+	if err != nil {
+		t.Fatalf("enrolled student should start an exam: %v", err)
+	}
+	if view == nil || len(view.Questions) == 0 {
+		t.Fatalf("expected a started attempt with questions, got %+v", view)
+	}
 }
