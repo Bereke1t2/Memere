@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/access"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 )
 
@@ -160,36 +161,29 @@ func (s *Service) requireReady(ctx context.Context, videoID uuid.UUID) (*entity.
 	return v, nil
 }
 
-// assertCanWatch enforces the Skill 4 access rules, resolving the video's course
-// and lesson server-side (never trusting a client-supplied course id — IDOR):
-//   - course teacher or admin: always allowed.
-//   - any other authenticated user (student): allowed only when the course is
-//     free or the lesson is a free preview.
-//   - otherwise: FORBIDDEN.
-//
-// TODO(phase4): replace the free/preview gate with a real enrollment check so
-// paying students reach purchased (non-free, non-preview) content.
+// assertCanWatch enforces video access, resolving the lesson server-side (never
+// trusting a client-supplied course id — IDOR) and delegating to the shared
+// access.Service. Owner/admin, a free course, an active enrollment, an active
+// subscription, or a free-preview lesson all pass; anything else is FORBIDDEN.
+// Paid content now unlocks for genuinely enrolled/subscribed students, not just
+// owner/admin.
 func (s *Service) assertCanWatch(ctx context.Context, actor *Actor, v *entity.Video) error {
-	course, err := s.courses.FindByID(ctx, v.CourseID)
-	if err != nil {
-		return err
-	}
-	if s.isOwner(actor, course) {
-		return nil
-	}
-	if actor == nil {
-		return apperror.Forbidden("you do not have access to this video", nil)
-	}
 	lesson, err := s.lessons.FindByID(ctx, v.LessonID)
 	if err != nil {
 		return err
 	}
-	if course.IsFree || lesson.IsFreePreview {
-		return nil
+	var act access.Actor
+	if actor != nil {
+		act = access.Actor{UserID: actor.UserID, Role: actor.Role}
 	}
-	// TODO(phase4): enrollment check — a student who purchased the course should
-	// be allowed here. Until Phase 4 lands, paid content is owner/admin only.
-	return apperror.Forbidden("this video requires purchasing the course", nil)
+	ok, err := s.access.CanAccessLesson(ctx, act, lesson)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return apperror.Forbidden("this video requires purchasing the course", nil)
+	}
+	return nil
 }
 
 // newToken mints an unguessable 256-bit hex download token.
