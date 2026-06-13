@@ -141,6 +141,8 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	examRepo := postgres.NewExamRepo(pool)
 	examAttemptRepo := postgres.NewExamAttemptRepo(pool)
 	videoRepo := postgres.NewVideoRepo(pool)
+	enrollmentRepo := postgres.NewEnrollmentRepo(pool)
+	subscriptionRepo := postgres.NewSubscriptionRepo(pool)
 	txManager := postgres.NewTxManager(pool)
 	sessionRepo := redisrepo.NewSessionRepo(redisClient)
 	attemptStateRepo := redisrepo.NewAttemptStateRepo(redisClient)
