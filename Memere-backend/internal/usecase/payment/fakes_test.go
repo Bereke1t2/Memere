@@ -307,6 +307,29 @@ func (q quoterFunc) Quote(ctx context.Context, code string, courseID uuid.UUID, 
 	return q(ctx, code, courseID, base)
 }
 
+// ---- subscription pricer + activator shims -----------------------------------
+
+type stubPricer struct {
+	price    decimal.Decimal
+	currency string
+	err      error
+}
+
+func (s stubPricer) PriceForPlan(string) (decimal.Decimal, string, error) {
+	return s.price, s.currency, s.err
+}
+
+type fakeActivator struct {
+	calls int
+	last  *entity.Payment
+}
+
+func (f *fakeActivator) Activate(_ context.Context, p *entity.Payment) error {
+	f.calls++
+	f.last = p
+	return nil
+}
+
 // ---- compile-time interface checks -------------------------------------------
 
 var (
@@ -319,4 +342,6 @@ var (
 	_ service.PaymentProvider           = (*mockProvider)(nil)
 	_ service.PaymentProviderRegistry   = mockRegistry{}
 	_ CouponQuoter                      = quoterFunc(nil)
+	_ PlanPricer                        = stubPricer{}
+	_ SubscriptionActivator             = (*fakeActivator)(nil)
 )

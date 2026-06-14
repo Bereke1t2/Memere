@@ -15,14 +15,16 @@ import (
 )
 
 type harness struct {
-	svc      *Service
-	payments *fakePaymentRepo
-	enroll   *fakeEnrollRepo
-	coupons  *fakeCouponRepo
-	webhooks *fakeWebhookRepo
-	courses  *fakeCourseRepo
-	provider *mockProvider
-	clock    time.Time
+	svc       *Service
+	payments  *fakePaymentRepo
+	enroll    *fakeEnrollRepo
+	coupons   *fakeCouponRepo
+	webhooks  *fakeWebhookRepo
+	courses   *fakeCourseRepo
+	provider  *mockProvider
+	pricer    PlanPricer
+	activator *fakeActivator
+	clock     time.Time
 
 	studentID uuid.UUID
 	courseID  uuid.UUID
@@ -36,6 +38,8 @@ func newHarness() *harness {
 		webhooks:  newFakeWebhookRepo(),
 		courses:   newFakeCourseRepo(),
 		provider:  &mockProvider{name: string(entity.ProviderChapa)},
+		pricer:    stubPricer{price: decimal.NewFromInt(500), currency: "ETB"},
+		activator: &fakeActivator{},
 		clock:     time.Date(2026, 6, 13, 12, 0, 0, 0, time.UTC),
 		studentID: uuid.New(),
 		courseID:  uuid.New(),
@@ -49,7 +53,7 @@ func newHarness() *harness {
 
 	h.svc = NewService(
 		h.payments, h.enroll, h.coupons, h.webhooks, h.courses,
-		mockRegistry{p: h.provider}, quoter, fakeTxManager{}, nil,
+		mockRegistry{p: h.provider}, quoter, h.pricer, h.activator, fakeTxManager{}, nil,
 		Config{CallbackURL: "https://api.memere/webhook", ReturnURL: "https://app.memere/done", DefaultCurrency: "ETB"},
 		func() time.Time { return h.clock },
 	)
