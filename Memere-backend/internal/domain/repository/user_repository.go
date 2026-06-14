@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
+	"github.com/Bereke1t2/Memere/memere-backend/pkg/pagination"
 )
 
 // UserRepository persists and retrieves users (spec §4.2.1). Every read filters
@@ -22,4 +23,8 @@ type UserRepository interface {
 	Update(ctx context.Context, u *entity.User) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 	SetLastLogin(ctx context.Context, id uuid.UUID, t time.Time) error
+	// List returns users matching filter (admin use). Bounded by limit.
+	List(ctx context.Context, filter AdminUserFilter, cursor *pagination.Cursor, limit int) ([]*entity.User, *pagination.Cursor, error)
+	// CountByRole returns the number of active users with the given role.
+	CountByRole(ctx context.Context, role entity.Role) (int, error)
 }

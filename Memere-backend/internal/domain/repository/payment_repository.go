@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
+	"github.com/Bereke1t2/Memere/memere-backend/pkg/pagination"
 )
 
 // UpdatePaymentStatusFields carries the optional fields a guarded status
@@ -36,6 +37,8 @@ type PaymentRepository interface {
 	// cannot settle an already-settled payment.
 	UpdateStatusGuarded(ctx context.Context, id uuid.UUID, from, to entity.PaymentStatus, fields UpdatePaymentStatusFields) (bool, error)
 	ListByStudent(ctx context.Context, studentID uuid.UUID, limit int) ([]*entity.Payment, error)
+	// ListAll returns payments matching filter for admin reconciliation views.
+	ListAll(ctx context.Context, filter AdminPaymentFilter, cursor *pagination.Cursor, limit int) ([]*entity.Payment, *pagination.Cursor, error)
 }
 
 // EnrollmentRepository persists course enrollments. The (student_id, course_id)
