@@ -99,7 +99,11 @@ func (s *Service) fulfill(ctx context.Context, p *entity.Payment, providerTxnID 
 		if p.CourseID != nil {
 			return s.grantCourse(ctx, p.StudentID, *p.CourseID)
 		}
-		// Subscription fulfillment arrives in Skill 4; the payment is completed.
+		// Subscription purchase: activate (create/extend) inside the same tx. When
+		// no activator is wired the payment still completes (deferred wiring).
+		if s.activate != nil {
+			return s.activate.Activate(ctx, p)
+		}
 		return nil
 	})
 }

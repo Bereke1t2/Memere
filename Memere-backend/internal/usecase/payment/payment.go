@@ -31,6 +31,11 @@ import (
 // checkout without re-calling the provider.
 const metaRedirectURL = "redirect_url"
 
+// metaPlan is the Metadata key under which a subscription purchase carries its
+// chosen plan from initiate to fulfillment (the Payment entity has no plan
+// column). It must match the subscription usecase's key.
+const metaPlan = "plan"
+
 // Actor is the authenticated caller's identity. A zero Actor (UserID == Nil) is
 // anonymous and may not initiate a payment.
 type Actor struct {
@@ -43,6 +48,20 @@ type Actor struct {
 // fulfillment). *coupon.Service satisfies it.
 type CouponQuoter interface {
 	Quote(ctx context.Context, code string, courseID uuid.UUID, basePrice decimal.Decimal) (final decimal.Decimal, couponID uuid.UUID, err error)
+}
+
+// PlanPricer resolves a subscription plan's price + currency for a subscription
+// checkout. *subscription.Service satisfies it. It may be nil, in which case
+// subscription purchases are rejected (deferred wiring).
+type PlanPricer interface {
+	PriceForPlan(plan string) (decimal.Decimal, string, error)
+}
+
+// SubscriptionActivator creates/extends a subscription from a settled payment.
+// *subscription.Service satisfies it. It may be nil, in which case a settled
+// subscription payment simply completes without activation (deferred wiring).
+type SubscriptionActivator interface {
+	Activate(ctx context.Context, p *entity.Payment) error
 }
 
 // Notifier fires post-fulfillment notifications. It is a no-op hook in Phase 4;
@@ -81,6 +100,8 @@ type Service struct {
 	courses  repository.CourseRepository
 	registry service.PaymentProviderRegistry
 	quoter   CouponQuoter
+	pricer   PlanPricer
+	activate SubscriptionActivator
 	tx       repository.TxManager
 	notify   Notifier
 	cfg      Config
@@ -88,7 +109,9 @@ type Service struct {
 }
 
 // NewService wires the payment usecase. notify may be nil (defaults to a no-op);
-// clock may be nil (defaults to time.Now).
+// clock may be nil (defaults to time.Now). pricer/activator may be nil until the
+// subscription usecase is wired (Skill 4), in which case subscription purchases
+// are rejected and a settled subscription payment completes without activation.
 func NewService(
 	payments repository.PaymentRepository,
 	enroll repository.EnrollmentRepository,
@@ -97,6 +120,8 @@ func NewService(
 	courses repository.CourseRepository,
 	registry service.PaymentProviderRegistry,
 	quoter CouponQuoter,
+	pricer PlanPricer,
+	activator SubscriptionActivator,
 	tx repository.TxManager,
 	notify Notifier,
 	cfg Config,
@@ -119,6 +144,8 @@ func NewService(
 		courses:  courses,
 		registry: registry,
 		quoter:   quoter,
+		pricer:   pricer,
+		activate: activator,
 		tx:       tx,
 		notify:   notify,
 		cfg:      cfg,
@@ -154,8 +181,19 @@ func viewOf(p *entity.Payment) *PaymentView {
 // (CourseID == nil) are deferred to Skill 4.
 func (s *Service) priceFor(ctx context.Context, in InitiateInput) (decimal.Decimal, string, error) {
 	if in.CourseID == nil {
-		return decimal.Zero, "", apperror.New(400, "SUBSCRIPTION_NOT_AVAILABLE",
-			"subscription purchases are not available yet", nil)
+		// Subscription purchase: price the plan via the injected pricer.
+		if s.pricer == nil {
+			return decimal.Zero, "", apperror.New(400, "SUBSCRIPTION_NOT_AVAILABLE",
+				"subscription purchases are not available", nil)
+		}
+		amount, currency, err := s.pricer.PriceForPlan(in.Plan)
+		if err != nil {
+			return decimal.Zero, "", err
+		}
+		if currency == "" {
+			currency = s.cfg.DefaultCurrency
+		}
+		return amount, currency, nil
 	}
 	c, err := s.courses.FindByID(ctx, *in.CourseID)
 	if err != nil {

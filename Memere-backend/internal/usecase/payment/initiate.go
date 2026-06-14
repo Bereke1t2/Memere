@@ -109,6 +109,10 @@ func (s *Service) Initiate(ctx context.Context, in InitiateInput) (*InitiateResu
 	}
 	p.ProviderCheckoutID = &co.CheckoutID
 	p.Metadata = map[string]any{metaRedirectURL: co.RedirectURL}
+	if in.CourseID == nil {
+		// Subscription purchase: carry the plan to fulfillment (no plan column).
+		p.Metadata[metaPlan] = in.Plan
+	}
 
 	if err := s.payments.Create(ctx, p); err != nil {
 		// A concurrent identical initiate won the idempotency-key race: re-read and
