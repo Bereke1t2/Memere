@@ -15,9 +15,22 @@ type TranscodeJob struct {
 	AttemptCount int    `json:"attempt_count"`
 }
 
+// NotificationJob is the unit of async push/email delivery. The in-app row is
+// written inline (before enqueue) so the badge count is immediately consistent;
+// this job drives the push/email fan-out that must never block the API path.
+type NotificationJob struct {
+	UserID   string            `json:"user_id"`
+	Type     string            `json:"type"`
+	Title    string            `json:"title"`
+	Body     string            `json:"body"`
+	Data     map[string]string `json:"data,omitempty"`
+	Channels []Channel         `json:"channels"`
+}
+
 // JobQueue is the async-work port. The monolith uses an in-process buffered
 // channel (infrastructure/messaging); a durable SQS/RabbitMQ consumer can be
 // dropped in behind the same interface without touching usecases.
 type JobQueue interface {
 	EnqueueTranscode(ctx context.Context, job TranscodeJob) error
+	EnqueueNotification(ctx context.Context, job NotificationJob) error
 }
