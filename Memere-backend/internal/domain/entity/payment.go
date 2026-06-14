@@ -22,12 +22,16 @@ const (
 	ProviderChapa    PaymentProvider = "chapa"
 	ProviderTelebirr PaymentProvider = "telebirr"
 	ProviderStripe   PaymentProvider = "stripe"
+	// ProviderMock is a test-only backend used by the Phase 4 smoke test: it
+	// settles offline (no external HTTP) and signs its own webhook. It is only
+	// usable when explicitly registered (PAYMENT_MOCK_ENABLED), never in prod.
+	ProviderMock PaymentProvider = "mock"
 )
 
 // Valid reports whether p is a known provider.
 func (p PaymentProvider) Valid() bool {
 	switch p {
-	case ProviderChapa, ProviderTelebirr, ProviderStripe:
+	case ProviderChapa, ProviderTelebirr, ProviderStripe, ProviderMock:
 		return true
 	}
 	return false
