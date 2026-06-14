@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -69,9 +70,21 @@ type SubscriptionRepository interface {
 	// apperror.NotFound — the all-access access check.
 	GetActiveForStudent(ctx context.Context, studentID uuid.UUID) (*entity.Subscription, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status entity.SubscriptionStatus) error
+	// ExtendPeriod pushes an active subscription's period end out and keeps it
+	// active — the period-extension primitive behind idempotent Activate.
+	ExtendPeriod(ctx context.Context, id uuid.UUID, newEnd time.Time) error
+	// CancelAtPeriodEnd flags the subscription as canceled (won't renew) while
+	// keeping access until current_period_end; returns false when there was no
+	// active, not-yet-canceled row to flag (idempotent).
+	CancelAtPeriodEnd(ctx context.Context, id uuid.UUID) (bool, error)
 	// ListExpiring returns active subscriptions whose period has ended, for the
 	// renewal/expiry sweeper (Skill 4).
 	ListExpiring(ctx context.Context, limit int) ([]*entity.Subscription, error)
+	// ExpireLapsed transitions an active, period-ended subscription to expired,
+	// guarded on status + period so a renewal racing the sweeper is never
+	// clobbered; returns false when there was no still-lapsed active row (the
+	// transition the sweeper applies after ListExpiring).
+	ExpireLapsed(ctx context.Context, id uuid.UUID) (bool, error)
 }
 
 // WebhookEventRepository is the dedup ledger (spec §7.3).
