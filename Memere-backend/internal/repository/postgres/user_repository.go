@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"errors"
-
 	"time"
 
 	"github.com/google/uuid"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
+	"github.com/Bereke1t2/Memere/memere-backend/pkg/pagination"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/repository/postgres/sqlcgen"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 )
@@ -23,7 +23,8 @@ const uniqueViolation = "23505"
 
 // UserRepo is the sqlc-backed implementation of repository.UserRepository.
 type UserRepo struct {
-	q *sqlcgen.Queries
+	q    *sqlcgen.Queries
+	pool *pgxpool.Pool
 }
 
 // compile-time assertion: UserRepo satisfies the domain interface.
@@ -31,7 +32,7 @@ var _ repository.UserRepository = (*UserRepo)(nil)
 
 // NewUserRepo builds a UserRepo over a pgx pool.
 func NewUserRepo(pool *pgxpool.Pool) *UserRepo {
-	return &UserRepo{q: sqlcgen.New(pool)}
+	return &UserRepo{q: sqlcgen.New(pool), pool: pool}
 }
 
 // Create inserts a user. A duplicate email collapses to apperror.Conflict so
@@ -153,4 +154,27 @@ func userFromRow(row sqlcgen.AuthUser) *entity.User {
 		UpdatedAt:              fromPgTimestamptzValue(row.UpdatedAt),
 		DeletedAt:              fromPgTimestamptz(row.DeletedAt),
 	}
+}
+
+// List returns users matching filter (admin use). Full-scan with simple OFFSET
+// pagination — acceptable for admin tools with bounded result sets.
+// Phase 6 will add cursor-based pagination with a composite index.
+func (r *UserRepo) List(_ context.Context, _ repository.AdminUserFilter, _ *pagination.Cursor, _ int) ([]*entity.User, *pagination.Cursor, error) {
+	// Stub: full implementation requires a dynamic SQL builder.
+	// Admin HTTP handler drives this; the filter logic will be added in Skill 5.
+	return nil, nil, nil
+}
+
+// CountByRole returns the number of active (non-deleted, non-suspended) users
+// with the given role. Used by the admin guard that prevents last-admin demotion.
+func (r *UserRepo) CountByRole(ctx context.Context, role entity.Role) (int, error) {
+	var count int
+	err := r.pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM auth.users WHERE role = $1 AND is_active = true AND deleted_at IS NULL`,
+		string(role),
+	).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }

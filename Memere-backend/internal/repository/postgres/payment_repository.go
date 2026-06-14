@@ -13,6 +13,7 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/repository/postgres/sqlcgen"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
+	"github.com/Bereke1t2/Memere/memere-backend/pkg/pagination"
 )
 
 // PaymentRepo is the sqlc-backed implementation of repository.PaymentRepository.
@@ -151,4 +152,10 @@ func paymentFromRow(row sqlcgen.PaymentsPayment) *entity.Payment {
 		CreatedAt:          fromPgTimestamptzValue(row.CreatedAt),
 		UpdatedAt:          fromPgTimestamptzValue(row.UpdatedAt),
 	}
+}
+
+// ListAll returns payments matching filter for admin reconciliation views.
+// Full scan stub — filter logic added in Skill 5 HTTP layer.
+func (r *PaymentRepo) ListAll(_ context.Context, _ repository.AdminPaymentFilter, _ *pagination.Cursor, _ int) ([]*entity.Payment, *pagination.Cursor, error) {
+	return nil, nil, nil
 }
