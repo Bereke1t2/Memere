@@ -285,4 +285,50 @@ type ProgressProgress struct {
 	LastAccessedAt       pgtype.Timestamptz
 	CreatedAt            pgtype.Timestamptz
 	UpdatedAt            pgtype.Timestamptz
+	DeletedAt            pgtype.Timestamptz
+}
+
+type ProgressCourseProgress struct {
+	StudentID        pgtype.UUID
+	CourseID         pgtype.UUID
+	CompletedLessons int32
+	TotalLessons     int32
+	PercentComplete  pgtype.Numeric
+	CompletedAt      pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+}
+
+type ProgressStudyStreak struct {
+	StudentID      pgtype.UUID
+	CurrentStreak  int32
+	LongestStreak  int32
+	LastStudyDate  pgtype.Date
+	LastWarnedDate pgtype.Date
+	UpdatedAt      pgtype.Timestamptz
+}
+
+type NotificationsNotification struct {
+	ID        pgtype.UUID
+	UserID    pgtype.UUID
+	Type      string
+	Title     string
+	Body      string
+	Data      []byte // JSONB scanned as raw bytes
+	ReadAt    pgtype.Timestamptz
+	CreatedAt pgtype.Timestamptz
+}
+
+type NotificationsDeviceToken struct {
+	ID        pgtype.UUID
+	UserID    pgtype.UUID
+	FCMToken  string
+	Platform  string
+	CreatedAt pgtype.Timestamptz
+}
+
+type NotificationsPreference struct {
+	UserID       pgtype.UUID
+	PushEnabled  bool
+	EmailEnabled bool
+	UpdatedAt    pgtype.Timestamptz
 }
