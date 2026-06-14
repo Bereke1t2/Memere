@@ -59,7 +59,9 @@ func (f *fakeEnrollRepo) ListByStudent(context.Context, uuid.UUID, int) ([]*enti
 	return nil, nil
 }
 
-type fakeSubRepo struct{ active map[uuid.UUID]*entity.Subscription }
+type fakeSubRepo struct {
+	active map[uuid.UUID]*entity.Subscription
+}
 
 func (f *fakeSubRepo) Create(context.Context, *entity.Subscription) error { return nil }
 func (f *fakeSubRepo) GetByID(context.Context, uuid.UUID) (*entity.Subscription, error) {
@@ -76,6 +78,14 @@ func (f *fakeSubRepo) UpdateStatus(context.Context, uuid.UUID, entity.Subscripti
 }
 func (f *fakeSubRepo) ListExpiring(context.Context, int) ([]*entity.Subscription, error) {
 	return nil, nil
+}
+
+func (f *fakeSubRepo) ExtendPeriod(context.Context, uuid.UUID, time.Time) error { return nil }
+func (f *fakeSubRepo) CancelAtPeriodEnd(context.Context, uuid.UUID) (bool, error) {
+	return true, nil
+}
+func (f *fakeSubRepo) ExpireLapsed(context.Context, uuid.UUID) (bool, error) {
+	return false, nil
 }
 
 // ---- helpers -----------------------------------------------------------------
@@ -128,8 +138,8 @@ func TestCanAccessCourse_Matrix(t *testing.T) {
 			want:   FullAccess,
 		},
 		{
-			name:  "enrolled student -> full",
-			actor: Actor{UserID: student, Role: entity.RoleStudent},
+			name:   "enrolled student -> full",
+			actor:  Actor{UserID: student, Role: entity.RoleStudent},
 			course: paid,
 			enroll: &fakeEnrollRepo{active: map[[2]uuid.UUID]*entity.Enrollment{
 				{student, courseID}: {StudentID: student, CourseID: courseID, ExpiresAt: nil},

@@ -477,6 +477,14 @@ func (f *fakeSubRepo) ListExpiring(context.Context, int) ([]*entity.Subscription
 	return nil, nil
 }
 
+func (f *fakeSubRepo) ExtendPeriod(context.Context, uuid.UUID, time.Time) error { return nil }
+func (f *fakeSubRepo) CancelAtPeriodEnd(context.Context, uuid.UUID) (bool, error) {
+	return true, nil
+}
+func (f *fakeSubRepo) ExpireLapsed(context.Context, uuid.UUID) (bool, error) {
+	return false, nil
+}
+
 // ---- compile-time interface checks -------------------------------------------
 
 var (

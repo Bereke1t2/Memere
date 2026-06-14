@@ -361,6 +361,13 @@ func (f *fakeSubRepo) UpdateStatus(context.Context, uuid.UUID, entity.Subscripti
 func (f *fakeSubRepo) ListExpiring(context.Context, int) ([]*entity.Subscription, error) {
 	return nil, nil
 }
+func (f *fakeSubRepo) ExtendPeriod(context.Context, uuid.UUID, time.Time) error { return nil }
+func (f *fakeSubRepo) CancelAtPeriodEnd(context.Context, uuid.UUID) (bool, error) {
+	return false, nil
+}
+func (f *fakeSubRepo) ExpireLapsed(context.Context, uuid.UUID) (bool, error) {
+	return false, nil
+}
 
 var (
 	_ repository.EnrollmentRepository   = (*fakeEnrollRepo)(nil)
