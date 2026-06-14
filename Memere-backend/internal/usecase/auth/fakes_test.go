@@ -8,7 +8,9 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
+	"github.com/Bereke1t2/Memere/memere-backend/pkg/pagination"
 )
 
 // fakeUserRepo is an in-memory UserRepository for usecase tests. It is keyed by
@@ -91,6 +93,22 @@ func (f *fakeUserRepo) SetLastLogin(_ context.Context, id uuid.UUID, t time.Time
 		u.LastLoginAt = &t
 	}
 	return nil
+}
+
+func (f *fakeUserRepo) List(context.Context, repository.AdminUserFilter, *pagination.Cursor, int) ([]*entity.User, *pagination.Cursor, error) {
+	return nil, nil, nil
+}
+
+func (f *fakeUserRepo) CountByRole(_ context.Context, role entity.Role) (int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	count := 0
+	for _, u := range f.byID {
+		if u.Role == role && u.IsActive {
+			count++
+		}
+	}
+	return count, nil
 }
 
 // fakeTokenRepo is an in-memory RefreshTokenRepository keyed by hash.

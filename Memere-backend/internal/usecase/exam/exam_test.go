@@ -35,7 +35,7 @@ func newHarness(t *testing.T) *harness {
 	// Course-linked exams gate through the real access.Service so the FullAccess
 	// policy is exercised end to end, not mocked.
 	accessSvc := access.NewService(enroll, newFakeSubRepo(), courses, nil)
-	svc := NewService(exams, attempts, courses, state, nil, fakeTxManager{}, accessSvc)
+	svc := NewService(exams, attempts, courses, state, nil, fakeTxManager{}, accessSvc, nil)
 
 	h := &harness{svc: svc, exams: exams, attempts: attempts, courses: courses, state: state, enroll: enroll}
 	h.clock = time.Date(2026, 6, 8, 12, 0, 0, 0, time.UTC)

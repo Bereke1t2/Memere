@@ -100,6 +100,10 @@ func (f *fakePaymentRepo) ListByStudent(_ context.Context, studentID uuid.UUID, 
 	return nil, nil
 }
 
+func (f *fakePaymentRepo) ListAll(context.Context, repository.AdminPaymentFilter, *pagination.Cursor, int) ([]*entity.Payment, *pagination.Cursor, error) {
+	return nil, nil, nil
+}
+
 // ---- fake enrollment repo ----------------------------------------------------
 
 type fakeEnrollRepo struct {

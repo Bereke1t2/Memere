@@ -232,6 +232,10 @@ func (f *fakeQueue) EnqueueTranscode(_ context.Context, job service.TranscodeJob
 	return nil
 }
 
+func (f *fakeQueue) EnqueueNotification(context.Context, service.NotificationJob) error {
+	return nil
+}
+
 func (f *fakeQueue) count() int {
 	f.mu.Lock()
 	defer f.mu.Unlock()

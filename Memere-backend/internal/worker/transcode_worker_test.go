@@ -178,6 +178,10 @@ func (q *fakeJobQueue) EnqueueTranscode(_ context.Context, job service.Transcode
 	return nil
 }
 
+func (q *fakeJobQueue) EnqueueNotification(context.Context, service.NotificationJob) error {
+	return nil
+}
+
 func (q *fakeJobQueue) enqueued() []service.TranscodeJob {
 	q.mu.Lock()
 	defer q.mu.Unlock()
