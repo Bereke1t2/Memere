@@ -18,8 +18,9 @@ type Config struct {
 	Redis      RedisConfig
 	JWT        JWTConfig
 	HTTP       HTTPConfig
-	Sweeper    SweeperConfig
-	SubSweeper SubscriptionSweeperConfig
+	Sweeper          SweeperConfig
+	SubSweeper       SubscriptionSweeperConfig
+	EngagementSweep  EngagementSweeperConfig
 	Storage    StorageConfig
 	Video      VideoConfig
 	Payment    PaymentConfig
@@ -111,6 +112,13 @@ type SweeperConfig struct {
 type SubscriptionSweeperConfig struct {
 	Enabled  bool          `envconfig:"SUBSCRIPTION_SWEEP_ENABLED" default:"true"`
 	Interval time.Duration `envconfig:"SUBSCRIPTION_SWEEP_INTERVAL" default:"1h"`
+}
+
+// EngagementSweeperConfig tunes the Phase 5 streak-warning sweeper (spec §11.2).
+type EngagementSweeperConfig struct {
+	Enabled  bool          `envconfig:"ENGAGEMENT_SWEEP_ENABLED" default:"true"`
+	Interval time.Duration `envconfig:"ENGAGEMENT_SWEEP_INTERVAL" default:"24h"`
+
 }
 
 // PaymentConfig groups the Phase 4 payment-flow settings (spec §10): the URLs we
@@ -205,7 +213,8 @@ type FCMConfig struct {
 }
 
 type SendGridConfig struct {
-	APIKey string `envconfig:"SENDGRID_API_KEY" default:""`
+	APIKey    string `envconfig:"SENDGRID_API_KEY" default:""`
+	FromEmail string `envconfig:"SENDGRID_FROM_EMAIL" default:"noreply@memere.app"`
 }
 
 // Load reads configuration from the environment, applying defaults and failing
