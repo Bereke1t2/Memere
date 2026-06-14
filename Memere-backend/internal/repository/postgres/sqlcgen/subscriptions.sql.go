@@ -11,6 +11,43 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const cancelSubscriptionAtPeriodEnd = `-- name: CancelSubscriptionAtPeriodEnd :execrows
+UPDATE payments.subscriptions
+SET canceled_at = now(),
+    updated_at = now()
+WHERE id = $1 AND status = 'active' AND canceled_at IS NULL
+`
+
+// CancelSubscriptionAtPeriodEnd flags an active subscription as canceled (it will
+// not renew) while keeping access until current_period_end; the sweeper expires
+// it once the period lapses. Guarded so a repeated cancel is a no-op.
+func (q *Queries) CancelSubscriptionAtPeriodEnd(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, cancelSubscriptionAtPeriodEnd, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const expireLapsedSubscription = `-- name: ExpireLapsedSubscription :execrows
+UPDATE payments.subscriptions
+SET status = 'expired',
+    updated_at = now()
+WHERE id = $1 AND status = 'active' AND current_period_end <= now()
+`
+
+// ExpireLapsedSubscription transitions an active subscription whose period has
+// ended to 'expired'. Guarded on status + period so a renewal that landed between
+// the sweeper's list and this update is never clobbered, and a repeated tick is a
+// no-op (the row is no longer active).
+func (q *Queries) ExpireLapsedSubscription(ctx context.Context, id pgtype.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, expireLapsedSubscription, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const createSubscription = `-- name: CreateSubscription :one
 INSERT INTO payments.subscriptions (
     id, student_id, plan, status, current_period_start, current_period_end,
@@ -58,6 +95,27 @@ func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscription
 		&i.CanceledAt,
 	)
 	return i, err
+}
+
+const extendSubscriptionPeriod = `-- name: ExtendSubscriptionPeriod :exec
+UPDATE payments.subscriptions
+SET current_period_end = $2,
+    status = 'active',
+    updated_at = now()
+WHERE id = $1
+`
+
+type ExtendSubscriptionPeriodParams struct {
+	ID               pgtype.UUID
+	CurrentPeriodEnd pgtype.Timestamptz
+}
+
+// ExtendSubscriptionPeriod pushes an active subscription's period end out (a
+// renewal or stacked purchase) and (re)activates it; the period-extension
+// primitive used by idempotent Activate.
+func (q *Queries) ExtendSubscriptionPeriod(ctx context.Context, arg ExtendSubscriptionPeriodParams) error {
+	_, err := q.db.Exec(ctx, extendSubscriptionPeriod, arg.ID, arg.CurrentPeriodEnd)
+	return err
 }
 
 const getActiveSubscriptionForStudent = `-- name: GetActiveSubscriptionForStudent :one
