@@ -13,18 +13,21 @@ import (
 // (AWS, Chapa, Stripe, FCM, SendGrid) are declared now so the shape is stable;
 // they are not required until the phase that uses them.
 type Config struct {
-	App     AppConfig
-	DB      DBConfig
-	Redis   RedisConfig
-	JWT     JWTConfig
-	HTTP    HTTPConfig
-	Sweeper SweeperConfig
-	Storage StorageConfig
-	Video   VideoConfig
+	App        AppConfig
+	DB         DBConfig
+	Redis      RedisConfig
+	JWT        JWTConfig
+	HTTP       HTTPConfig
+	Sweeper    SweeperConfig
+	SubSweeper SubscriptionSweeperConfig
+	Storage    StorageConfig
+	Video      VideoConfig
+	Payment    PaymentConfig
 
 	// Reserved for later phases (not required to boot in Phase 1).
 	AWS      AWSConfig
 	Chapa    ChapaConfig
+	Telebirr TelebirrConfig
 	Stripe   StripeConfig
 	FCM      FCMConfig
 	SendGrid SendGridConfig
@@ -102,6 +105,42 @@ type SweeperConfig struct {
 	Interval time.Duration `envconfig:"SWEEPER_INTERVAL" default:"60s"`
 }
 
+// SubscriptionSweeperConfig tunes the Phase 4 subscription expiry sweeper
+// (spec §10.2): how often it scans for lapsed subscriptions to expire, and a
+// switch to disable it in a deployment that handles renewals elsewhere.
+type SubscriptionSweeperConfig struct {
+	Enabled  bool          `envconfig:"SUBSCRIPTION_SWEEP_ENABLED" default:"true"`
+	Interval time.Duration `envconfig:"SUBSCRIPTION_SWEEP_INTERVAL" default:"1h"`
+}
+
+// PaymentConfig groups the Phase 4 payment-flow settings (spec §10): the URLs we
+// hand the provider at checkout, the default currency, the configurable
+// teacher/platform revenue split (§1.6), config-driven subscription plan pricing
+// (§1.6), and the test-only mock provider switch used by the smoke test.
+type PaymentConfig struct {
+	// CallbackURL is the base webhook URL we give providers; the provider name is
+	// appended (…/webhooks/payments/<provider>).
+	CallbackURL     string `envconfig:"PAYMENT_CALLBACK_URL" default:"http://localhost:8080/api/v1/webhooks/payments"`
+	ReturnURL       string `envconfig:"PAYMENT_RETURN_URL" default:"http://localhost:8080/payments/done"`
+	DefaultCurrency string `envconfig:"PAYMENT_DEFAULT_CURRENCY" default:"ETB"`
+
+	// TeacherShare is the fraction of gross a teacher keeps (spec §1.6, 70/30).
+	TeacherShare float64 `envconfig:"TEACHER_REVENUE_SHARE" default:"0.70"`
+
+	// MockEnabled registers the test-only mock provider; MockWebhookSecret is the
+	// HMAC secret it verifies simulated webhooks against.
+	MockEnabled       bool   `envconfig:"PAYMENT_MOCK_ENABLED" default:"false"`
+	MockWebhookSecret string `envconfig:"PAYMENT_MOCK_WEBHOOK_SECRET" default:"mock-secret"`
+
+	// Subscription plan pricing (config-driven, never hardcoded in the usecase).
+	MonthlyPrice    float64       `envconfig:"SUB_MONTHLY_PRICE" default:"299"`
+	MonthlyCurrency string        `envconfig:"SUB_MONTHLY_CURRENCY" default:"ETB"`
+	MonthlyPeriod   time.Duration `envconfig:"SUB_MONTHLY_PERIOD" default:"720h"` // 30 days
+	AnnualPrice     float64       `envconfig:"SUB_ANNUAL_PRICE" default:"2999"`
+	AnnualCurrency  string        `envconfig:"SUB_ANNUAL_CURRENCY" default:"ETB"`
+	AnnualPeriod    time.Duration `envconfig:"SUB_ANNUAL_PERIOD" default:"8760h"` // 365 days
+}
+
 // StorageConfig groups object-storage settings for the Phase 3 video pipeline
 // (spec §3.3, §8). The same shape serves AWS S3 in production and MinIO in local
 // dev (Endpoint + UsePathStyle set). Bucket is intentionally NOT required so the
@@ -146,11 +185,19 @@ type AWSConfig struct {
 }
 
 type ChapaConfig struct {
-	SecretKey string `envconfig:"CHAPA_SECRET_KEY" default:""`
+	SecretKey     string `envconfig:"CHAPA_SECRET_KEY" default:""`
+	WebhookSecret string `envconfig:"CHAPA_WEBHOOK_SECRET" default:""`
+	BaseURL       string `envconfig:"CHAPA_BASE_URL" default:""`
 }
 
 type StripeConfig struct {
-	SecretKey string `envconfig:"STRIPE_SECRET_KEY" default:""`
+	SecretKey     string `envconfig:"STRIPE_SECRET_KEY" default:""`
+	WebhookSecret string `envconfig:"STRIPE_WEBHOOK_SECRET" default:""`
+}
+
+type TelebirrConfig struct {
+	AppKey        string `envconfig:"TELEBIRR_APP_KEY" default:""`
+	WebhookSecret string `envconfig:"TELEBIRR_WEBHOOK_SECRET" default:""`
 }
 
 type FCMConfig struct {
