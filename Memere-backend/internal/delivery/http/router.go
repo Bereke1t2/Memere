@@ -25,6 +25,13 @@ type Deps struct {
 	Exams     *ExamHandler
 	Analytics *AnalyticsHandler
 	Video     *VideoHandler
+
+	// Phase 4 (payments) handlers. Nil when payments are not configured, in which
+	// case their routes are not registered.
+	Payments      *PaymentHandler
+	Enrollments   *EnrollmentHandler
+	Subscriptions *SubscriptionHandler
+	Revenue       *RevenueHandler
 }
 
 // NewRouter assembles the Gin engine: the global middleware stack (in order),
@@ -48,6 +55,7 @@ func NewRouter(deps Deps) *gin.Engine {
 	requireAuth := middleware.RequireAuth(deps.JWT)
 	optionalAuth := middleware.OptionalAuth(deps.JWT)
 	teacherOrAdmin := middleware.RequireRole(entity.RoleTeacher, entity.RoleAdmin)
+	adminOnly := middleware.RequireRole(entity.RoleAdmin)
 	loginLimit := middleware.LoginRateLimit(deps.Cache, deps.Config.HTTP.LoginRateLimit, deps.Config.HTTP.LoginRateWindow)
 
 	v1 := r.Group("/api/v1")
@@ -144,6 +152,44 @@ func NewRouter(deps Deps) *gin.Engine {
 			videos.POST("/:id/retry", requireAuth, teacherOrAdmin, deps.Video.Retry)
 		}
 		v1.POST("/lessons/:id/videos/upload-url", requireAuth, teacherOrAdmin, deps.Video.RequestUpload)
+	}
+
+	// Phase 4 — payments, enrollments, subscriptions, revenue. Registered as a
+	// block so an unconfigured payment stack leaves the routes absent rather than
+	// nil-panicking.
+	if deps.Payments != nil {
+		// Provider webhook: PUBLIC and raw-body. It is registered OUTSIDE requireAuth
+		// (unauthenticated providers must reach it) and does no JSON binding — the
+		// handler reads the raw body itself for signature verification. The global
+		// logger redacts bodies, so no payload/secret is logged.
+		v1.POST("/webhooks/payments/:provider", deps.Payments.Webhook)
+
+		payments := v1.Group("/payments")
+		{
+			payments.POST("/initiate", requireAuth, deps.Payments.Initiate)
+			payments.GET("", requireAuth, deps.Payments.ListMine)
+			payments.GET("/:id/status", requireAuth, deps.Payments.Status)
+			payments.POST("/:id/refund", requireAuth, adminOnly, deps.Payments.Refund)
+		}
+
+		// Free-course enrollment (paid access goes through the payment flow).
+		courses.POST("/:id/enroll-free", requireAuth, deps.Enrollments.EnrollFree)
+		v1.GET("/me/enrollments", requireAuth, deps.Enrollments.ListMine)
+
+		// Subscriptions. The plan catalogue is public; everything else is bearer.
+		v1.GET("/subscription-plans", deps.Subscriptions.ListPlans)
+		subs := v1.Group("/subscriptions")
+		{
+			subs.POST("", requireAuth, deps.Subscriptions.Subscribe)
+			subs.POST("/:id/cancel", requireAuth, deps.Subscriptions.Cancel)
+		}
+		v1.GET("/me/subscription", requireAuth, deps.Subscriptions.GetMine)
+
+		// Revenue reporting. Platform totals are admin-only; earnings are
+		// teacher/admin; per-course sales ownership is checked in the usecase.
+		v1.GET("/admin/revenue", requireAuth, adminOnly, deps.Revenue.PlatformRevenue)
+		v1.GET("/me/earnings", requireAuth, teacherOrAdmin, deps.Revenue.MyEarnings)
+		courses.GET("/:id/sales", requireAuth, deps.Revenue.CourseSales)
 	}
 
 	return r
