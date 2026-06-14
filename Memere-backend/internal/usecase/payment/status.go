@@ -55,6 +55,27 @@ func (s *Service) GetPaymentStatus(ctx context.Context, actor Actor, paymentID u
 	return viewOf(p), nil
 }
 
+// ListMyPayments returns the caller's own payments, most recent first (IDOR-safe:
+// scoped to the authenticated student id, never a client-supplied id). limit is
+// clamped to a sane range.
+func (s *Service) ListMyPayments(ctx context.Context, actor Actor, limit int) ([]*PaymentView, error) {
+	if actor.UserID == uuid.Nil {
+		return nil, apperror.Unauthorized("authentication required", nil)
+	}
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	ps, err := s.payments.ListByStudent(ctx, actor.UserID, limit)
+	if err != nil {
+		return nil, err
+	}
+	views := make([]*PaymentView, 0, len(ps))
+	for _, p := range ps {
+		views = append(views, viewOf(p))
+	}
+	return views, nil
+}
+
 // RefundPayment marks a completed payment refunded (admin only). Per spec
 // decision the enrollment is intentionally KEPT — refunds are handled
 // out-of-band and revoking access automatically would be surprising; the
