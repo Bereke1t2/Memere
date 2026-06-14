@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -73,6 +74,32 @@ func (r *SubscriptionRepo) UpdateStatus(ctx context.Context, id uuid.UUID, statu
 		return apperror.Internal(err)
 	}
 	return nil
+}
+
+func (r *SubscriptionRepo) ExtendPeriod(ctx context.Context, id uuid.UUID, newEnd time.Time) error {
+	if err := queriesFor(ctx, r.q).ExtendSubscriptionPeriod(ctx, sqlcgen.ExtendSubscriptionPeriodParams{
+		ID:               toPgUUID(id),
+		CurrentPeriodEnd: pgTimestamptzValue(newEnd),
+	}); err != nil {
+		return apperror.Internal(err)
+	}
+	return nil
+}
+
+func (r *SubscriptionRepo) CancelAtPeriodEnd(ctx context.Context, id uuid.UUID) (bool, error) {
+	n, err := queriesFor(ctx, r.q).CancelSubscriptionAtPeriodEnd(ctx, toPgUUID(id))
+	if err != nil {
+		return false, apperror.Internal(err)
+	}
+	return n > 0, nil
+}
+
+func (r *SubscriptionRepo) ExpireLapsed(ctx context.Context, id uuid.UUID) (bool, error) {
+	n, err := queriesFor(ctx, r.q).ExpireLapsedSubscription(ctx, toPgUUID(id))
+	if err != nil {
+		return false, apperror.Internal(err)
+	}
+	return n > 0, nil
 }
 
 func (r *SubscriptionRepo) ListExpiring(ctx context.Context, limit int) ([]*entity.Subscription, error) {
