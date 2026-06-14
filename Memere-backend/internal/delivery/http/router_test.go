@@ -99,3 +99,55 @@ func TestNewRouter_RegistersPhase3VideoRoutes(t *testing.T) {
 		}
 	}
 }
+
+// TestNewRouter_RegistersPhase4PaymentRoutes verifies the Phase 4 payment,
+// enrollment, subscription, and revenue routes assemble without a panic (the new
+// /courses/:id/{enroll-free,sales} sub-routes coexist with the existing :id
+// routes) and are registered. In particular the public, unauthenticated webhook
+// route must be present.
+func TestNewRouter_RegistersPhase4PaymentRoutes(t *testing.T) {
+	deps := Deps{
+		Config:        &config.Config{},
+		JWT:           jwt.NewManager("test-secret", time.Minute, time.Hour, "memere-test"),
+		Auth:          &AuthHandler{},
+		Courses:       &CourseHandler{},
+		Quizzes:       &QuizHandler{},
+		Exams:         &ExamHandler{},
+		Analytics:     &AnalyticsHandler{},
+		Payments:      &PaymentHandler{},
+		Enrollments:   &EnrollmentHandler{},
+		Subscriptions: &SubscriptionHandler{},
+		Revenue:       &RevenueHandler{},
+	}
+
+	r := NewRouter(deps)
+
+	want := map[string]bool{
+		"POST /api/v1/payments/initiate":           false,
+		"GET /api/v1/payments":                     false,
+		"GET /api/v1/payments/:id/status":          false,
+		"POST /api/v1/payments/:id/refund":         false,
+		"POST /api/v1/webhooks/payments/:provider": false,
+		"POST /api/v1/courses/:id/enroll-free":     false,
+		"GET /api/v1/me/enrollments":               false,
+		"GET /api/v1/subscription-plans":           false,
+		"POST /api/v1/subscriptions":               false,
+		"POST /api/v1/subscriptions/:id/cancel":    false,
+		"GET /api/v1/me/subscription":              false,
+		"GET /api/v1/admin/revenue":                false,
+		"GET /api/v1/me/earnings":                  false,
+		"GET /api/v1/courses/:id/sales":            false,
+	}
+
+	for _, route := range r.Routes() {
+		key := route.Method + " " + route.Path
+		if _, ok := want[key]; ok {
+			want[key] = true
+		}
+	}
+	for key, found := range want {
+		if !found {
+			t.Errorf("route not registered: %s", key)
+		}
+	}
+}
