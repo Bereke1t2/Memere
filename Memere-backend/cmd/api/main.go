@@ -14,12 +14,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	redis "github.com/redis/go-redis/v9"
+	"github.com/shopspring/decimal"
 
 	"github.com/Bereke1t2/Memere/memere-backend/config"
 	delivery_http "github.com/Bereke1t2/Memere/memere-backend/internal/delivery/http"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/service"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/infrastructure/cache"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/infrastructure/database"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/infrastructure/messaging"
+	paymentinfra "github.com/Bereke1t2/Memere/memere-backend/internal/infrastructure/payment"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/infrastructure/storage"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/infrastructure/transcode"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/repository/postgres"
@@ -27,9 +31,14 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/access"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/analytics"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/auth"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/coupon"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/course"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/enrollment"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/exam"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/payment"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/quiz"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/revenue"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/subscription"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/video"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/worker"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/jwt"
@@ -89,6 +98,12 @@ func main() {
 		log.Println("attempt sweeper disabled (SWEEPER_ENABLED=false)")
 	}
 
+	if cfg.SubSweeper.Enabled {
+		go app.SubSweeper.Run(bgCtx)
+	} else {
+		log.Println("subscription sweeper disabled (SUBSCRIPTION_SWEEP_ENABLED=false)")
+	}
+
 	// Transcode worker: re-enqueue videos stranded in 'processing' by a previous
 	// crash (the in-proc queue is non-durable), then start consuming jobs.
 	if n, err := app.VideoUC.RequeueStuck(bgCtx); err != nil {
@@ -119,10 +134,11 @@ func main() {
 // App bundles the constructed HTTP router and the background workers so main can
 // own their lifecycle.
 type App struct {
-	Router  *gin.Engine
-	Sweeper *worker.AttemptSweeper
-	Worker  *worker.TranscodeWorker
-	VideoUC *video.Service
+	Router     *gin.Engine
+	Sweeper    *worker.AttemptSweeper
+	SubSweeper *worker.SubscriptionSweeper
+	Worker     *worker.TranscodeWorker
+	VideoUC    *video.Service
 }
 
 // buildApp performs the explicit constructor wiring for the API: repositories
@@ -144,6 +160,10 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	videoRepo := postgres.NewVideoRepo(pool)
 	enrollmentRepo := postgres.NewEnrollmentRepo(pool)
 	subscriptionRepo := postgres.NewSubscriptionRepo(pool)
+	paymentRepo := postgres.NewPaymentRepo(pool)
+	couponRepo := postgres.NewCouponRepo(pool)
+	webhookRepo := postgres.NewWebhookEventRepo(pool)
+	revenueRepo := postgres.NewRevenueRepo(pool)
 	txManager := postgres.NewTxManager(pool)
 	sessionRepo := redisrepo.NewSessionRepo(redisClient)
 	attemptStateRepo := redisrepo.NewAttemptStateRepo(redisClient)
@@ -196,6 +216,66 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 		DownloadURLTTL: cfg.Storage.DownloadURLTTL,
 	})
 
+	// Phase 4 payment stack. The provider registry is built from config; the
+	// test-only mock provider is appended only when explicitly enabled
+	// (PAYMENT_MOCK_ENABLED) so it can never settle a real payment in production.
+	providers := []service.PaymentProvider{
+		paymentinfra.NewChapaProvider(paymentinfra.ChapaConfig{
+			SecretKey:     cfg.Chapa.SecretKey,
+			WebhookSecret: cfg.Chapa.WebhookSecret,
+			BaseURL:       cfg.Chapa.BaseURL,
+		}),
+		paymentinfra.NewTelebirrProvider(paymentinfra.TelebirrConfig{
+			WebhookSecret: cfg.Telebirr.WebhookSecret,
+		}),
+		paymentinfra.NewStripeProvider(paymentinfra.StripeConfig{
+			WebhookSecret: cfg.Stripe.WebhookSecret,
+		}),
+	}
+	if cfg.Payment.MockEnabled {
+		log.Println("payment: mock provider ENABLED (PAYMENT_MOCK_ENABLED=true) — do not use in production")
+		providers = append(providers, paymentinfra.NewMockProvider(paymentinfra.MockConfig{
+			WebhookSecret: cfg.Payment.MockWebhookSecret,
+		}))
+	}
+	registry := paymentinfra.NewRegistry(providers...)
+
+	// Subscription plans are config-driven (spec §1.6) — never hardcoded here.
+	subCfg := subscription.Config{
+		Monthly: subscription.PlanSpec{
+			Plan:     entity.PlanMonthly,
+			Price:    decimal.NewFromFloat(cfg.Payment.MonthlyPrice),
+			Currency: cfg.Payment.MonthlyCurrency,
+			Period:   cfg.Payment.MonthlyPeriod,
+		},
+		Annual: subscription.PlanSpec{
+			Plan:     entity.PlanAnnual,
+			Price:    decimal.NewFromFloat(cfg.Payment.AnnualPrice),
+			Currency: cfg.Payment.AnnualCurrency,
+			Period:   cfg.Payment.AnnualPeriod,
+		},
+	}
+
+	couponSvc := coupon.NewService(couponRepo, nil)
+	subscriptionSvc := subscription.NewService(subscriptionRepo, subCfg, nil)
+	enrollmentSvc := enrollment.NewService(enrollmentRepo, courseRepo, nil)
+	revenueSvc := revenue.NewService(revenueRepo, courseRepo, revenue.Config{
+		TeacherShare: decimal.NewFromFloat(cfg.Payment.TeacherShare),
+	})
+	// The subscription service satisfies both the PlanPricer and the
+	// SubscriptionActivator ports the payment flow needs.
+	paymentSvc := payment.NewService(
+		paymentRepo, enrollmentRepo, couponRepo, webhookRepo, courseRepo,
+		registry, couponSvc, subscriptionSvc, subscriptionSvc,
+		txManager, nil,
+		payment.Config{
+			CallbackURL:     cfg.Payment.CallbackURL,
+			ReturnURL:       cfg.Payment.ReturnURL,
+			DefaultCurrency: cfg.Payment.DefaultCurrency,
+		},
+		nil,
+	)
+
 	// Handlers + router.
 	router := delivery_http.NewRouter(delivery_http.Deps{
 		Config:    cfg,
@@ -208,11 +288,17 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 		Exams:     delivery_http.NewExamHandler(examSvc),
 		Analytics: delivery_http.NewAnalyticsHandler(analyticsSvc),
 		Video:     delivery_http.NewVideoHandler(videoSvc),
+
+		Payments:      delivery_http.NewPaymentHandler(paymentSvc),
+		Enrollments:   delivery_http.NewEnrollmentHandler(enrollmentSvc),
+		Subscriptions: delivery_http.NewSubscriptionHandler(subscriptionSvc, paymentSvc),
+		Revenue:       delivery_http.NewRevenueHandler(revenueSvc, nil),
 	})
 
 	// Background workers: the expiry sweeper drives both attempt engines off one
 	// ticker; the transcode worker consumes the in-proc queue and runs FFmpeg.
 	sweeper := worker.NewAttemptSweeper(cfg.Sweeper.Interval, quizSvc, examSvc)
+	subSweeper := worker.NewSubscriptionSweeper(cfg.SubSweeper.Interval, subscriptionSvc, nil)
 	coder := transcode.NewFFmpeg()
 	transcodeWorker := worker.NewTranscodeWorker(queue.Transcode(), store, videoRepo, coder, queue, nil, worker.WorkerCfg{
 		Concurrency: cfg.Video.Concurrency,
@@ -221,9 +307,10 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	})
 
 	return &App{
-		Router:  router,
-		Sweeper: sweeper,
-		Worker:  transcodeWorker,
-		VideoUC: videoSvc,
+		Router:     router,
+		Sweeper:    sweeper,
+		SubSweeper: subSweeper,
+		Worker:     transcodeWorker,
+		VideoUC:    videoSvc,
 	}, nil
 }
