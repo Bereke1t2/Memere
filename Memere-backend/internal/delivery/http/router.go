@@ -32,6 +32,12 @@ type Deps struct {
 	Enrollments   *EnrollmentHandler
 	Subscriptions *SubscriptionHandler
 	Revenue       *RevenueHandler
+
+	// Phase 5 handlers. Non-nil when the respective feature is wired.
+	Progress      *ProgressHandler
+	Notifications *NotificationHandler
+	Certificates  *CertificateHandler
+	Admin         *AdminHandler
 }
 
 // NewRouter assembles the Gin engine: the global middleware stack (in order),
@@ -190,6 +196,58 @@ func NewRouter(deps Deps) *gin.Engine {
 		v1.GET("/admin/revenue", requireAuth, adminOnly, deps.Revenue.PlatformRevenue)
 		v1.GET("/me/earnings", requireAuth, teacherOrAdmin, deps.Revenue.MyEarnings)
 		courses.GET("/:id/sales", requireAuth, deps.Revenue.CourseSales)
+	}
+
+	// Phase 5 — progress, notifications, certificates, admin.
+	if deps.Progress != nil {
+		v1.POST("/lessons/:id/complete", requireAuth, deps.Progress.Complete)
+		v1.PUT("/lessons/:id/video-progress", requireAuth, deps.Progress.VideoProgress)
+		v1.GET("/courses/:id/progress", requireAuth, deps.Progress.GetCourseProgress)
+		v1.GET("/me/dashboard", requireAuth, deps.Progress.GetDashboard)
+		v1.GET("/me/streak", requireAuth, deps.Progress.GetStreak)
+	}
+
+	if deps.Notifications != nil {
+		v1.GET("/me/notifications", requireAuth, deps.Notifications.List)
+		v1.GET("/me/notifications/unread-count", requireAuth, deps.Notifications.UnreadCount)
+		v1.POST("/me/notifications/:id/read", requireAuth, deps.Notifications.MarkRead)
+		v1.POST("/me/notifications/read-all", requireAuth, deps.Notifications.MarkAllRead)
+		v1.POST("/me/devices", requireAuth, deps.Notifications.RegisterDevice)
+		v1.DELETE("/me/devices/:token", requireAuth, deps.Notifications.UnregisterDevice)
+		v1.GET("/me/notification-preferences", requireAuth, deps.Notifications.GetPreferences)
+		v1.PUT("/me/notification-preferences", requireAuth, deps.Notifications.UpdatePreferences)
+	}
+
+	if deps.Certificates != nil {
+		// Public serial verification — no auth required.
+		v1.GET("/verify/certificates/:serial", deps.Certificates.Verify)
+		v1.POST("/courses/:id/certificate", requireAuth, deps.Certificates.Issue)
+		v1.GET("/me/certificates", requireAuth, deps.Certificates.ListMine)
+		v1.GET("/certificates/:id/download", requireAuth, deps.Certificates.GetDownloadURL)
+	}
+
+	if deps.Admin != nil {
+		adminGroup := v1.Group("/admin", requireAuth, adminOnly)
+		{
+			adminGroup.GET("/users", deps.Admin.ListUsers)
+			adminGroup.GET("/users/:id", deps.Admin.GetUser)
+			adminGroup.POST("/users/:id/suspend", deps.Admin.SuspendUser)
+			adminGroup.POST("/users/:id/reactivate", deps.Admin.ReactivateUser)
+			adminGroup.POST("/users/:id/role", deps.Admin.ChangeRole)
+
+			adminGroup.GET("/courses", deps.Admin.ListCourses)
+			adminGroup.POST("/courses/:id/unpublish", deps.Admin.UnpublishCourse)
+
+			adminGroup.GET("/payments", deps.Admin.ListPayments)
+			adminGroup.GET("/payments/:id", deps.Admin.GetPaymentDetail)
+			adminGroup.POST("/payments/reconcile", deps.Admin.ReconcilePending)
+
+			adminGroup.POST("/announcements", deps.Admin.Broadcast)
+
+			adminGroup.GET("/analytics/overview", deps.Admin.Overview)
+			adminGroup.GET("/analytics/revenue", deps.Admin.RevenueBreakdown)
+			adminGroup.GET("/analytics/engagement", deps.Admin.GetEngagementStats)
+		}
 	}
 
 	return r
