@@ -268,10 +268,23 @@ The API server will start on `http://localhost:8080`.
 | `JWT_REFRESH_TTL` | Refresh token TTL | `720h` |
 | `SWEEPER_ENABLED` | Enable the background attempt-expiry sweeper | `true` |
 | `SWEEPER_INTERVAL` | How often the sweeper scans for expired attempts | `60s` |
+| `SUBSCRIPTION_SWEEP_ENABLED` | Enable the background subscription-expiry sweeper | `true` |
+| `SUBSCRIPTION_SWEEP_INTERVAL` | How often the subscription sweeper scans for lapsed plans | `1h` |
 | `AWS_S3_BUCKET` | S3 bucket for media | `memere-media` |
 | `AWS_REGION` | AWS region | `af-south-1` |
 | `CHAPA_SECRET_KEY` | Chapa payment API key | `CHASECK_TEST-...` |
+| `CHAPA_WEBHOOK_SECRET` | Chapa webhook HMAC secret | `...` |
 | `STRIPE_SECRET_KEY` | Stripe API key | `sk_test_...` |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret | `whsec_...` |
+| `TELEBIRR_WEBHOOK_SECRET` | Telebirr webhook HMAC secret | `...` |
+| `PAYMENT_CALLBACK_URL` | Base webhook URL given to providers (`/<provider>` appended) | `https://api.example.com/api/v1/webhooks/payments` |
+| `PAYMENT_RETURN_URL` | Where the provider redirects the user after paying | `https://app.example.com/payments/done` |
+| `PAYMENT_DEFAULT_CURRENCY` | Currency used when a course carries none | `ETB` |
+| `TEACHER_REVENUE_SHARE` | Teacher's fraction of gross (platform keeps the rest) | `0.70` |
+| `SUB_MONTHLY_PRICE` / `SUB_ANNUAL_PRICE` | Subscription plan prices | `299` / `2999` |
+| `SUB_MONTHLY_PERIOD` / `SUB_ANNUAL_PERIOD` | Subscription plan billing periods | `720h` / `8760h` |
+| `PAYMENT_MOCK_ENABLED` | Register the **test-only** offline mock provider (never in prod) | `false` |
+| `PAYMENT_MOCK_WEBHOOK_SECRET` | HMAC secret the mock provider verifies its webhook with | `mock-secret` |
 | `FCM_SERVER_KEY` | Firebase Cloud Messaging key | `AAAA...` |
 | `SENDGRID_API_KEY` | SendGrid email API key | `SG....` |
 
@@ -388,11 +401,59 @@ All API endpoints follow REST conventions with the base path `/api/v1`.
 
 ### Payment Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/v1/payments/initiate` | Initiate a payment |
-| `GET` | `/api/v1/payments/:id/status` | Check payment status |
-| `POST` | `/api/v1/payments/webhook` | Payment provider webhook |
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/api/v1/payments/initiate` | bearer | Start an idempotent checkout (**requires `Idempotency-Key` header**) |
+| `GET` | `/api/v1/payments` | bearer | The caller's own payment history |
+| `GET` | `/api/v1/payments/:id/status` | bearer (owner/admin) | Payment status (with a server-to-server verify fallback) |
+| `POST` | `/api/v1/payments/:id/refund` | bearer + admin | Refund a completed payment |
+| `POST` | `/api/v1/webhooks/payments/:provider` | **public, raw body, signature-verified** | Provider settlement callback |
+
+**Enrollment & subscriptions**
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/api/v1/courses/:id/enroll-free` | bearer | Enrol directly in a free course |
+| `GET` | `/api/v1/me/enrollments` | bearer | The caller's enrollments |
+| `GET` | `/api/v1/subscription-plans` | public | The plan catalogue (price + period) |
+| `POST` | `/api/v1/subscriptions` | bearer | Subscribe (initiates a payment; **requires `Idempotency-Key`**) |
+| `GET` | `/api/v1/me/subscription` | bearer | The caller's active subscription |
+| `POST` | `/api/v1/subscriptions/:id/cancel` | bearer (owner) | Cancel at period end (keeps access until then) |
+
+**Revenue**
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `GET` | `/api/v1/admin/revenue` | bearer + admin | Platform revenue over `?from&to` (RFC3339; default last 30d) |
+| `GET` | `/api/v1/me/earnings` | bearer + teacher/admin | Teacher earnings (gross × configured share) |
+| `GET` | `/api/v1/courses/:id/sales` | bearer (owner/admin) | Lifetime sales for one course |
+
+**Idempotency & webhooks.** Every `POST /payments/initiate` (and
+`POST /subscriptions`) **must** carry a client-generated `Idempotency-Key`
+header — a retried request with the same key returns the original payment instead
+of charging again. The webhook route is **public, reads the raw request body**
+(needed to verify the provider's HMAC signature), and is mounted **outside** the
+auth/JSON middleware; it returns `200` on any successful (idempotent) processing,
+so a re-delivered event never double-grants. Configure the provider callback to
+`…/api/v1/webhooks/payments/<provider>` (`<provider>` ∈ `chapa`, `telebirr`,
+`stripe`). No provider secret or raw payload is ever logged or returned to a
+client.
+
+Run the full purchase flow end-to-end against the local stack with
+`bash scripts/smoke_phase4.sh` — start the server with the test-only mock
+provider enabled first:
+
+```bash
+make up && make migrate-up
+PAYMENT_MOCK_ENABLED=true make run &
+bash scripts/smoke_phase4.sh
+```
+
+The `mock` provider settles offline (no external HTTP) and signs its own webhook
+with the same HMAC-SHA256 scheme as the real providers, so idempotency, signature
+verification, dedup, and transactional fulfillment are all exercised without a
+live gateway. It is **only** registered when `PAYMENT_MOCK_ENABLED=true` and must
+never be enabled in production.
 
 ### Video Endpoints
 
@@ -407,9 +468,11 @@ All API endpoints follow REST conventions with the base path `/api/v1`.
 | `GET` | `/api/v1/videos/download/:token` | bearer (allowed) | Consume the token → 302 redirect to the signed manifest (single-use) |
 
 Access control resolves the video → lesson → course server-side: the owning
-teacher/admin always; other authenticated students only for a free course or a
-free-preview lesson (paid-enrollment checks arrive in Phase 4). No endpoint ever
-returns a raw storage key, and all delivery URLs are signed and expiring.
+teacher/admin always; other authenticated students for a free course, a
+free-preview lesson, or a **paid course they are enrolled in / hold an active
+subscription for** (enrollment is now backed by the Phase 4 payment flow via the
+shared `access.Service`). No endpoint ever returns a raw storage key, and all
+delivery URLs are signed and expiring.
 
 Run the full pipeline end-to-end against the local stack with
 `bash scripts/smoke_phase3.sh` (after `make up && make minio-bucket &&
