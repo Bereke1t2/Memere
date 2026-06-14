@@ -28,14 +28,20 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/internal/infrastructure/transcode"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/repository/postgres"
 	redisrepo "github.com/Bereke1t2/Memere/memere-backend/internal/repository/redis"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/infrastructure/notification"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/infrastructure/pdf"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/access"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/admin"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/analytics"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/auth"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/certificate"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/coupon"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/course"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/enrollment"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/exam"
+	notificationuc "github.com/Bereke1t2/Memere/memere-backend/internal/usecase/notification"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/payment"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/progress"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/quiz"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/revenue"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/subscription"
@@ -113,6 +119,15 @@ func main() {
 	}
 	go app.Worker.Run(bgCtx)
 
+	// Phase 5 workers: notification fan-out + engagement (streak) sweeper.
+	go app.NotifWorker.Run(bgCtx)
+
+	if cfg.EngagementSweep.Enabled {
+		go app.EngSweeper.Run(bgCtx)
+	} else {
+		log.Println("engagement sweeper disabled (ENGAGEMENT_SWEEP_ENABLED=false)")
+	}
+
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
@@ -134,11 +149,13 @@ func main() {
 // App bundles the constructed HTTP router and the background workers so main can
 // own their lifecycle.
 type App struct {
-	Router     *gin.Engine
-	Sweeper    *worker.AttemptSweeper
-	SubSweeper *worker.SubscriptionSweeper
-	Worker     *worker.TranscodeWorker
-	VideoUC    *video.Service
+	Router        *gin.Engine
+	Sweeper       *worker.AttemptSweeper
+	SubSweeper    *worker.SubscriptionSweeper
+	Worker        *worker.TranscodeWorker
+	NotifWorker   *worker.NotificationWorker
+	EngSweeper    *worker.EngagementSweeper
+	VideoUC       *video.Service
 }
 
 // buildApp performs the explicit constructor wiring for the API: repositories
@@ -165,6 +182,12 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	webhookRepo := postgres.NewWebhookEventRepo(pool)
 	revenueRepo := postgres.NewRevenueRepo(pool)
 	txManager := postgres.NewTxManager(pool)
+	progressRepo := postgres.NewProgressRepo(pool)
+	notifRepo := postgres.NewNotificationRepo(pool)
+	deviceRepo := postgres.NewDeviceTokenRepo(pool)
+	prefRepo := postgres.NewPreferenceRepo(pool)
+	auditRepo := postgres.NewAdminAuditRepo(pool)
+	certRepo := postgres.NewCertificateRepo(pool)
 	sessionRepo := redisrepo.NewSessionRepo(redisClient)
 	attemptStateRepo := redisrepo.NewAttemptStateRepo(redisClient)
 	scoreRankingRepo := redisrepo.NewScoreRankingRepo(redisClient)
@@ -199,6 +222,14 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	// In-process transcode queue (non-durable; future swap to SQS).
 	queue := messaging.NewInProcQueue(cfg.Video.QueueBuffer)
 
+	// Phase 5 — notification senders (real if keys present, LogSender in dev).
+	// Created before usecases so hooks can be passed to all services from the start.
+	pushSender := notification.NewFCMSender(cfg.FCM.ServerKey)
+	emailSender := notification.NewSendGridSender(cfg.SendGrid.APIKey, cfg.SendGrid.FromEmail)
+	notifDispatcher := notificationuc.NewDispatcher(notifRepo, queue)
+	hooks := notificationuc.NewHooks(notifDispatcher)
+	notifWorker := worker.NewNotificationWorker(queue, pushSender, emailSender, deviceRepo, prefRepo)
+
 	// Usecases.
 	authSvc := auth.NewService(userRepo, tokenRepo, sessionRepo, jwtManager)
 	courseSvc := course.NewService(courseRepo, sectionRepo, lessonRepo, txManager)
@@ -206,7 +237,7 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	// course/lesson?" — quiz/exam taking and paid video all route through it.
 	accessSvc := access.NewService(enrollmentRepo, subscriptionRepo, courseRepo, nil)
 	quizSvc := quiz.NewService(quizRepo, questionRepo, quizAttemptRepo, courseRepo, attemptStateRepo, txManager, accessSvc)
-	examSvc := exam.NewService(examRepo, examAttemptRepo, courseRepo, attemptStateRepo, scoreRankingRepo, txManager, accessSvc)
+	examSvc := exam.NewService(examRepo, examAttemptRepo, courseRepo, attemptStateRepo, scoreRankingRepo, txManager, accessSvc, hooks)
 	analyticsSvc := analytics.NewService(examRepo, examAttemptRepo, courseRepo, scoreRankingRepo)
 	videoSvc := video.NewService(videoRepo, lessonRepo, courseRepo, store, queue, signer, downloadTokens, accessSvc, video.Config{
 		UploadURLTTL:   cfg.Storage.UploadURLTTL,
@@ -267,7 +298,7 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	paymentSvc := payment.NewService(
 		paymentRepo, enrollmentRepo, couponRepo, webhookRepo, courseRepo,
 		registry, couponSvc, subscriptionSvc, subscriptionSvc,
-		txManager, nil,
+		txManager, hooks,
 		payment.Config{
 			CallbackURL:     cfg.Payment.CallbackURL,
 			ReturnURL:       cfg.Payment.ReturnURL,
@@ -275,6 +306,19 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 		},
 		nil,
 	)
+
+	// Engagement sweeper warns students whose streak is at risk.
+	engSweeper := worker.NewEngagementSweeper(progressRepo, hooks, nil, cfg.EngagementSweep.Interval)
+
+	// Phase 5 usecases.
+	progressSvc := progress.NewService(progressRepo, courseRepo, enrollmentRepo, accessSvc, lessonRepo, hooks,
+		progress.Config{StreakTZ: "Africa/Addis_Ababa"}, nil)
+	notifSvc := notificationuc.NewService(notifRepo, deviceRepo, prefRepo)
+	adminSvc := admin.NewService(userRepo, courseRepo, paymentRepo, enrollmentRepo, subscriptionRepo,
+		revenueRepo, auditRepo, notifDispatcher, registry)
+	pdfRenderer := pdf.NewFPDFRenderer()
+	certSvc := certificate.NewService(certRepo, progressRepo, courseRepo, userRepo, store, signer,
+		pdfRenderer, hooks, certificate.Config{})
 
 	// Handlers + router.
 	router := delivery_http.NewRouter(delivery_http.Deps{
@@ -293,6 +337,11 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 		Enrollments:   delivery_http.NewEnrollmentHandler(enrollmentSvc),
 		Subscriptions: delivery_http.NewSubscriptionHandler(subscriptionSvc, paymentSvc),
 		Revenue:       delivery_http.NewRevenueHandler(revenueSvc, nil),
+
+		Progress:      delivery_http.NewProgressHandler(progressSvc),
+		Notifications: delivery_http.NewNotificationHandler(notifSvc),
+		Certificates:  delivery_http.NewCertificateHandler(certSvc),
+		Admin:         delivery_http.NewAdminHandler(adminSvc),
 	})
 
 	// Background workers: the expiry sweeper drives both attempt engines off one
@@ -307,10 +356,12 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	})
 
 	return &App{
-		Router:     router,
-		Sweeper:    sweeper,
-		SubSweeper: subSweeper,
-		Worker:     transcodeWorker,
-		VideoUC:    videoSvc,
+		Router:      router,
+		Sweeper:     sweeper,
+		SubSweeper:  subSweeper,
+		Worker:      transcodeWorker,
+		NotifWorker: notifWorker,
+		EngSweeper:  engSweeper,
+		VideoUC:     videoSvc,
 	}, nil
 }
