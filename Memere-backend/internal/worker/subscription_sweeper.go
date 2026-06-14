@@ -16,17 +16,17 @@ type SubscriptionExpirer interface {
 	SweepExpired(ctx context.Context, limit int) ([]*entity.Subscription, error)
 }
 
-// SubscriptionNotifier fires the "your subscription expired" notification. It is a
-// no-op hook in Phase 4; Phase 5 wires it to the real notification system.
+// SubscriptionNotifier fires the "your subscription expired" notification.
 type SubscriptionNotifier interface {
 	SubscriptionExpired(ctx context.Context, sub *entity.Subscription)
 }
 
-// NoopSubscriptionNotifier is the default notifier used until Phase 5.
-type NoopSubscriptionNotifier struct{}
+// noopSubscriptionNotifier is the default when no notifier is wired (tests
+// that don't care about notifications). Unexported so callers supply the real
+// notification.Hooks facade in production.
+type noopSubscriptionNotifier struct{}
 
-// SubscriptionExpired does nothing.
-func (NoopSubscriptionNotifier) SubscriptionExpired(context.Context, *entity.Subscription) {}
+func (noopSubscriptionNotifier) SubscriptionExpired(context.Context, *entity.Subscription) {}
 
 // SubscriptionSweeper expires lapsed subscriptions on a ticker until its context
 // is cancelled (wired to the app's shutdown signal in main.go). It mirrors the
@@ -45,7 +45,7 @@ type SubscriptionSweeper struct {
 // nil (defaults to a no-op).
 func NewSubscriptionSweeper(interval time.Duration, expirer SubscriptionExpirer, notify SubscriptionNotifier) *SubscriptionSweeper {
 	if notify == nil {
-		notify = NoopSubscriptionNotifier{}
+		notify = noopSubscriptionNotifier{}
 	}
 	return &SubscriptionSweeper{
 		expirer:  expirer,

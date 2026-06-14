@@ -23,6 +23,17 @@ type CourseAccess interface {
 	RequireFullAccess(ctx context.Context, actor access.Actor, courseID uuid.UUID) error
 }
 
+// Notifier fires async notifications after an exam is graded. Implementations
+// must never block or fail the API request path.
+type Notifier interface {
+	ExamGraded(ctx context.Context, studentID, attemptID uuid.UUID, score float64)
+}
+
+// noopExamNotifier is the default when no notifier is wired.
+type noopExamNotifier struct{}
+
+func (noopExamNotifier) ExamGraded(context.Context, uuid.UUID, uuid.UUID, float64) {}
+
 // Service implements the exam-engine usecases over the domain repositories plus
 // the shared Redis attempt-state store. now is injectable so tests drive the
 // server-side timer with a fake clock.
@@ -34,12 +45,12 @@ type Service struct {
 	ranking  repository.ScoreRanking
 	tx       repository.TxManager
 	access   CourseAccess
+	notify   Notifier
 	now      func() time.Time
 }
 
-// NewService wires the exam usecase with its dependencies. ranking may be nil
-// (e.g. in tests that don't exercise percentile); finalize records the graded
-// percentage only when it is set.
+// NewService wires the exam usecase with its dependencies. ranking and notify
+// may be nil (e.g. in tests that don't exercise percentile/notifications).
 func NewService(
 	exams repository.ExamRepository,
 	attempts repository.ExamAttemptRepository,
@@ -48,7 +59,11 @@ func NewService(
 	ranking repository.ScoreRanking,
 	tx repository.TxManager,
 	accessSvc CourseAccess,
+	notify Notifier,
 ) *Service {
+	if notify == nil {
+		notify = noopExamNotifier{}
+	}
 	return &Service{
 		exams:    exams,
 		attempts: attempts,
@@ -57,6 +72,7 @@ func NewService(
 		ranking:  ranking,
 		tx:       tx,
 		access:   accessSvc,
+		notify:   notify,
 		now:      time.Now,
 	}
 }
@@ -273,6 +289,10 @@ func (s *Service) finalize(ctx context.Context, exam *entity.Exam, attempt *enti
 		_ = s.ranking.RecordExamScore(ctx, exam.ID, attempt.StudentID, core.Percentage)
 	}
 	_ = s.state.DeleteAttemptState(ctx, attempt.ID)
+
+	// Fire the exam-graded notification asynchronously via the hook (must not
+	// block or fail this request).
+	s.notify.ExamGraded(ctx, attempt.StudentID, attempt.ID, core.Score)
 
 	res := s.result(exam, attempt, core)
 	res.SubmittedAt = &now

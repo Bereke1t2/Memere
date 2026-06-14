@@ -64,18 +64,18 @@ type SubscriptionActivator interface {
 	Activate(ctx context.Context, p *entity.Payment) error
 }
 
-// Notifier fires post-fulfillment notifications. It is a no-op hook in Phase 4;
-// Phase 5 wires it to the real notification system. PurchaseConfirmed must never
+// Notifier fires post-fulfillment notifications. PurchaseConfirmed must never
 // fail the fulfillment — it runs after the transaction commits.
 type Notifier interface {
 	PurchaseConfirmed(ctx context.Context, p *entity.Payment)
 }
 
-// NoopNotifier is the default Notifier used until Phase 5.
-type NoopNotifier struct{}
+// noopNotifier is used when no Notifier is wired (tests that don't care about
+// notifications). The type is unexported so it cannot be referenced outside
+// this package — callers must supply the real notification.Hooks facade.
+type noopNotifier struct{}
 
-// PurchaseConfirmed does nothing.
-func (NoopNotifier) PurchaseConfirmed(context.Context, *entity.Payment) {}
+func (noopNotifier) PurchaseConfirmed(context.Context, *entity.Payment) {}
 
 // Config carries the URLs the usecase hands the provider when creating a
 // checkout. main.go maps the typed config onto this so the usecase stays free of
@@ -128,7 +128,7 @@ func NewService(
 	clock func() time.Time,
 ) *Service {
 	if notify == nil {
-		notify = NoopNotifier{}
+		notify = noopNotifier{}
 	}
 	if clock == nil {
 		clock = time.Now
