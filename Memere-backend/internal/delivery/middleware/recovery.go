@@ -1,11 +1,12 @@
 package middleware
 
 import (
-	"log"
 	"net/http"
 	"runtime/debug"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/Bereke1t2/Memere/memere-backend/pkg/logger"
 )
 
 // Recovery recovers from a panic in any downstream handler, logs the stack
@@ -16,7 +17,11 @@ func Recovery() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if r := recover(); r != nil {
-				log.Printf("panic recovered [request_id=%s]: %v\n%s", RequestIDFromContext(c), r, debug.Stack())
+				logger.FromContext(c.Request.Context()).Error("panic recovered",
+					"request_id", RequestIDFromContext(c),
+					"panic", r,
+					"stack", string(debug.Stack()),
+				)
 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 					"code":    "INTERNAL_SERVER_ERROR",
 					"message": "An internal server error occurred",
