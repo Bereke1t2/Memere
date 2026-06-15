@@ -78,3 +78,20 @@ func (h *AnalyticsHandler) ExamStats(c *gin.Context) {
 	resp := dto.NewExamStatsResponse(stats)
 	respondJSON(c, http.StatusOK, &resp)
 }
+
+// Leaderboard handles GET /exams/:id/leaderboard?limit=10 → 200.
+// Returns the top-N students for the exam plus the caller's own rank.
+func (h *AnalyticsHandler) Leaderboard(c *gin.Context) {
+	examID, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	limit := clampInt(parseInt(c.Query("limit"), 10), 1, 100)
+	result, err := h.svc.GetLeaderboard(c.Request.Context(), analyticsActor(c), examID, limit)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	respondJSON(c, http.StatusOK, result)
+}

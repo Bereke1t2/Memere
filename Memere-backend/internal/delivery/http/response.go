@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 
@@ -14,6 +15,25 @@ import (
 // respondJSON writes a success payload with the given status.
 func respondJSON(c *gin.Context, status int, payload any) {
 	c.JSON(status, payload)
+}
+
+// parseInt parses s as a base-10 integer; returns fallback on any error.
+func parseInt(s string, fallback int) int {
+	if v, err := strconv.Atoi(s); err == nil {
+		return v
+	}
+	return fallback
+}
+
+// clampInt returns v clamped to [min, max].
+func clampInt(v, min, max int) int {
+	if v < min {
+		return min
+	}
+	if v > max {
+		return max
+	}
+	return v
 }
 
 // respondError maps an error to the standard { code, message, details } envelope
