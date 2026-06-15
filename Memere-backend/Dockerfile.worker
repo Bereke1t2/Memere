@@ -1,0 +1,53 @@
+# syntax=docker/dockerfile:1.7
+
+# ---------------------------------------------------------------------------
+# Transcode worker image — includes FFmpeg so the TranscodeWorker can invoke
+# it for HLS segmentation (Phase 3 §8.1). Kept separate from the API image
+# (which is distroless) so the API image stays minimal and non-root.
+#
+# Base: alpine:3.20 — small, well-maintained, has FFmpeg in the apk registry.
+# Digest-pin the base as for the API image.
+# ---------------------------------------------------------------------------
+FROM golang:1.26-bookworm AS build
+
+ARG VERSION=dev
+ARG COMMIT=unknown
+ARG BUILD_TIME=unknown
+
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+
+# The worker binary is cmd/api compiled with the same flags; at runtime the
+# process is started with WORKER_MODE=true which disables the HTTP listener
+# and runs only the TranscodeWorker + NotificationWorker goroutines.
+# A dedicated cmd/worker can be introduced in Skill 5 — for now we reuse the
+# monolith binary via env-flag so the API and worker share exactly one build
+# artefact and one set of tests.
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -trimpath \
+    -ldflags="-s -w \
+      -X 'github.com/Bereke1t2/Memere/memere-backend/internal/version.Version=${VERSION}' \
+      -X 'github.com/Bereke1t2/Memere/memere-backend/internal/version.Commit=${COMMIT}' \
+      -X 'github.com/Bereke1t2/Memere/memere-backend/internal/version.BuildTime=${BUILD_TIME}'" \
+    -o /out/worker ./cmd/api
+
+# ---------------------------------------------------------------------------
+# Runtime stage — alpine with FFmpeg.
+# Pin digest: `docker pull alpine:3.20 && docker inspect --format
+# '{{index .RepoDigests 0}}' alpine:3.20`
+# ---------------------------------------------------------------------------
+FROM alpine:3.20@sha256:de4fe76caf59e963f4c4da9a01fa0aa31fb6b29c3eef56d0d18fd65a78a040dd
+
+RUN apk add --no-cache ffmpeg ca-certificates tzdata
+
+# Run as an unprivileged user — mirrors the API image's nonroot intent.
+RUN addgroup -S worker && adduser -S worker -G worker
+USER worker:worker
+
+COPY --from=build /out/worker /worker
+
+EXPOSE 8080
+
+ENTRYPOINT ["/worker"]
