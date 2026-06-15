@@ -62,3 +62,68 @@ func (r *SessionRepo) DeleteSession(ctx context.Context, userID uuid.UUID) error
 	}
 	return nil
 }
+
+// --- Account lockout ---
+
+func loginFailKey(userID uuid.UUID) string {
+	return fmt.Sprintf("auth:fail:%s", userID.String())
+}
+
+// IncrLoginFailure increments the per-account failed-login counter and starts
+// the lockout TTL on the first failure. Returns the new count.
+func (r *SessionRepo) IncrLoginFailure(ctx context.Context, userID uuid.UUID, lockoutTTL time.Duration) (int64, error) {
+	key := loginFailKey(userID)
+	count, err := r.client.Incr(ctx, key).Result()
+	if err != nil {
+		return 0, apperror.Internal(err)
+	}
+	if count == 1 {
+		_ = r.client.Expire(ctx, key, lockoutTTL).Err()
+	}
+	return count, nil
+}
+
+// ClearLoginFailures resets the counter after a successful login.
+func (r *SessionRepo) ClearLoginFailures(ctx context.Context, userID uuid.UUID) error {
+	if err := r.client.Del(ctx, loginFailKey(userID)).Err(); err != nil {
+		return apperror.Internal(err)
+	}
+	return nil
+}
+
+// IsLockedOut returns true when the stored failure count >= maxFailures.
+func (r *SessionRepo) IsLockedOut(ctx context.Context, userID uuid.UUID, maxFailures int) (bool, error) {
+	val, err := r.client.Get(ctx, loginFailKey(userID)).Int64()
+	if errors.Is(err, goredis.Nil) {
+		return false, nil
+	}
+	if err != nil {
+		return false, apperror.Internal(err)
+	}
+	return val >= int64(maxFailures), nil
+}
+
+// --- Access-token JTI denylist ---
+
+func denyKey(jti string) string { return "auth:deny:" + jti }
+
+// DenyToken adds the JWT ID to the revocation set. The TTL should match the
+// token's remaining lifetime so the key auto-expires when the token does.
+func (r *SessionRepo) DenyToken(ctx context.Context, jti string, ttl time.Duration) error {
+	if err := r.client.Set(ctx, denyKey(jti), "1", ttl).Err(); err != nil {
+		return apperror.Internal(err)
+	}
+	return nil
+}
+
+// IsTokenDenied returns true when the JTI is on the denylist.
+func (r *SessionRepo) IsTokenDenied(ctx context.Context, jti string) (bool, error) {
+	err := r.client.Get(ctx, denyKey(jti)).Err()
+	if errors.Is(err, goredis.Nil) {
+		return false, nil
+	}
+	if err != nil {
+		return false, apperror.Internal(err)
+	}
+	return true, nil
+}
