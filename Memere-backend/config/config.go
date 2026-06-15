@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -24,6 +25,8 @@ type Config struct {
 	Storage    StorageConfig
 	Video      VideoConfig
 	Payment    PaymentConfig
+	Observability ObservabilityConfig
+	Security      SecurityConfig
 
 	// Reserved for later phases (not required to boot in Phase 1).
 	AWS      AWSConfig
@@ -72,6 +75,12 @@ type RedisConfig struct {
 	Port     string `envconfig:"REDIS_PORT" default:"6379"`
 	Password string `envconfig:"REDIS_PASSWORD" default:""`
 	DB       int    `envconfig:"REDIS_DB" default:"0"`
+
+	// Pool sizing and timeouts (Phase 6 Skill 3 §12.2).
+	PoolSize    int           `envconfig:"REDIS_POOL_SIZE"    default:"20"`
+	DialTimeout time.Duration `envconfig:"REDIS_DIAL_TIMEOUT" default:"3s"`
+	ReadTimeout time.Duration `envconfig:"REDIS_READ_TIMEOUT" default:"2s"`
+	WriteTimeout time.Duration `envconfig:"REDIS_WRITE_TIMEOUT" default:"2s"`
 }
 
 func (r RedisConfig) Addr() string { return fmt.Sprintf("%s:%s", r.Host, r.Port) }
@@ -217,6 +226,31 @@ type SendGridConfig struct {
 	FromEmail string `envconfig:"SENDGRID_FROM_EMAIL" default:"noreply@memere.app"`
 }
 
+// SecurityConfig groups Phase 6 / Skill 2 hardening settings.
+//
+//   - LoginMaxFailures:   Failed-login attempts before the account is locked.
+//   - LoginLockoutTTL:    How long a locked account stays locked.
+//   - BodyLimitBytes:     Maximum JSON request body size (all non-upload routes).
+//   - MinJWTSecretLen:    Minimum length of JWT_SECRET in production.
+type SecurityConfig struct {
+	LoginMaxFailures int           `envconfig:"LOGIN_MAX_FAILURES"  default:"10"`
+	LoginLockoutTTL  time.Duration `envconfig:"LOGIN_LOCKOUT_TTL"   default:"30m"`
+	BodyLimitBytes   int64         `envconfig:"BODY_LIMIT_BYTES"    default:"1048576"` // 1 MiB
+	MinJWTSecretLen  int           `envconfig:"MIN_JWT_SECRET_LEN"  default:"32"`
+}
+
+// ObservabilityConfig groups Phase 6 telemetry settings.
+//
+//   - LogLevel:      stdlib slog level ("debug" | "info" | "warn" | "error").
+//   - OTELEndpoint:  OTLP/HTTP collector URL, "stdout" for dev, "" for no-op.
+//   - MetricsPort:   Port for the internal Prometheus /metrics HTTP server.
+//     Defaults to 9090; set to "" to disable.
+type ObservabilityConfig struct {
+	LogLevel     string `envconfig:"LOG_LEVEL"      default:"info"`
+	OTELEndpoint string `envconfig:"OTEL_ENDPOINT"  default:""`
+	MetricsPort  string `envconfig:"METRICS_PORT"   default:"9090"`
+}
+
 // Load reads configuration from the environment, applying defaults and failing
 // fast if any required variable is missing.
 func Load() (*Config, error) {
@@ -225,4 +259,45 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("load config: %w", err)
 	}
 	return &cfg, nil
+}
+
+// ValidateProduction fails fast when APP_ENV=production and any security-
+// critical setting is absent or dangerously weak (§7.3 secret management):
+//
+//   - JWT_SECRET must be at least MinJWTSecretLen characters.
+//   - CORS_ALLOWED_ORIGINS must not be "*" (fail-closed §2.5).
+//   - Each enabled payment provider must have its webhook secret set.
+func (c *Config) ValidateProduction() error {
+	if !c.App.IsProduction() {
+		return nil
+	}
+	var errs []string
+
+	if len(c.JWT.Secret) < c.Security.MinJWTSecretLen {
+		errs = append(errs, fmt.Sprintf("JWT_SECRET must be at least %d characters in production", c.Security.MinJWTSecretLen))
+	}
+	if len(c.HTTP.CORSAllowedOrigins) == 1 && c.HTTP.CORSAllowedOrigins[0] == "*" {
+		errs = append(errs, "CORS_ALLOWED_ORIGINS must not be '*' in production — set explicit allowed origins")
+	}
+	if c.Chapa.SecretKey != "" && c.Chapa.WebhookSecret == "" {
+		errs = append(errs, "CHAPA_WEBHOOK_SECRET required when CHAPA_SECRET_KEY is set")
+	}
+	if c.Stripe.SecretKey != "" && c.Stripe.WebhookSecret == "" {
+		errs = append(errs, "STRIPE_WEBHOOK_SECRET required when STRIPE_SECRET_KEY is set")
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("production config invalid:\n  - %s", joinErrs(errs))
+	}
+	return nil
+}
+
+func joinErrs(errs []string) string {
+	var b strings.Builder
+	for i, e := range errs {
+		if i > 0 {
+			b.WriteString("\n  - ")
+		}
+		b.WriteString(e)
+	}
+	return b.String()
 }
