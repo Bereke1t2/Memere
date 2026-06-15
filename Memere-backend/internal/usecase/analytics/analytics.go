@@ -225,6 +225,52 @@ func weakAreas(breakdown []SubjectScore) []SubjectScore {
 }
 
 // toInt coerces a JSONB-decoded number (float64) or int into an int.
+// LeaderboardResult is the response for the GET /exams/:id/leaderboard route.
+type LeaderboardResult struct {
+	TopN   []LeaderboardRow `json:"top_n"`
+	MyRank int64            `json:"my_rank"`   // 0 when caller has no score
+	MyScore float64         `json:"my_score"`  // 0 when caller has no score
+	Total  int64            `json:"total"`
+}
+
+// LeaderboardRow is one entry in the leaderboard.
+type LeaderboardRow struct {
+	Rank      int64   `json:"rank"`
+	StudentID string  `json:"student_id"`
+	Score     float64 `json:"score"`
+}
+
+// GetLeaderboard returns the top limit students for an exam (any authenticated
+// caller may view), plus the caller's own rank when they have a score.
+func (s *Service) GetLeaderboard(ctx context.Context, actor *Actor, examID uuid.UUID, limit int) (*LeaderboardResult, error) {
+	if actor == nil {
+		return nil, apperror.Unauthorized("authentication required", nil)
+	}
+	entries, err := s.ranking.GetTopN(ctx, examID, limit)
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]LeaderboardRow, 0, len(entries))
+	for _, e := range entries {
+		rows = append(rows, LeaderboardRow{
+			Rank:      e.Rank,
+			StudentID: e.StudentID.String(),
+			Score:     e.Score,
+		})
+	}
+	result := &LeaderboardResult{TopN: rows}
+	rank, total, myScore, ok, err := s.ranking.GetRank(ctx, examID, actor.UserID)
+	if err != nil {
+		return nil, err
+	}
+	if ok {
+		result.MyRank = rank
+		result.MyScore = myScore
+		result.Total = total
+	}
+	return result, nil
+}
+
 func toInt(v any) int {
 	switch n := v.(type) {
 	case float64:

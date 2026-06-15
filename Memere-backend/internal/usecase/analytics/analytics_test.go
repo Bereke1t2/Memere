@@ -150,6 +150,15 @@ func (f *fakeRanking) RecordExamScore(context.Context, uuid.UUID, uuid.UUID, flo
 func (f *fakeRanking) PercentileRank(context.Context, uuid.UUID, uuid.UUID) (float64, bool, error) {
 	return f.pct, f.ok, nil
 }
+func (f *fakeRanking) GetTopN(context.Context, uuid.UUID, int) ([]repository.LeaderboardEntry, error) {
+	return nil, nil
+}
+func (f *fakeRanking) GetRank(context.Context, uuid.UUID, uuid.UUID) (int64, int64, float64, bool, error) {
+	return 0, 0, 0, false, nil
+}
+func (f *fakeRanking) RebuildFromScores(context.Context, uuid.UUID, map[uuid.UUID]float64) error {
+	return nil
+}
 
 type fakeExamAttemptRepo struct {
 	byID  map[uuid.UUID]*entity.ExamAttempt
