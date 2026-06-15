@@ -201,3 +201,56 @@ func (f *fakeSessionRepo) DeleteSession(_ context.Context, userID uuid.UUID) err
 	delete(f.byUser, userID)
 	return nil
 }
+
+// --- account lockout stubs ---
+
+type failEntry struct {
+	count int64
+}
+
+var fakeFailures = map[uuid.UUID]*failEntry{}
+var fakeFailMu sync.Mutex
+
+func (f *fakeSessionRepo) IncrLoginFailure(_ context.Context, userID uuid.UUID, _ time.Duration) (int64, error) {
+	fakeFailMu.Lock()
+	defer fakeFailMu.Unlock()
+	if fakeFailures[userID] == nil {
+		fakeFailures[userID] = &failEntry{}
+	}
+	fakeFailures[userID].count++
+	return fakeFailures[userID].count, nil
+}
+
+func (f *fakeSessionRepo) ClearLoginFailures(_ context.Context, userID uuid.UUID) error {
+	fakeFailMu.Lock()
+	defer fakeFailMu.Unlock()
+	delete(fakeFailures, userID)
+	return nil
+}
+
+func (f *fakeSessionRepo) IsLockedOut(_ context.Context, userID uuid.UUID, max int) (bool, error) {
+	fakeFailMu.Lock()
+	defer fakeFailMu.Unlock()
+	if e, ok := fakeFailures[userID]; ok {
+		return e.count >= int64(max), nil
+	}
+	return false, nil
+}
+
+// --- JTI denylist stubs ---
+
+var fakeDenied = map[string]bool{}
+var fakeDenyMu sync.Mutex
+
+func (f *fakeSessionRepo) DenyToken(_ context.Context, jti string, _ time.Duration) error {
+	fakeDenyMu.Lock()
+	defer fakeDenyMu.Unlock()
+	fakeDenied[jti] = true
+	return nil
+}
+
+func (f *fakeSessionRepo) IsTokenDenied(_ context.Context, jti string) (bool, error) {
+	fakeDenyMu.Lock()
+	defer fakeDenyMu.Unlock()
+	return fakeDenied[jti], nil
+}

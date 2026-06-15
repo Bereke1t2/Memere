@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/jwt"
@@ -246,5 +248,111 @@ func TestLogout_Idempotent(t *testing.T) {
 	// Logging out with no/unknown token still succeeds.
 	if err := svc.Logout(ctx, [16]byte{}, ""); err != nil {
 		t.Fatalf("logout with empty token should succeed, got %v", err)
+	}
+}
+
+// --- Phase 6 Skill 2: account lockout tests ---
+
+func lockoutSvc() (*Service, *fakeUserRepo) {
+	users := newFakeUserRepo()
+	tokens := newFakeTokenRepo()
+	sessions := newFakeSessionRepo()
+	mgr := jwt.NewManager("test-secret", 15*time.Minute, 720*time.Hour, "memere-test")
+	svc := NewService(users, tokens, sessions, mgr).
+		WithLockout(LockoutConfig{MaxFailures: 3, LockoutTTL: 30 * time.Minute})
+	return svc, users
+}
+
+func TestLogin_LockoutAfterNFailures(t *testing.T) {
+	// Reset global fake state.
+	fakeFailMu.Lock()
+	fakeFailures = map[uuid.UUID]*failEntry{}
+	fakeFailMu.Unlock()
+
+	svc, _ := lockoutSvc()
+	ctx := context.Background()
+
+	if _, err := svc.Register(ctx, validRegisterInput()); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	for i := 0; i < 3; i++ {
+		_, _, err := svc.Login(ctx, LoginInput{Email: "student@example.com", Password: "wrong"})
+		if !apperror.IsCode(err, "INVALID_CREDENTIALS") {
+			t.Fatalf("attempt %d: expected INVALID_CREDENTIALS, got %v", i+1, err)
+		}
+	}
+
+	// The 4th attempt must also return INVALID_CREDENTIALS (opaque — don't reveal lockout).
+	_, _, err := svc.Login(ctx, LoginInput{Email: "student@example.com", Password: "correct horse battery"})
+	if !apperror.IsCode(err, "INVALID_CREDENTIALS") {
+		t.Fatalf("locked account: expected INVALID_CREDENTIALS, got %v", err)
+	}
+}
+
+func TestLogin_ClearsLockoutOnSuccess(t *testing.T) {
+	fakeFailMu.Lock()
+	fakeFailures = map[uuid.UUID]*failEntry{}
+	fakeFailMu.Unlock()
+
+	svc, _ := lockoutSvc()
+	ctx := context.Background()
+
+	if _, err := svc.Register(ctx, validRegisterInput()); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	// Two bad attempts.
+	for i := 0; i < 2; i++ {
+		svc.Login(ctx, LoginInput{Email: "student@example.com", Password: "bad"}) //nolint:errcheck
+	}
+
+	// Successful login clears the counter.
+	if _, _, err := svc.Login(ctx, LoginInput{Email: "student@example.com", Password: "correct horse battery"}); err != nil {
+		t.Fatalf("login should succeed before lockout: %v", err)
+	}
+
+	// Another bad attempt after a successful login should NOT be locked (counter reset).
+	_, _, err := svc.Login(ctx, LoginInput{Email: "student@example.com", Password: "bad"})
+	if !apperror.IsCode(err, "INVALID_CREDENTIALS") {
+		t.Fatalf("expected INVALID_CREDENTIALS (not locked), got %v", err)
+	}
+}
+
+// --- Phase 6 Skill 2: access-token denylist tests ---
+
+func TestRevokeAccessToken_DeniesSubsequentCheck(t *testing.T) {
+	fakeDenyMu.Lock()
+	fakeDenied = map[string]bool{}
+	fakeDenyMu.Unlock()
+
+	svc, _ := lockoutSvc()
+	ctx := context.Background()
+
+	if _, err := svc.Register(ctx, validRegisterInput()); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+	tok, _, err := svc.Login(ctx, LoginInput{Email: "student@example.com", Password: "correct horse battery"})
+	if err != nil {
+		t.Fatalf("login: %v", err)
+	}
+
+	if err := svc.RevokeAccessToken(ctx, tok.AccessToken); err != nil {
+		t.Fatalf("RevokeAccessToken: %v", err)
+	}
+
+	// Parse the JTI from the token to verify the denylist.
+	mgr := jwt.NewManager("test-secret", 15*time.Minute, 720*time.Hour, "memere-test")
+	claims, err := mgr.Verify(tok.AccessToken, jwt.TokenTypeAccess)
+	if err != nil {
+		t.Fatalf("verify: %v", err)
+	}
+
+	fakeDenyMu.Lock()
+	denied := fakeDenied[claims.ID]
+	fakeDenyMu.Unlock()
+
+	if !denied {
+		t.Error("access token JTI must be on the denylist after revocation")
 	}
 }
