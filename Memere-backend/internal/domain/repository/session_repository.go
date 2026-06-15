@@ -20,4 +20,21 @@ type SessionRepository interface {
 	GetSession(ctx context.Context, userID uuid.UUID) (string, error)
 	// DeleteSession removes the user's session (logout).
 	DeleteSession(ctx context.Context, userID uuid.UUID) error
+
+	// --- Account lockout (Phase 6 Skill 2, §7.3) ---
+
+	// IncrLoginFailure increments the per-account failed-login counter and sets
+	// its TTL to lockoutTTL on the first increment. Returns the new count.
+	IncrLoginFailure(ctx context.Context, userID uuid.UUID, lockoutTTL time.Duration) (int64, error)
+	// ClearLoginFailures resets the counter after a successful login.
+	ClearLoginFailures(ctx context.Context, userID uuid.UUID) error
+	// IsLockedOut returns true when the account is currently in lockout state.
+	IsLockedOut(ctx context.Context, userID uuid.UUID, maxFailures int) (bool, error)
+
+	// --- Access-token JTI denylist (Phase 6 Skill 2, §7.3) ---
+
+	// DenyToken adds a JWT ID to the revocation set until the given TTL expires.
+	DenyToken(ctx context.Context, jti string, ttl time.Duration) error
+	// IsTokenDenied returns true when the JTI is on the denylist.
+	IsTokenDenied(ctx context.Context, jti string) (bool, error)
 }
