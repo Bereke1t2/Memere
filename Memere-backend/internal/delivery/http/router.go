@@ -8,6 +8,7 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/config"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/delivery/middleware"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/jwt"
 )
 
@@ -19,6 +20,9 @@ type Deps struct {
 	DB        *pgxpool.Pool
 	Cache     *redis.Client
 	JWT       *jwt.Manager
+	// Sessions is the Redis SessionRepository used for the JTI denylist check in
+	// RequireAuth. Optional: when nil the denylist check is skipped.
+	Sessions  repository.SessionRepository
 	Auth      *AuthHandler
 	Courses   *CourseHandler
 	Quizzes   *QuizHandler
@@ -47,22 +51,37 @@ func NewRouter(deps Deps) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
 
-	// Global middleware — order matters (spec §3.2): request-id first so every
-	// later log/recovery line can reference it, then recovery, logging, CORS,
-	// and the global rate limit.
+	// Global middleware — order matters (spec §3.2, Phase 6 §12):
+	//  1. SecurityHeaders — hardening headers on every response
+	//  2. RequestID       — correlation id available to every subsequent layer
+	//  3. Recovery        — catches panics before they can abort tracing spans
+	//  4. Tracing         — opens OTel span; uses request_id attribute
+	//  5. Logger          — slog access log; enriches ctx with request-scoped logger
+	//  6. Metrics         — records Prometheus RED metrics after the handler returns
+	//  7. BodyLimit       — rejects oversized JSON bodies (1 MiB default)
+	//  8. CORS            — sets Access-Control-* headers (fail-closed in prod)
+	//  9. RateLimit       — Redis fixed-window; runs after logging so blocks appear
+	// 10. Compress        — gzip response bodies > 1 KiB when client supports it
+	r.Use(middleware.SecurityHeaders())
 	r.Use(middleware.RequestID())
 	r.Use(middleware.Recovery())
+	r.Use(middleware.Tracing())
 	r.Use(middleware.Logger())
-	r.Use(middleware.CORS(deps.Config.HTTP.CORSAllowedOrigins))
+	r.Use(middleware.Metrics())
+	r.Use(middleware.BodyLimit(deps.Config.Security.BodyLimitBytes))
+	r.Use(middleware.CORS(deps.Config.HTTP.CORSAllowedOrigins, deps.Config.App.IsProduction()))
 	r.Use(middleware.RateLimit(deps.Cache, deps.Config.HTTP.RateLimitRPM))
+	r.Use(middleware.Compress())
 
 	r.GET("/health", healthHandler(deps.DB, deps.Cache))
 
-	requireAuth := middleware.RequireAuth(deps.JWT)
+	requireAuth := middleware.RequireAuth(deps.JWT, deps.Sessions)
 	optionalAuth := middleware.OptionalAuth(deps.JWT)
 	teacherOrAdmin := middleware.RequireRole(entity.RoleTeacher, entity.RoleAdmin)
 	adminOnly := middleware.RequireRole(entity.RoleAdmin)
 	loginLimit := middleware.LoginRateLimit(deps.Cache, deps.Config.HTTP.LoginRateLimit, deps.Config.HTTP.LoginRateWindow)
+	userLimit := middleware.UserRateLimit(deps.Cache, 30)
+	webhookLimit := middleware.ProviderWebhookRateLimit(deps.Cache, 120)
 
 	v1 := r.Group("/api/v1")
 
@@ -125,6 +144,8 @@ func NewRouter(deps Deps) *gin.Engine {
 		exams.POST("/:id/questions", requireAuth, teacherOrAdmin, deps.Exams.AddQuestion)
 		exams.POST("/:id/publish", requireAuth, teacherOrAdmin, deps.Exams.Publish)
 		exams.GET("/:id/stats", requireAuth, teacherOrAdmin, deps.Analytics.ExamStats)
+		// Leaderboard: top-N + caller's own rank. Any authenticated student may view.
+		exams.GET("/:id/leaderboard", requireAuth, deps.Analytics.Leaderboard)
 	}
 	mockExams := v1.Group("/mock-exams")
 	{
@@ -168,11 +189,11 @@ func NewRouter(deps Deps) *gin.Engine {
 		// (unauthenticated providers must reach it) and does no JSON binding — the
 		// handler reads the raw body itself for signature verification. The global
 		// logger redacts bodies, so no payload/secret is logged.
-		v1.POST("/webhooks/payments/:provider", deps.Payments.Webhook)
+		v1.POST("/webhooks/payments/:provider", webhookLimit, deps.Payments.Webhook)
 
 		payments := v1.Group("/payments")
 		{
-			payments.POST("/initiate", requireAuth, deps.Payments.Initiate)
+			payments.POST("/initiate", requireAuth, userLimit, deps.Payments.Initiate)
 			payments.GET("", requireAuth, deps.Payments.ListMine)
 			payments.GET("/:id/status", requireAuth, deps.Payments.Status)
 			payments.POST("/:id/refund", requireAuth, adminOnly, deps.Payments.Refund)
