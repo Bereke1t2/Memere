@@ -1,0 +1,109 @@
+name: deploy-staging
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_API: ghcr.io/${{ github.repository_owner }}/memere-api
+  IMAGE_WORKER: ghcr.io/${{ github.repository_owner }}/memere-worker
+
+# Only one staging deploy runs at a time; newer pushes cancel in-flight deploys.
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    environment: staging
+    needs: []   # ci.yml build job already ran and pushed the image on main push
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set build metadata
+        id: meta
+        run: echo "commit=${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+
+      # -----------------------------------------------------------------------
+      # Run DB migrations against the staging database before rolling out the
+      # new application version (expand/contract zero-downtime pattern).
+      # -----------------------------------------------------------------------
+      - name: Run migrations (staging)
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+        run: |
+          docker run --rm \
+            -e DB_HOST="${DATABASE_URL}" \
+            ${{ env.IMAGE_API }}:${{ steps.meta.outputs.commit }} \
+            /migrate -direction up
+
+      # -----------------------------------------------------------------------
+      # Roll out the new API and worker images to the staging cluster.
+      # Skill 5 provides the Kubernetes manifests; `kubectl set image` triggers
+      # a rolling update that respects the pod disruption budget.
+      # -----------------------------------------------------------------------
+      - name: Configure kubectl (staging)
+        uses: azure/k8s-set-context@v4
+        with:
+          method: kubeconfig
+          kubeconfig: ${{ secrets.STAGING_KUBECONFIG }}
+
+      - name: Deploy API to staging
+        run: |
+          kubectl set image deployment/memere-api \
+            api=${{ env.IMAGE_API }}:${{ steps.meta.outputs.commit }} \
+            -n memere-staging
+          kubectl rollout status deployment/memere-api -n memere-staging --timeout=5m
+
+      - name: Deploy worker to staging
+        run: |
+          kubectl set image deployment/memere-worker \
+            worker=${{ env.IMAGE_WORKER }}:${{ steps.meta.outputs.commit }} \
+            -n memere-staging
+          kubectl rollout status deployment/memere-worker -n memere-staging --timeout=5m
+
+      # -----------------------------------------------------------------------
+      # Integration smoke test: hit /health and /version to confirm the new
+      # release is serving before notifying the team.
+      # -----------------------------------------------------------------------
+      - name: Smoke test staging
+        run: |
+          STAGING_URL="${{ vars.STAGING_URL }}"
+          for i in $(seq 1 10); do
+            status=$(curl -s -o /dev/null -w "%{http_code}" "${STAGING_URL}/health")
+            if [ "$status" = "200" ]; then
+              echo "Smoke test passed (attempt $i)"
+              curl -s "${STAGING_URL}/version"
+              exit 0
+            fi
+            echo "Attempt $i: got $status, retrying in 10s…"
+            sleep 10
+          done
+          echo "Smoke test FAILED after 10 attempts"
+          exit 1
+
+      - name: Notify Slack (success)
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "✅ Staging deploy succeeded: commit `${{ steps.meta.outputs.commit }}` is live at ${{ vars.STAGING_URL }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify Slack (failure)
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "❌ Staging deploy failed for commit `${{ steps.meta.outputs.commit }}` — check the Actions log."
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
