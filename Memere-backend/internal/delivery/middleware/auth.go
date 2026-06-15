@@ -1,12 +1,14 @@
 package middleware
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/course"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/jwt"
 )
@@ -23,32 +25,53 @@ func bearerToken(c *gin.Context) string {
 }
 
 // actorFromToken verifies an access token and builds the caller's identity.
-func actorFromToken(mgr *jwt.Manager, token string) (*course.Actor, error) {
+func actorFromToken(mgr *jwt.Manager, token string) (*course.Actor, *jwt.Claims, error) {
 	claims, err := mgr.Verify(token, jwt.TokenTypeAccess)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return &course.Actor{UserID: claims.UserID, Role: entity.Role(claims.Role)}, nil
+	return &course.Actor{UserID: claims.UserID, Role: entity.Role(claims.Role)}, claims, nil
+}
+
+// TokenChecker is the subset of SessionRepository needed by RequireAuth to
+// consult the access-token denylist. Injected at router construction so the
+// middleware has no import cycle into the auth usecase.
+type TokenChecker interface {
+	IsTokenDenied(ctx context.Context, jti string) (bool, error)
 }
 
 // RequireAuth rejects any request without a valid access token (401), otherwise
-// loads the caller's identity into the context.
-func RequireAuth(mgr *jwt.Manager) gin.HandlerFunc {
+// loads the caller's identity into the context. It also checks the JTI denylist
+// so that revoked tokens (logout/suspend) are rejected before their expiry.
+func RequireAuth(mgr *jwt.Manager, denylist ...repository.SessionRepository) gin.HandlerFunc {
+	var checker TokenChecker
+	if len(denylist) > 0 && denylist[0] != nil {
+		checker = denylist[0]
+	}
 	return func(c *gin.Context) {
 		token := bearerToken(c)
 		if token == "" {
 			abortUnauthorized(c)
 			return
 		}
-		actor, err := actorFromToken(mgr, token)
+		actor, claims, err := actorFromToken(mgr, token)
 		if err != nil {
 			abortUnauthorized(c)
 			return
+		}
+		// Denylist check: reject revoked JTIs (logout / suspend).
+		if checker != nil {
+			denied, err := checker.IsTokenDenied(c.Request.Context(), claims.ID)
+			if err == nil && denied {
+				abortUnauthorized(c)
+				return
+			}
 		}
 		setActor(c, actor)
 		c.Next()
 	}
 }
+
 
 // OptionalAuth attaches the caller's identity when a valid access token is
 // present but never fails the request: anonymous callers continue with no
@@ -56,7 +79,7 @@ func RequireAuth(mgr *jwt.Manager) gin.HandlerFunc {
 func OptionalAuth(mgr *jwt.Manager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if token := bearerToken(c); token != "" {
-			if actor, err := actorFromToken(mgr, token); err == nil {
+			if actor, _, err := actorFromToken(mgr, token); err == nil {
 				setActor(c, actor)
 			}
 		}
