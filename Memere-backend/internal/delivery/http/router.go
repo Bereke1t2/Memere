@@ -74,6 +74,7 @@ func NewRouter(deps Deps) *gin.Engine {
 	r.Use(middleware.Compress())
 
 	r.GET("/health", healthHandler(deps.DB, deps.Cache))
+	r.GET("/version", versionHandler())
 
 	requireAuth := middleware.RequireAuth(deps.JWT, deps.Sessions)
 	optionalAuth := middleware.OptionalAuth(deps.JWT)
