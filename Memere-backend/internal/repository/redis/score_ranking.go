@@ -73,3 +73,73 @@ func (r *ScoreRankingRepo) PercentileRank(ctx context.Context, examID, studentID
 
 	return float64(atOrBelow) / float64(total) * 100, true, nil
 }
+
+// GetTopN returns the top limit students ordered by score descending (highest
+// first), with 1-based ranks. Ties share the same score but are assigned
+// consecutive ranks per Redis ordering.
+func (r *ScoreRankingRepo) GetTopN(ctx context.Context, examID uuid.UUID, limit int) ([]repository.LeaderboardEntry, error) {
+	key := examScoresKey(examID)
+	members, err := r.client.ZRevRangeWithScores(ctx, key, 0, int64(limit-1)).Result()
+	if err != nil {
+		return nil, apperror.Internal(err)
+	}
+	out := make([]repository.LeaderboardEntry, 0, len(members))
+	for i, m := range members {
+		id, err := uuid.Parse(m.Member.(string))
+		if err != nil {
+			continue
+		}
+		out = append(out, repository.LeaderboardEntry{
+			StudentID: id,
+			Score:     m.Score,
+			Rank:      int64(i + 1),
+		})
+	}
+	return out, nil
+}
+
+// GetRank returns the 1-based rank of the student (highest score = rank 1), the
+// student's best score, and the total number of entries in the sorted set.
+// ok=false when the student has no recorded score.
+func (r *ScoreRankingRepo) GetRank(ctx context.Context, examID, studentID uuid.UUID) (rank, total int64, score float64, ok bool, err error) {
+	key := examScoresKey(examID)
+	member := studentID.String()
+
+	// ZREVRANK returns 0-based rank (best = 0) in descending order.
+	rank0, zErr := r.client.ZRevRank(ctx, key, member).Result()
+	if zErr == goredis.Nil {
+		return 0, 0, 0, false, nil
+	}
+	if zErr != nil {
+		return 0, 0, 0, false, apperror.Internal(zErr)
+	}
+
+	score, zErr = r.client.ZScore(ctx, key, member).Result()
+	if zErr != nil {
+		return 0, 0, 0, false, apperror.Internal(zErr)
+	}
+
+	total, zErr = r.client.ZCard(ctx, key).Result()
+	if zErr != nil {
+		return 0, 0, 0, false, apperror.Internal(zErr)
+	}
+
+	return rank0 + 1, total, score, true, nil
+}
+
+// RebuildFromScores clears the sorted set and repopulates it from the provided
+// studentID → best-percentage map. Intended for admin-triggered recovery after
+// Redis data loss.
+func (r *ScoreRankingRepo) RebuildFromScores(ctx context.Context, examID uuid.UUID, scores map[uuid.UUID]float64) error {
+	key := examScoresKey(examID)
+
+	pipe := r.client.Pipeline()
+	pipe.Del(ctx, key)
+	for sid, pct := range scores {
+		pipe.ZAdd(ctx, key, goredis.Z{Score: pct, Member: sid.String()})
+	}
+	if _, err := pipe.Exec(ctx); err != nil {
+		return apperror.Internal(err)
+	}
+	return nil
+}
