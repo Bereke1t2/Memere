@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,10 +14,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	redis "github.com/redis/go-redis/v9"
 	"github.com/shopspring/decimal"
+	_ "go.uber.org/automaxprocs" // auto-sets GOMAXPROCS to cgroup CPU quota in containers
 
 	"github.com/Bereke1t2/Memere/memere-backend/config"
+	infmetrics "github.com/Bereke1t2/Memere/memere-backend/internal/infrastructure/metrics"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/infrastructure/tracing"
+	repocache "github.com/Bereke1t2/Memere/memere-backend/internal/repository/cache"
+	"github.com/Bereke1t2/Memere/memere-backend/pkg/logger"
 	delivery_http "github.com/Bereke1t2/Memere/memere-backend/internal/delivery/http"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/service"
@@ -56,40 +63,98 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	// Phase 6 — structured logger. Must come first so all subsequent log calls
+	// use the configured level/format and the redacting handler.
+	appLogger := logger.New(cfg.App.Env, cfg.Observability.LogLevel)
+	_ = appLogger // slog.SetDefault is called inside logger.New
+
+	// Phase 6 Skill 2 — fail fast on weak/missing secrets in production.
+	if err := cfg.ValidateProduction(); err != nil {
+		slog.Error("production config validation failed", "err", err)
+		os.Exit(1)
+	}
+
 	ctx := context.Background()
+
+	// Phase 6 — OpenTelemetry tracing.
+	shutdownTracing, err := tracing.Setup(ctx, "memere-api", cfg.Observability.OTELEndpoint)
+	if err != nil {
+		slog.Error("failed to init tracing", "err", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := shutdownTracing(context.Background()); err != nil {
+			slog.Error("tracing shutdown error", "err", err)
+		}
+	}()
+
+	// Phase 6 — Prometheus metrics server (separate port so /metrics is never
+	// exposed on the public API port). An empty MetricsPort disables it.
+	if cfg.Observability.MetricsPort != "" {
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", promhttp.Handler())
+		metricsSrv := &http.Server{
+			Addr:         ":" + cfg.Observability.MetricsPort,
+			Handler:      mux,
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 5 * time.Second,
+		}
+		go func() {
+			slog.Info("metrics server listening", "port", cfg.Observability.MetricsPort)
+			if err := metricsSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				slog.Error("metrics server error", "err", err)
+			}
+		}()
+	}
 
 	// Connect to PostgreSQL
 	dbPool, err := database.Connect(ctx, cfg)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		slog.Error("failed to connect to database", "err", err)
+		os.Exit(1)
 	}
 	defer dbPool.Close()
 
 	// Connect to Redis
 	redisClient, err := cache.Connect(ctx, cfg)
 	if err != nil {
-		log.Fatalf("Failed to connect to cache: %v", err)
+		slog.Error("failed to connect to cache", "err", err)
+		os.Exit(1)
 	}
 	defer redisClient.Close()
+
+	// Phase 6 — scrape pgx pool stats into Prometheus gauges every 15 s.
+	go func() {
+		t := time.NewTicker(15 * time.Second)
+		defer t.Stop()
+		for range t.C {
+			s := dbPool.Stat()
+			infmetrics.DBPoolAcquired.Set(float64(s.AcquiredConns()))
+			infmetrics.DBPoolTotal.Set(float64(s.TotalConns()))
+		}
+	}()
 
 	// Build the fully-wired application (router + background workers).
 	app, err := buildApp(ctx, cfg, dbPool, redisClient)
 	if err != nil {
-		log.Fatalf("Failed to build application: %v", err)
+		slog.Error("failed to build application", "err", err)
+		os.Exit(1)
 	}
 
 	srv := &http.Server{
-		Addr:         ":" + cfg.App.Port,
-		Handler:      app.Router,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
+		Addr:              ":" + cfg.App.Port,
+		Handler:           app.Router,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       10 * time.Second,
+		WriteTimeout:      10 * time.Second,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	go func() {
-		log.Printf("Starting server on port %s", cfg.App.Port)
+		slog.Info("API server listening", "port", cfg.App.Port, "env", cfg.App.Env)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("Listen and serve error: %v", err)
+			slog.Error("listen and serve error", "err", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -101,21 +166,21 @@ func main() {
 	if cfg.Sweeper.Enabled {
 		go app.Sweeper.Run(bgCtx)
 	} else {
-		log.Println("attempt sweeper disabled (SWEEPER_ENABLED=false)")
+		slog.Info("attempt sweeper disabled", "reason", "SWEEPER_ENABLED=false")
 	}
 
 	if cfg.SubSweeper.Enabled {
 		go app.SubSweeper.Run(bgCtx)
 	} else {
-		log.Println("subscription sweeper disabled (SUBSCRIPTION_SWEEP_ENABLED=false)")
+		slog.Info("subscription sweeper disabled", "reason", "SUBSCRIPTION_SWEEP_ENABLED=false")
 	}
 
 	// Transcode worker: re-enqueue videos stranded in 'processing' by a previous
 	// crash (the in-proc queue is non-durable), then start consuming jobs.
 	if n, err := app.VideoUC.RequeueStuck(bgCtx); err != nil {
-		log.Printf("requeue stuck videos failed: %v", err)
+		slog.Error("requeue stuck videos failed", "err", err)
 	} else if n > 0 {
-		log.Printf("re-enqueued %d stuck video(s) for transcoding", n)
+		slog.Info("re-enqueued stuck videos", "count", n)
 	}
 	go app.Worker.Run(bgCtx)
 
@@ -125,14 +190,14 @@ func main() {
 	if cfg.EngagementSweep.Enabled {
 		go app.EngSweeper.Run(bgCtx)
 	} else {
-		log.Println("engagement sweeper disabled (ENGAGEMENT_SWEEP_ENABLED=false)")
+		slog.Info("engagement sweeper disabled", "reason", "ENGAGEMENT_SWEEP_ENABLED=false")
 	}
 
 	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
-	log.Println("Shutting down server...")
+	slog.Info("shutting down server")
 
 	stopBackground()
 
@@ -140,10 +205,11 @@ func main() {
 	defer cancel()
 
 	if err := srv.Shutdown(ctxTimeout); err != nil {
-		log.Fatalf("Server forced to shutdown: %v", err)
+		slog.Error("server forced to shutdown", "err", err)
+		os.Exit(1)
 	}
 
-	log.Println("Server exiting gracefully")
+	slog.Info("server exited gracefully")
 }
 
 // App bundles the constructed HTTP router and the background workers so main can
@@ -163,10 +229,10 @@ type App struct {
 // router with its middleware, and the background workers. Plain dependency
 // injection — no DI framework (matches the spec's explicit-wiring intent).
 func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redisClient *redis.Client) (*App, error) {
-	// Repositories.
-	userRepo := postgres.NewUserRepo(pool)
+	// Repositories (Phase 6 Skill 3: hot reads wrapped with Redis cache-aside).
+	userRepo := repocache.NewCachedUserRepo(postgres.NewUserRepo(pool), redisClient)
 	tokenRepo := postgres.NewRefreshTokenRepo(pool)
-	courseRepo := postgres.NewCourseRepo(pool)
+	courseRepo := repocache.NewCachedCourseRepo(postgres.NewCourseRepo(pool), redisClient)
 	sectionRepo := postgres.NewSectionRepo(pool)
 	lessonRepo := postgres.NewLessonRepo(pool)
 	quizRepo := postgres.NewQuizRepo(pool)
@@ -231,7 +297,11 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	notifWorker := worker.NewNotificationWorker(queue, pushSender, emailSender, deviceRepo, prefRepo)
 
 	// Usecases.
-	authSvc := auth.NewService(userRepo, tokenRepo, sessionRepo, jwtManager)
+	authSvc := auth.NewService(userRepo, tokenRepo, sessionRepo, jwtManager).
+		WithLockout(auth.LockoutConfig{
+			MaxFailures: cfg.Security.LoginMaxFailures,
+			LockoutTTL:  cfg.Security.LoginLockoutTTL,
+		})
 	courseSvc := course.NewService(courseRepo, sectionRepo, lessonRepo, txManager)
 	// access.Service is the single authority on "can this caller reach this
 	// course/lesson?" — quiz/exam taking and paid video all route through it.
@@ -326,6 +396,7 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 		DB:        pool,
 		Cache:     redisClient,
 		JWT:       jwtManager,
+		Sessions:  sessionRepo,
 		Auth:      delivery_http.NewAuthHandler(authSvc, userRepo),
 		Courses:   delivery_http.NewCourseHandler(courseSvc),
 		Quizzes:   delivery_http.NewQuizHandler(quizSvc),
