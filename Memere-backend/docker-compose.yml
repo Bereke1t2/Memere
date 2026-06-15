@@ -54,6 +54,90 @@ services:
     # preconfigured mc alias, so the usual probes false-report "unhealthy".
     # Readiness is confirmed out-of-band by `make minio-bucket`.
 
+  # --- Phase 6 Skill 4: full application stack (make compose-up) ---
+
+  # migrate runs the embedded migrations once before the API boots, then exits.
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: local
+        COMMIT: dev
+    container_name: memere_migrate
+    restart: on-failure
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+    entrypoint: ["/migrate", "-direction", "up"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # api — HTTP server. Starts only after migrations have finished.
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: local
+        COMMIT: dev
+    container_name: memere_api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      S3_ENDPOINT: http://minio:9000
+      S3_USE_PATH_STYLE: "true"
+      APP_ENV: development
+      OTEL_ENDPOINT: ""
+      METRICS_PORT: "9090"
+    ports:
+      - "${APP_PORT:-8080}:8080"
+      - "9090:9090"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # worker — transcode + notification workers. Uses the same binary; in Skill 5
+  # this becomes a separate Kubernetes Deployment with the FFmpeg-capable image.
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+      args:
+        VERSION: local
+        COMMIT: dev
+    container_name: memere_worker
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      S3_ENDPOINT: http://minio:9000
+      S3_USE_PATH_STYLE: "true"
+      APP_ENV: development
+      APP_PORT: "8081"
+      SWEEPER_ENABLED: "false"
+      SUBSCRIPTION_SWEEP_ENABLED: "false"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
 volumes:
   pgdata:
   redisdata:
