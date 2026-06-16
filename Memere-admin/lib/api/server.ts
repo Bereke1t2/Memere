@@ -1,24 +1,11 @@
 import "server-only";
 
-import { cookies } from "next/headers";
 import { z } from "zod";
 import { env } from "@/lib/env";
 import { ApiError } from "./errors";
 import { ErrorEnvelopeSchema } from "./schemas";
-
-// ---- Cookie names (Skill 3 implements set/clear helpers) ----------------------
-
-const ACCESS_COOKIE = "mm_access";
-
-async function getAccessToken(): Promise<string | undefined> {
-  const jar = await cookies();
-  return jar.get(ACCESS_COOKIE)?.value;
-}
-
-/** Stub: Skill 3 replaces this with the real refresh → cookie rotation. */
-async function refreshAccessToken(): Promise<string | undefined> {
-  return undefined;
-}
+import { getAccessToken } from "@/lib/auth/cookies";
+import { refreshAccessToken } from "@/lib/auth/refresh";
 
 // ---- Core fetch ---------------------------------------------------------------
 
