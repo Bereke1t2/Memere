@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { refresh } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthCookies, getRefreshToken, setAuthCookies } from "@/lib/auth/cookies";

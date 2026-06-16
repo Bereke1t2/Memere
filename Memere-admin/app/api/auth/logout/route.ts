@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { logout } from "@/lib/api/endpoints";
 import { clearAuthCookies, getRefreshToken } from "@/lib/auth/cookies";
 
