@@ -6,7 +6,12 @@ function requireEnv(key: string): string {
   return val ?? "";
 }
 
+// Lazy getters: validation runs at request time, not at module evaluation / build.
 export const env = {
-  API_BASE_URL: requireEnv("API_BASE_URL"),
-  COOKIE_SECRET: requireEnv("COOKIE_SECRET"),
-} as const;
+  get API_BASE_URL() {
+    return requireEnv("API_BASE_URL");
+  },
+  get COOKIE_SECRET() {
+    return requireEnv("COOKIE_SECRET");
+  },
+};

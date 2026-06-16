@@ -3,6 +3,9 @@ import { getSession } from "@/lib/auth/session";
 import { LoginForm } from "@/components/auth/login-form";
 import type { Metadata } from "next";
 
+// Always dynamic — reads httpOnly cookies to check existing session.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = { title: "Sign In — Memere Admin" };
 
 export default async function LoginPage() {
