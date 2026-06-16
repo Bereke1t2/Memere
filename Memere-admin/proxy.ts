@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const ACCESS_COOKIE = "mm_access";
 const REFRESH_COOKIE = "mm_refresh";
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const access = req.cookies.get(ACCESS_COOKIE)?.value;
   const refresh = req.cookies.get(REFRESH_COOKIE)?.value;
 
