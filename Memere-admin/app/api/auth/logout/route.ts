@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { logout } from "@/lib/api/endpoints";
 import { clearAuthCookies, getRefreshToken } from "@/lib/auth/cookies";
 
-export async function POST(_req: NextRequest) {
+export async function POST() {
   try {
     const refreshToken = await getRefreshToken();
     if (refreshToken) {

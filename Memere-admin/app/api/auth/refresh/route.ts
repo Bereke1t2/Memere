@@ -3,7 +3,7 @@ import { refresh } from "@/lib/api/endpoints";
 import { ApiError } from "@/lib/api/errors";
 import { clearAuthCookies, getRefreshToken, setAuthCookies } from "@/lib/auth/cookies";
 
-export async function POST(_req: NextRequest) {
+export async function POST() {
   const refreshToken = await getRefreshToken();
   if (!refreshToken) {
     return NextResponse.json(
