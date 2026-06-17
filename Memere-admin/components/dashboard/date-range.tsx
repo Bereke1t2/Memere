@@ -1,8 +1,6 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 const PRESETS = [
   { label: "7d", days: 7 },
@@ -48,18 +46,27 @@ export function DateRange({ from, to }: DateRangeProps) {
   }
 
   return (
-    <div className="flex items-center gap-1" role="group" aria-label="Date range presets">
-      {PRESETS.map((p) => (
-        <Button
-          key={p.label}
-          size="sm"
-          variant={isActivePreset(p.days, from, to) ? "default" : "outline"}
-          className={cn("text-xs h-7 px-3")}
-          onClick={() => apply(p.days)}
-        >
-          {p.label}
-        </Button>
-      ))}
+    <div
+      className="inline-flex items-center rounded-xl border bg-card p-1 gap-0.5"
+      role="group"
+      aria-label="Date range presets"
+    >
+      {PRESETS.map((p) => {
+        const active = isActivePreset(p.days, from, to);
+        return (
+          <button
+            key={p.label}
+            onClick={() => apply(p.days)}
+            className={
+              active
+                ? "rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 h-7 px-3 text-xs font-medium"
+                : "rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent h-7 px-3 text-xs font-medium"
+            }
+          >
+            {p.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

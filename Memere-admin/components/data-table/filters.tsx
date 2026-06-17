@@ -41,9 +41,9 @@ export function SearchFilter({
 
   return (
     <div className="relative">
-      <Search className="absolute left-2.5 top-2 h-4 w-4 text-muted-foreground pointer-events-none" />
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
       <Input
-        className="pl-8 h-8 w-56"
+        className="pl-9 h-9 w-full sm:w-64 text-sm"
         placeholder={placeholder}
         value={value}
         onChange={(e) => handleChange(e.target.value)}
@@ -85,7 +85,7 @@ export function SelectFilter({
 
   return (
     <Select value={current} onValueChange={handleChange}>
-      <SelectTrigger className="h-8 w-36">
+      <SelectTrigger className="h-9 text-sm min-w-[9rem]">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent>

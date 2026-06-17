@@ -5,13 +5,12 @@ import {
   Pie,
   Cell,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { RevenueBreakdownItem } from "@/lib/api/schemas";
 
-const PALETTE = ["#2563eb", "#16a34a", "#d97706", "#9333ea", "#ef4444", "#0891b2"];
+const PALETTE = ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b", "#ef4444"];
 
 interface UnitsPieProps {
   data: RevenueBreakdownItem[];
@@ -43,7 +42,7 @@ function CustomTooltip({
 export function UnitsPie({ data }: UnitsPieProps) {
   if (!data.length) {
     return (
-      <Card>
+      <Card className="border-0 shadow-sm">
         <CardHeader>
           <CardTitle className="text-base">Payments by Provider</CardTitle>
         </CardHeader>
@@ -61,37 +60,54 @@ export function UnitsPie({ data }: UnitsPieProps) {
     value: item.units,
   }));
 
+  const totalUnits = chartData.reduce((sum, entry) => sum + entry.value, 0);
+
   return (
-    <Card>
+    <Card className="border-0 shadow-sm">
       <CardHeader>
         <CardTitle className="text-base">Payments by Provider</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={240}>
-          <PieChart>
-            <Pie
-              data={chartData}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              outerRadius={80}
-              label={({ name, percent }: { name?: string; percent?: number }) =>
-                `${name ?? ""} ${((percent ?? 0) * 100).toFixed(0)}%`
-              }
-              labelLine={false}
-            >
-              {chartData.map((_, i) => (
-                <Cell
-                  key={i}
-                  fill={PALETTE[i % PALETTE.length]}
-                />
-              ))}
-            </Pie>
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
-          </PieChart>
-        </ResponsiveContainer>
+        <div className="relative" style={{ height: 260 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={chartData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={55}
+                outerRadius={90}
+                label={false}
+                labelLine={false}
+              >
+                {chartData.map((_, i) => (
+                  <Cell
+                    key={i}
+                    fill={PALETTE[i % PALETTE.length]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip content={<CustomTooltip />} />
+            </PieChart>
+          </ResponsiveContainer>
+          {/* Center label */}
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <span className="text-2xl font-bold leading-none">{totalUnits}</span>
+            <span className="mt-1 text-xs text-muted-foreground">total</span>
+          </div>
+        </div>
+        {/* Custom legend */}
+        <div className="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2">
+          {chartData.map((entry, i) => (
+            <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <div className="h-2.5 w-2.5 rounded-full" style={{ background: PALETTE[i % PALETTE.length] }} />
+              <span>{entry.name}</span>
+              <span className="font-medium text-foreground">{entry.value}</span>
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );

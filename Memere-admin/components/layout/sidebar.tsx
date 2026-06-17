@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { GraduationCap, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { SidebarNav } from "./sidebar-nav";
 import { cn } from "@/lib/utils";
@@ -12,7 +11,7 @@ interface SidebarProps {
   appName?: string;
 }
 
-export function Sidebar({ appName = "Memere Admin" }: SidebarProps) {
+export function Sidebar({ appName = "Memere" }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -20,14 +19,32 @@ export function Sidebar({ appName = "Memere Admin" }: SidebarProps) {
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          "hidden md:flex flex-col border-r bg-card transition-all duration-200",
-          collapsed ? "w-14" : "w-56"
+          "hidden md:flex flex-col transition-all duration-200",
+          collapsed ? "w-16" : "w-[220px]"
         )}
+        style={{
+          background: "hsl(var(--sidebar-bg))",
+          color: "hsl(var(--sidebar-fg))",
+        }}
       >
         {/* Logo / title */}
-        <div className={cn("flex h-14 items-center border-b px-3", collapsed && "justify-center")}>
+        <div
+          className={cn(
+            "flex h-16 items-center border-b px-3",
+            collapsed ? "justify-center" : "justify-start"
+          )}
+          style={{ borderColor: "hsl(var(--sidebar-border))" }}
+        >
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
+            <GraduationCap className="h-4 w-4 text-white" />
+          </div>
           {!collapsed && (
-            <span className="text-sm font-semibold truncate">{appName}</span>
+            <span
+              className="font-semibold text-sm ml-2.5 truncate"
+              style={{ color: "hsl(var(--sidebar-fg))" }}
+            >
+              {appName}
+            </span>
           )}
         </div>
 
@@ -36,15 +53,18 @@ export function Sidebar({ appName = "Memere Admin" }: SidebarProps) {
           <SidebarNav collapsed={collapsed} />
         </div>
 
-        <Separator />
+        {/* Divider */}
+        <div style={{ borderColor: "hsl(var(--sidebar-border))", borderTopWidth: 1 }} />
 
         {/* Collapse toggle */}
-        <div className="flex justify-end p-2">
+        <div className={cn("p-3", collapsed ? "flex justify-center" : "flex justify-end")}>
           <Button
             variant="ghost"
             size="icon"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             onClick={() => setCollapsed((c) => !c)}
+            className="hover:text-white"
+            style={{ color: "hsl(var(--sidebar-muted))" }}
           >
             {collapsed ? (
               <PanelLeftOpen className="h-4 w-4" />
@@ -62,7 +82,7 @@ export function Sidebar({ appName = "Memere Admin" }: SidebarProps) {
 export function MobileSidebar({
   open,
   onClose,
-  appName = "Memere Admin",
+  appName = "Memere",
 }: {
   open: boolean;
   onClose: () => void;
@@ -70,9 +90,27 @@ export function MobileSidebar({
 }) {
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent side="left" className="w-56 p-0 flex flex-col">
-        <SheetTitle className="flex h-14 items-center border-b px-4 text-sm font-semibold">
-          {appName}
+      <SheetContent
+        side="left"
+        className="w-[220px] p-0 flex flex-col border-r-0"
+        style={{
+          background: "hsl(var(--sidebar-bg))",
+          color: "hsl(var(--sidebar-fg))",
+        }}
+      >
+        <SheetTitle
+          className="flex h-16 items-center border-b px-3"
+          style={{ borderColor: "hsl(var(--sidebar-border))" }}
+        >
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0">
+            <GraduationCap className="h-4 w-4 text-white" />
+          </div>
+          <span
+            className="font-semibold text-sm ml-2.5 truncate"
+            style={{ color: "hsl(var(--sidebar-fg))" }}
+          >
+            {appName}
+          </span>
         </SheetTitle>
         <div className="flex-1 overflow-y-auto py-3">
           <SidebarNav collapsed={false} />

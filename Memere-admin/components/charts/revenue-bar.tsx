@@ -31,7 +31,7 @@ function CustomTooltip({
   if (!active || !payload?.length) return null;
   const item = payload[0].payload;
   return (
-    <div className="rounded-md border bg-popover px-3 py-2 text-sm shadow-md">
+    <div className="rounded-xl border-0 shadow-lg bg-white dark:bg-zinc-900 px-4 py-3 text-sm">
       <p className="font-medium capitalize">{item.provider}</p>
       <p className="text-muted-foreground">{formatMoney(item.gross, PLATFORM_CURRENCY)}</p>
       <p className="text-muted-foreground">{item.units} payments</p>
@@ -42,9 +42,10 @@ function CustomTooltip({
 export function RevenueBar({ data }: RevenueBarProps) {
   if (!data.length) {
     return (
-      <Card>
+      <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-base">Revenue by Provider</CardTitle>
+          <CardTitle className="text-sm font-semibold">Revenue by Provider</CardTitle>
+          <p className="text-xs text-muted-foreground">Revenue split by payment provider</p>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-12">
           <p className="text-sm text-muted-foreground">No revenue data for this period.</p>
@@ -59,29 +60,40 @@ export function RevenueBar({ data }: RevenueBarProps) {
   }));
 
   return (
-    <Card>
+    <Card className="border-0 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-base">Revenue by Provider</CardTitle>
+        <CardTitle className="text-sm font-semibold">Revenue by Provider</CardTitle>
+        <p className="text-xs text-muted-foreground">Revenue split by payment provider</p>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={240}>
+        <ResponsiveContainer width="100%" height={280}>
           <BarChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+            <defs>
+              <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#6366f1" stopOpacity={1} />
+                <stop offset="100%" stopColor="#818cf8" stopOpacity={0.7} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e4e4e7" />
             <XAxis
               dataKey="provider"
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 11, fill: '#71717a' }}
+              axisLine={false}
+              tickLine={false}
               tickFormatter={(v: string) =>
                 v.charAt(0).toUpperCase() + v.slice(1)
               }
             />
             <YAxis
-              tick={{ fontSize: 12 }}
+              tick={{ fontSize: 11, fill: '#71717a' }}
+              axisLine={false}
+              tickLine={false}
               tickFormatter={(v: number) =>
                 v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
               }
             />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="grossNum" name="Revenue" radius={[4, 4, 0, 0]} className="fill-primary" />
+            <Bar dataKey="grossNum" name="Revenue" radius={[6, 6, 0, 0]} fill="url(#revenueGrad)" />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

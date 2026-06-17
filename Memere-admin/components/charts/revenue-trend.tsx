@@ -1,11 +1,10 @@
 "use client";
 
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
@@ -46,7 +45,7 @@ export function RevenueTrend({ data }: RevenueTrendProps) {
   const hasData = data.some((d) => d.gross > 0);
 
   return (
-    <Card>
+    <Card className="border-0 shadow-sm">
       <CardHeader>
         <CardTitle className="text-base">Gross Revenue Trend</CardTitle>
       </CardHeader>
@@ -58,25 +57,39 @@ export function RevenueTrend({ data }: RevenueTrendProps) {
             </p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-              <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+          <ResponsiveContainer width="100%" height={220}>
+            <AreaChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="trendGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 11, fill: "#71717a" }}
+                axisLine={false}
+                tickLine={false}
+              />
               <YAxis
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 11, fill: "#71717a" }}
+                axisLine={false}
+                tickLine={false}
                 tickFormatter={(v: number) =>
                   v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)
                 }
               />
               <Tooltip content={<CustomTooltip />} />
-              <Line
+              <Area
                 type="monotone"
                 dataKey="gross"
-                stroke="#2563eb"
+                stroke="#6366f1"
                 strokeWidth={2}
-                dot={{ r: 3 }}
+                fill="url(#trendGrad)"
+                dot={false}
+                activeDot={{ r: 4, fill: "#6366f1" }}
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         )}
       </CardContent>

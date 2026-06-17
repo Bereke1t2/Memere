@@ -48,9 +48,17 @@ async function DashboardContent({ from, to }: { from: string; to: string }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <KpiCards data={overview} />
-      <Engagement data={engagement} />
-      <RevenueBar data={breakdown} />
+      <section className="flex flex-col gap-3">
+        <KpiCards data={overview} />
+      </section>
+      <section className="flex flex-col gap-3">
+        <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Engagement</p>
+        <Engagement data={engagement} />
+      </section>
+      <section className="flex flex-col gap-3">
+        <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Revenue Breakdown</p>
+        <RevenueBar data={breakdown} />
+      </section>
     </div>
   );
 }
@@ -65,8 +73,11 @@ export default async function DashboardPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Platform overview and analytics</p>
+        </div>
         <DateRange from={from} to={to} />
       </div>
       <Suspense fallback={<DashboardSkeleton />}>

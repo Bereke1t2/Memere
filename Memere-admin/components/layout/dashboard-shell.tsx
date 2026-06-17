@@ -19,8 +19,8 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
       <MobileSidebar open={mobileOpen} onClose={() => setMobileOpen(false)} />
       <div className="flex flex-1 flex-col min-w-0">
         <Header user={user} onMenuClick={() => setMobileOpen(true)} />
-        <main id="main-content" className="flex-1 overflow-auto p-6">
-          {children}
+        <main id="main-content" className="flex-1 overflow-auto bg-zinc-50 dark:bg-zinc-950">
+          <div className="p-6 max-w-screen-2xl mx-auto">{children}</div>
         </main>
       </div>
     </div>

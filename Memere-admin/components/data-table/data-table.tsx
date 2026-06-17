@@ -43,14 +43,14 @@ export function DataTable<TData>({
   });
 
   return (
-    <div className="rounded-md border overflow-hidden">
+    <div className="rounded-xl border-0 shadow-sm overflow-hidden bg-card">
       <div className="overflow-auto">
         <Table>
-          <TableHeader className="sticky top-0 bg-card z-10">
+          <TableHeader className="sticky top-0 z-10">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="bg-zinc-50 dark:bg-zinc-900 border-b">
                 {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
+                  <TableHead key={header.id} className="text-xs font-semibold text-muted-foreground uppercase tracking-wide py-3">
                     {header.isPlaceholder
                       ? null
                       : flexRender(
@@ -77,7 +77,7 @@ export function DataTable<TData>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="py-12 text-center"
+                  className="py-16 text-center"
                 >
                   {emptyState ?? (
                     <p className="text-sm text-muted-foreground">
@@ -91,7 +91,10 @@ export function DataTable<TData>({
                 <TableRow
                   key={row.id}
                   onClick={() => onRowClick?.(row)}
-                  className={cn(onRowClick && "cursor-pointer")}
+                  className={cn(
+                    "hover:bg-zinc-50/50 dark:hover:bg-zinc-900/50 transition-colors",
+                    onRowClick && "cursor-pointer"
+                  )}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>

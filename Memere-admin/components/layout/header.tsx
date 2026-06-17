@@ -58,7 +58,7 @@ export function Header({ user, onMenuClick }: HeaderProps) {
   }
 
   return (
-    <header className="flex h-14 shrink-0 items-center border-b bg-card px-4 gap-3">
+    <header className="flex h-14 shrink-0 items-center border-b bg-background px-4 gap-3">
       <Button
         variant="ghost"
         size="icon"
@@ -70,15 +70,15 @@ export function Header({ user, onMenuClick }: HeaderProps) {
       </Button>
 
       <nav aria-label="Breadcrumb" className="flex-1">
-        <ol className="flex items-center gap-1.5 text-sm">
+        <ol className="flex items-center gap-1.5">
           {crumb.parent ? (
             <>
-              <li className="text-muted-foreground">{crumb.parent}</li>
-              <li aria-hidden="true" className="text-muted-foreground">/</li>
-              <li className="font-medium capitalize">{crumb.current}</li>
+              <li className="text-muted-foreground text-sm">{crumb.parent}</li>
+              <li aria-hidden="true" className="text-border text-sm select-none">/</li>
+              <li className="text-foreground font-semibold text-sm capitalize">{crumb.current}</li>
             </>
           ) : (
-            <li className="font-medium">{crumb.current}</li>
+            <li className="text-foreground font-semibold text-sm">{crumb.current}</li>
           )}
         </ol>
       </nav>
@@ -93,18 +93,24 @@ export function Header({ user, onMenuClick }: HeaderProps) {
             aria-label="Open user menu"
           >
             <Avatar className="h-8 w-8">
-              <AvatarFallback className="text-xs">{initials(user)}</AvatarFallback>
+              <AvatarFallback className="h-8 w-8 bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-semibold">
+                {initials(user)}
+              </AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel className="font-normal">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium">
-                {user.first_name} {user.last_name}
-              </span>
-              <span className="text-xs text-muted-foreground">{user.email}</span>
-              <span className="text-xs text-muted-foreground capitalize">{user.role}</span>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-semibold truncate">
+                  {user.first_name} {user.last_name}
+                </span>
+                <span className="shrink-0 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 text-xs px-1.5 py-0.5">
+                  Admin
+                </span>
+              </div>
+              <span className="text-xs text-muted-foreground truncate">{user.email}</span>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />

@@ -73,7 +73,7 @@ export function Pagination({ nextCursor, isLoading }: PaginationProps) {
   }
 
   return (
-    <div className="flex items-center justify-between py-3">
+    <div className="flex items-center justify-between px-2 py-3 border-t border-border/50">
       <div className="flex items-center gap-2">
         <span className="text-sm text-muted-foreground">Rows per page</span>
         <Select value={limit} onValueChange={setLimit}>
@@ -89,26 +89,26 @@ export function Pagination({ nextCursor, isLoading }: PaginationProps) {
           </SelectContent>
         </Select>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <Button
           variant="outline"
-          size="icon"
-          className="h-8 w-8"
+          size="sm"
+          className="h-8 text-xs gap-0"
           onClick={goPrev}
           disabled={cursorStack.length === 0 || isLoading}
           aria-label="Previous page"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4 mr-1" /> Previous
         </Button>
         <Button
           variant="outline"
-          size="icon"
-          className="h-8 w-8"
+          size="sm"
+          className="h-8 text-xs gap-0"
           onClick={goNext}
           disabled={!nextCursor || isLoading}
           aria-label="Next page"
         >
-          <ChevronRight className="h-4 w-4" />
+          Next <ChevronRight className="h-4 w-4 ml-1" />
         </Button>
       </div>
     </div>

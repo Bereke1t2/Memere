@@ -41,11 +41,11 @@ export function SidebarNav({ collapsed }: SidebarNavProps) {
             href={href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               isActive
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-              collapsed && "justify-center px-2"
+                ? "bg-indigo-600 text-white"
+                : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100",
+              collapsed && "justify-center px-0 w-10 h-10 mx-auto"
             )}
           >
             <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
