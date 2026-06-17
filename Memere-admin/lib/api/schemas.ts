@@ -150,17 +150,17 @@ export function PaginatedSchema<T extends z.ZodTypeAny>(itemSchema: T) {
 
 export const PaginatedUsersSchema = z.object({
   users: UserSchema.array(),
-  next: z.string(),
+  next: z.string().nullable(),
 });
 
 export const PaginatedCoursesSchema = z.object({
   courses: CourseSchema.array(),
-  next: z.string(),
+  next: z.string().nullable(),
 });
 
 export const PaginatedPaymentsSchema = z.object({
   payments: AdminPaymentSchema.array(),
-  next: z.string(),
+  next: z.string().nullable(),
 });
 
 export const RevenueBreakdownResponseSchema = z.object({

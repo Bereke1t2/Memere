@@ -93,7 +93,7 @@ export function Header({ user, onMenuClick }: HeaderProps) {
             aria-label="Open user menu"
           >
             <Avatar className="h-8 w-8">
-              <AvatarFallback className="h-8 w-8 bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs font-semibold">
+              <AvatarFallback className="h-8 w-8 bg-foreground text-background text-xs font-semibold">
                 {initials(user)}
               </AvatarFallback>
             </Avatar>
@@ -106,7 +106,7 @@ export function Header({ user, onMenuClick }: HeaderProps) {
                 <span className="text-sm font-semibold truncate">
                   {user.first_name} {user.last_name}
                 </span>
-                <span className="shrink-0 rounded bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 text-xs px-1.5 py-0.5">
+                <span className="shrink-0 rounded border text-xs px-1.5 py-0.5 text-muted-foreground">
                   Admin
                 </span>
               </div>

@@ -64,7 +64,7 @@ export function LoginForm() {
     <Card className="w-full max-w-md border-0 shadow-xl">
       <CardContent className="pt-8 pb-8 px-8">
         <div className="flex flex-col items-center gap-3 pb-6">
-          <div className="rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 p-3">
+          <div className="rounded-2xl bg-foreground p-3">
             <GraduationCap className="h-8 w-8 text-white" />
           </div>
           <div className="text-center">
@@ -122,7 +122,7 @@ export function LoginForm() {
 
           <Button
             type="submit"
-            className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
+            className="w-full h-11"
             disabled={isSubmitting}
           >
             {isSubmitting ? (

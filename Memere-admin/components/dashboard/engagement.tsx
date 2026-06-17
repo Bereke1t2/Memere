@@ -7,18 +7,9 @@ interface EngagementProps {
 }
 
 const TILES = [
-  {
-    title: "Quiz Pass Rate",
-    value: (d: EngagementStats) => d.avg_quiz_pass_rate,
-  },
-  {
-    title: "Exam Pass Rate",
-    value: (d: EngagementStats) => d.avg_exam_pass_rate,
-  },
-  {
-    title: "Course Completion",
-    value: (d: EngagementStats) => d.avg_completion_pct,
-  },
+  { title: "Quiz Pass Rate",    value: (d: EngagementStats) => d.avg_quiz_pass_rate },
+  { title: "Exam Pass Rate",    value: (d: EngagementStats) => d.avg_exam_pass_rate },
+  { title: "Course Completion", value: (d: EngagementStats) => d.avg_completion_pct },
 ] as const;
 
 export function Engagement({ data }: EngagementProps) {
@@ -28,14 +19,14 @@ export function Engagement({ data }: EngagementProps) {
         const pct = value(data);
         const width = Math.min(100, Math.max(0, pct * 100));
         return (
-          <Card key={title} className="border-0 shadow-sm">
+          <Card key={title} className="border shadow-none">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-medium text-muted-foreground">{title}</p>
-                <span className="text-2xl font-bold">{formatPercent(pct)}</span>
+                <p className="text-sm text-muted-foreground">{title}</p>
+                <span className="text-xl font-semibold tabular-nums">{formatPercent(pct)}</span>
               </div>
               <div
-                className="h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden"
+                className="h-1.5 rounded-full bg-muted overflow-hidden"
                 role="progressbar"
                 aria-valuenow={Math.round(width)}
                 aria-valuemin={0}
@@ -43,11 +34,10 @@ export function Engagement({ data }: EngagementProps) {
                 aria-label={title}
               >
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-700"
+                  className="h-full rounded-full bg-foreground transition-all duration-700"
                   style={{ width: `${width}%` }}
                 />
               </div>
-              <p className="mt-2 text-xs text-muted-foreground">{Math.round(width)}% of target</p>
             </CardContent>
           </Card>
         );

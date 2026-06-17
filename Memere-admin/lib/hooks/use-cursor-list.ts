@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 
 export interface CursorPage<T> {
   items: T[];
-  next: string;
+  next: string | null;
 }
 
 /**
@@ -41,7 +41,7 @@ export function useCursorList<T>({
         const { toast } = await import("sonner");
         toast.error("Your session has expired. Please log in again.");
         window.location.replace("/login");
-        return { items: [], next: "" } as CursorPage<T>;
+        return { items: [], next: null } as CursorPage<T>;
       }
 
       if (!res.ok) {

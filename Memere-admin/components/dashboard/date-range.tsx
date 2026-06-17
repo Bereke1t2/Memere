@@ -3,9 +3,9 @@
 import { useRouter, useSearchParams } from "next/navigation";
 
 const PRESETS = [
-  { label: "7d", days: 7 },
-  { label: "30d", days: 30 },
-  { label: "90d", days: 90 },
+  { label: "7d",       days: 7 },
+  { label: "30d",      days: 30 },
+  { label: "90d",      days: 90 },
   { label: "This year", days: null },
 ] as const;
 
@@ -15,9 +15,7 @@ function toISO(d: Date): string {
 
 function presetRange(days: number | null): { from: string; to: string } {
   const to = new Date();
-  if (days === null) {
-    return { from: `${to.getFullYear()}-01-01`, to: toISO(to) };
-  }
+  if (days === null) return { from: `${to.getFullYear()}-01-01`, to: toISO(to) };
   const from = new Date(to);
   from.setDate(from.getDate() - days);
   return { from: toISO(from), to: toISO(to) };
@@ -47,7 +45,7 @@ export function DateRange({ from, to }: DateRangeProps) {
 
   return (
     <div
-      className="inline-flex items-center rounded-xl border bg-card p-1 gap-0.5"
+      className="inline-flex items-center rounded-lg border bg-card p-0.5 gap-0.5"
       role="group"
       aria-label="Date range presets"
     >
@@ -59,8 +57,8 @@ export function DateRange({ from, to }: DateRangeProps) {
             onClick={() => apply(p.days)}
             className={
               active
-                ? "rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 h-7 px-3 text-xs font-medium"
-                : "rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent h-7 px-3 text-xs font-medium"
+                ? "rounded-md bg-foreground text-background h-7 px-3 text-xs font-medium transition-colors"
+                : "rounded-md text-muted-foreground hover:text-foreground hover:bg-muted h-7 px-3 text-xs font-medium transition-colors"
             }
           >
             {p.label}
