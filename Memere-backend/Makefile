@@ -1,5 +1,5 @@
 .PHONY: run build tidy lint test up down migrate-up migrate-down migrate-create sqlc minio-bucket \
-        ci docker-build docker-build-worker compose-up compose-down seed \
+        ci docker-build docker-build-worker compose-up compose-down seed seed-admin \
         k8s-dry-run k8s-apply k8s-migrate k8s-status k8s-rollout kind-up kind-down
 
 # Auto-load .env so config.Load() (which reads the process environment) sees
@@ -104,6 +104,12 @@ sqlc:
 # seed — populate the database with realistic development data.
 seed:
 	go run ./scripts/seed
+
+# seed-admin — create (or reset) the admin account used for local dev and smoke
+# tests. Idempotent: safe to run multiple times. Override defaults with env vars:
+#   ADMIN_EMAIL=me@example.com ADMIN_PASSWORD=secret make seed-admin
+seed-admin:
+	go run ./cmd/seed-admin
 
 # ---------------------------------------------------------------------------
 # Kubernetes targets (Phase 6 Skill 5)
