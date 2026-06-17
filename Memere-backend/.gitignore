@@ -1,5 +1,6 @@
 bin/
 api
+seed-admin
 .env
 *.out
 coverage.txt
