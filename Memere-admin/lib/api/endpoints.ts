@@ -12,6 +12,9 @@ import {
   ReconcileResponseSchema,
   CourseSchema,
   SectionSchema,
+  TeacherCourseListSchema,
+  EarningsSchema,
+  CourseSalesSchema,
   type AuthResponse,
   type User,
   type Overview,
@@ -24,6 +27,10 @@ import {
   type ReconcileResponse,
   type Course,
   type Section,
+  type TeacherCourseList,
+  type CreateCourseInput,
+  type Earnings,
+  type CourseSales,
 } from "./schemas";
 
 // ---- Auth ----------------------------------------------------------------------
@@ -211,4 +218,52 @@ export async function broadcast(input: {
     method: "POST",
     body: input,
   });
+}
+
+// ---- Teacher: My Courses (Phase 5) --------------------------------------------
+
+export async function listMyCourses(params: {
+  teacherId: string;
+  limit?: number;
+  next_cursor?: string;
+}): Promise<TeacherCourseList> {
+  const qs = new URLSearchParams();
+  qs.set("teacher_id", params.teacherId);
+  if (params.limit) qs.set("limit", String(params.limit));
+  if (params.next_cursor) qs.set("next_cursor", params.next_cursor);
+  const data = await apiFetch(`/courses?${qs}`, { schema: TeacherCourseListSchema });
+  return data!;
+}
+
+export async function createCourse(input: CreateCourseInput): Promise<Course> {
+  const data = await apiFetch("/courses", { method: "POST", body: input, schema: CourseSchema });
+  return data!;
+}
+
+export async function updateCourse(id: string, input: Partial<CreateCourseInput>): Promise<Course> {
+  const data = await apiFetch(`/courses/${id}`, { method: "PUT", body: input, schema: CourseSchema });
+  return data!;
+}
+
+export async function deleteCourse(id: string): Promise<void> {
+  await apiFetch(`/courses/${id}`, { method: "DELETE" });
+}
+
+export async function publishCourse(id: string): Promise<void> {
+  await apiFetch(`/courses/${id}/publish`, { method: "POST" });
+}
+
+// ---- Teacher: Earnings (Phase 5) ----------------------------------------------
+
+export async function getMyEarnings(from: string, to: string): Promise<Earnings> {
+  const data = await apiFetch(
+    `/me/earnings?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    { schema: EarningsSchema }
+  );
+  return data!;
+}
+
+export async function getCourseSales(courseId: string): Promise<CourseSales> {
+  const data = await apiFetch(`/courses/${courseId}/sales`, { schema: CourseSalesSchema });
+  return data!;
 }

@@ -170,3 +170,46 @@ export const RevenueBreakdownResponseSchema = z.object({
 export type PaginatedUsers = z.infer<typeof PaginatedUsersSchema>;
 export type PaginatedCourses = z.infer<typeof PaginatedCoursesSchema>;
 export type PaginatedPayments = z.infer<typeof PaginatedPaymentsSchema>;
+
+// ---- Teacher: course list (public /courses endpoint) ---------------------------
+
+export const TeacherCourseListSchema = z.object({
+  data: CourseSchema.array(),
+  next_cursor: z.string().nullable(),
+  limit: z.number(),
+});
+export type TeacherCourseList = z.infer<typeof TeacherCourseListSchema>;
+
+// ---- Teacher: create / update course ------------------------------------------
+
+export const CreateCourseInputSchema = z.object({
+  title: z.string().min(3, "Title must be at least 3 characters").max(200),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+  subject: z.string().min(1, "Subject is required"),
+  grade: z.number().int().min(1, "Grade is required").max(12),
+  level: z.enum(["beginner", "intermediate", "advanced"]),
+  price: z.number().min(0),
+  language: z.string(),
+});
+export type CreateCourseInput = z.infer<typeof CreateCourseInputSchema>;
+
+// ---- Teacher: earnings --------------------------------------------------------
+
+export const EarningsSchema = z.object({
+  teacher_id: z.string(),
+  from: z.string(),
+  to: z.string(),
+  gross: z.string(),
+  teacher_share: z.string(),
+  earnings: z.string(),
+  platform_fee: z.string(),
+  units: z.number(),
+});
+export type Earnings = z.infer<typeof EarningsSchema>;
+
+export const CourseSalesSchema = z.object({
+  course_id: z.string(),
+  gross: z.string(),
+  units: z.number(),
+});
+export type CourseSales = z.infer<typeof CourseSalesSchema>;
