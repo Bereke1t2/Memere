@@ -13,6 +13,7 @@ import {
   CourseSchema,
   SectionSchema,
   TeacherCourseListSchema,
+  SectionListResponseSchema,
   EarningsSchema,
   CourseSalesSchema,
   type AuthResponse,
@@ -158,9 +159,9 @@ export async function getCourse(id: string): Promise<Course> {
 
 export async function getCourseSections(id: string): Promise<Section[]> {
   const data = await apiFetch(`/courses/${id}/sections`, {
-    schema: SectionSchema.array(),
+    schema: SectionListResponseSchema,
   });
-  return data ?? [];
+  return data?.data ?? [];
 }
 
 export async function unpublishCourse(id: string, reason: string): Promise<void> {
@@ -256,8 +257,11 @@ export async function publishCourse(id: string): Promise<void> {
 // ---- Teacher: Earnings (Phase 5) ----------------------------------------------
 
 export async function getMyEarnings(from: string, to: string): Promise<Earnings> {
+  // Backend requires RFC3339; date-only strings (YYYY-MM-DD) are rejected.
+  const fromRFC = from.includes("T") ? from : `${from}T00:00:00Z`;
+  const toRFC = to.includes("T") ? to : `${to}T23:59:59Z`;
   const data = await apiFetch(
-    `/me/earnings?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    `/me/earnings?from=${encodeURIComponent(fromRFC)}&to=${encodeURIComponent(toRFC)}`,
     { schema: EarningsSchema }
   );
   return data!;

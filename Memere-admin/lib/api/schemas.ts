@@ -74,10 +74,15 @@ export const SectionSchema = z.object({
   course_id: z.string().optional(),
   title: z.string(),
   order: z.number().optional(),
+  order_index: z.number().optional(),
   is_published: z.boolean().optional(),
   total_lessons: z.number().optional(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
+});
+
+export const SectionListResponseSchema = z.object({
+  data: SectionSchema.array(),
 });
 
 export type Section = z.infer<typeof SectionSchema>;

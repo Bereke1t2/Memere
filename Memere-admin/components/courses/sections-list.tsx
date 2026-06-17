@@ -77,7 +77,7 @@ export function SectionsList({ courseId, sections }: SectionsListProps) {
               className="flex items-center gap-4 px-4 py-3 border-b last:border-0 hover:bg-muted/30 transition-colors"
             >
               <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground shrink-0">
-                {section.order ?? idx + 1}
+                {section.order ?? section.order_index ?? idx + 1}
               </span>
               <span className="flex-1 text-sm font-medium">{section.title}</span>
               <span className="text-xs text-muted-foreground tabular-nums">
