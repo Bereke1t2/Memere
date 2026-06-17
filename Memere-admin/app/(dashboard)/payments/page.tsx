@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireStaff } from "@/lib/auth/session";
 import { listPayments } from "@/lib/api/endpoints";
 import { PaymentsClient } from "./payments-client";
 
@@ -6,6 +8,8 @@ export default async function PaymentsPage({
 }: {
   searchParams: Promise<{ after?: string; status?: string; limit?: string }>;
 }) {
+  const { user } = await requireStaff();
+  if (user.role !== "admin") redirect("/");
   const params = await searchParams;
   const limit = Math.min(parseInt(params.limit ?? "20", 10), 100);
   const after = params.after;

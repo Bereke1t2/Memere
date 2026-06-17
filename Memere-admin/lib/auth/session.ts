@@ -33,3 +33,18 @@ export async function requireAdmin(): Promise<Session> {
   if (session.user.role !== "admin") redirect("/login");
   return session;
 }
+
+/**
+ * Allows both admin and teacher. Redirects to /login for anyone else.
+ */
+export async function requireStaff(): Promise<Session> {
+  const session = await getSession();
+  if (!session) redirect("/login");
+  if (session.user.role !== "admin" && session.user.role !== "teacher")
+    redirect("/login");
+  return session;
+}
+
+export function isAdmin(session: Session): boolean {
+  return session.user.role === "admin";
+}

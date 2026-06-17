@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireStaff } from "@/lib/auth/session";
 import { Suspense } from "react";
 import { getOverview, getRevenueBreakdown } from "@/lib/api/endpoints";
 import { DateRange } from "@/components/dashboard/date-range";
@@ -171,6 +173,8 @@ export default async function RevenuePage({
 }: {
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
+  const { user } = await requireStaff();
+  if (user.role !== "admin") redirect("/");
   const params = await searchParams;
   const { from, to } = resolveRange(params);
 

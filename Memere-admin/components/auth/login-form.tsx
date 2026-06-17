@@ -20,8 +20,9 @@ type LoginValues = z.infer<typeof loginSchema>;
 
 const CODE_COPY: Record<string, string> = {
   INVALID_CREDENTIALS: "Email or password is incorrect.",
-  NOT_ADMIN: "This account is not an administrator.",
-  FORBIDDEN: "This account is not an administrator.",
+  NOT_ADMIN: "Only admins and teachers can access this panel.",
+  NOT_STAFF: "Only admins and teachers can access this panel.",
+  FORBIDDEN: "Only admins and teachers can access this panel.",
 };
 
 export function LoginForm() {

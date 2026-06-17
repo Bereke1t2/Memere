@@ -9,11 +9,12 @@ import {
   CreditCard,
   TrendingUp,
   Megaphone,
+  DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-const NAV_ITEMS = [
+const ADMIN_NAV = [
   { href: "/",              label: "Dashboard",     icon: LayoutDashboard },
   { href: "/users",         label: "Users",         icon: Users },
   { href: "/courses",       label: "Courses",       icon: BookOpen },
@@ -22,16 +23,24 @@ const NAV_ITEMS = [
   { href: "/announcements", label: "Announcements", icon: Megaphone },
 ];
 
+const TEACHER_NAV = [
+  { href: "/",            label: "Dashboard",  icon: LayoutDashboard },
+  { href: "/my-courses",  label: "My Courses", icon: BookOpen },
+  { href: "/earnings",    label: "Earnings",   icon: DollarSign },
+];
+
 interface SidebarNavProps {
   collapsed: boolean;
+  role: string;
 }
 
-export function SidebarNav({ collapsed }: SidebarNavProps) {
+export function SidebarNav({ collapsed, role }: SidebarNavProps) {
   const pathname = usePathname();
+  const items = role === "teacher" ? TEACHER_NAV : ADMIN_NAV;
 
   return (
     <nav aria-label="Main navigation" className="flex flex-col gap-1 px-2">
-      {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+      {items.map(({ href, label, icon: Icon }) => {
         const isActive =
           href === "/" ? pathname === "/" : pathname.startsWith(href);
 

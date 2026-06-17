@@ -9,11 +9,12 @@ export async function POST(req: NextRequest) {
 
     const auth = await login(email, password);
 
-    if (auth.user?.role !== "admin") {
+    const role = auth.user?.role;
+    if (role !== "admin" && role !== "teacher") {
       return NextResponse.json(
         {
-          code: "NOT_ADMIN",
-          message: "This account is not an administrator.",
+          code: "NOT_STAFF",
+          message: "Only admins and teachers can access this panel.",
         },
         { status: 403 }
       );

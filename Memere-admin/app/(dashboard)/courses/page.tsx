@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireStaff } from "@/lib/auth/session";
 import { listCourses } from "@/lib/api/endpoints";
 import { CoursesClient } from "./courses-client";
 
@@ -6,6 +8,8 @@ export default async function CoursesPage({
 }: {
   searchParams: Promise<{ after?: string; limit?: string }>;
 }) {
+  const { user } = await requireStaff();
+  if (user.role !== "admin") redirect("/");
   const params = await searchParams;
   const limit = Math.min(parseInt(params.limit ?? "20", 10), 100);
   const after = params.after;

@@ -1,6 +1,10 @@
+import { redirect } from "next/navigation";
+import { requireStaff } from "@/lib/auth/session";
 import { AnnouncementsClient } from "./announcements-client";
 
-export default function AnnouncementsPage() {
+export default async function AnnouncementsPage() {
+  const { user } = await requireStaff();
+  if (user.role !== "admin") redirect("/");
   return (
     <div className="flex flex-col gap-6">
       <div>

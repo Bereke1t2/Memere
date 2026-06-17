@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+import { requireStaff } from "@/lib/auth/session";
 import { listUsers } from "@/lib/api/endpoints";
 import { UsersClient } from "./users-client";
 
@@ -6,6 +8,8 @@ export default async function UsersPage({
 }: {
   searchParams: Promise<{ after?: string; role?: string; q?: string; limit?: string }>;
 }) {
+  const { user } = await requireStaff();
+  if (user.role !== "admin") redirect("/");
   const params = await searchParams;
   const limit = Math.min(parseInt(params.limit ?? "20", 10), 100);
   const after = params.after;

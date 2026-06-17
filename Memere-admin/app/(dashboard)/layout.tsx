@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 
-import { requireAdmin } from "@/lib/auth/session";
+import { requireStaff } from "@/lib/auth/session";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 
 export default async function DashboardLayout({
@@ -8,6 +8,6 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = await requireAdmin();
+  const { user } = await requireStaff();
   return <DashboardShell user={user}>{children}</DashboardShell>;
 }

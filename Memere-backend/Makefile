@@ -1,5 +1,5 @@
 .PHONY: run build tidy lint test up down migrate-up migrate-down migrate-create sqlc minio-bucket \
-        ci docker-build docker-build-worker compose-up compose-down seed seed-admin \
+        ci docker-build docker-build-worker compose-up compose-down seed seed-admin seed-teacher \
         k8s-dry-run k8s-apply k8s-migrate k8s-status k8s-rollout kind-up kind-down
 
 # Auto-load .env so config.Load() (which reads the process environment) sees
@@ -110,6 +110,12 @@ seed:
 #   ADMIN_EMAIL=me@example.com ADMIN_PASSWORD=secret make seed-admin
 seed-admin:
 	go run ./cmd/seed-admin
+
+# seed-teacher — create (or reset) a teacher account for local dev and smoke tests.
+# Idempotent. Override defaults:
+#   TEACHER_EMAIL=me@example.com TEACHER_PASSWORD=secret make seed-teacher
+seed-teacher:
+	go run ./cmd/seed-teacher
 
 # ---------------------------------------------------------------------------
 # Kubernetes targets (Phase 6 Skill 5)
