@@ -67,6 +67,21 @@ export const CourseSchema = z.object({
 
 export type Course = z.infer<typeof CourseSchema>;
 
+// ---- Section -------------------------------------------------------------------
+
+export const SectionSchema = z.object({
+  id: z.string(),
+  course_id: z.string().optional(),
+  title: z.string(),
+  order: z.number().optional(),
+  is_published: z.boolean().optional(),
+  total_lessons: z.number().optional(),
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+});
+
+export type Section = z.infer<typeof SectionSchema>;
+
 // ---- Payment -------------------------------------------------------------------
 
 export const AdminPaymentSchema = z.object({

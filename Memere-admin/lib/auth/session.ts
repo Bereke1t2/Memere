@@ -2,7 +2,6 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 import { me } from "@/lib/api/endpoints";
-import { ApiError } from "@/lib/api/errors";
 import type { User } from "@/lib/api/schemas";
 
 export interface Session {
@@ -18,9 +17,9 @@ export async function getSession(): Promise<Session | null> {
   try {
     const user = await me();
     return { user };
-  } catch (err) {
-    if (err instanceof ApiError) return null;
-    throw err;
+  } catch {
+    // ApiError (4xx/5xx) or network failure — both mean no valid session.
+    return null;
   }
 }
 

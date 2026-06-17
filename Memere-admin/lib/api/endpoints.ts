@@ -10,6 +10,8 @@ import {
   PaginatedPaymentsSchema,
   AdminPaymentSchema,
   ReconcileResponseSchema,
+  CourseSchema,
+  SectionSchema,
   type AuthResponse,
   type User,
   type Overview,
@@ -20,6 +22,8 @@ import {
   type PaginatedPayments,
   type AdminPayment,
   type ReconcileResponse,
+  type Course,
+  type Section,
 } from "./schemas";
 
 // ---- Auth ----------------------------------------------------------------------
@@ -138,6 +142,18 @@ export async function listCourses(params: {
     schema: PaginatedCoursesSchema,
   });
   return data!;
+}
+
+export async function getCourse(id: string): Promise<Course> {
+  const data = await apiFetch(`/courses/${id}`, { schema: CourseSchema });
+  return data!;
+}
+
+export async function getCourseSections(id: string): Promise<Section[]> {
+  const data = await apiFetch(`/courses/${id}/sections`, {
+    schema: SectionSchema.array(),
+  });
+  return data ?? [];
 }
 
 export async function unpublishCourse(id: string, reason: string): Promise<void> {
