@@ -1,0 +1,17 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-pdb
+  namespace: production
+  labels:
+    app.kubernetes.io/name: memere
+    app.kubernetes.io/component: api
+spec:
+  # Guarantee at least 1 API pod is available during voluntary disruptions
+  # (node drain, rolling update). With minReplicas=2 this means at most 1 pod
+  # is disrupted at a time.
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: memere
+      app.kubernetes.io/component: api

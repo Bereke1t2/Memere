@@ -1,0 +1,45 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api
+  namespace: production
+  labels:
+    app.kubernetes.io/name: memere
+    app.kubernetes.io/component: api
+  annotations:
+    # nginx-ingress controller annotations
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    # cert-manager issues the TLS certificate from Let's Encrypt.
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Upstream keep-alive and timeouts (match server WriteTimeout 10s + buffer).
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "5"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "15"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "15"
+    nginx.ingress.kubernetes.io/proxy-body-size: "2100m"   # allow video upload pre-sign flow bodies
+    # Block public access to internal-only paths at the edge.
+    nginx.ingress.kubernetes.io/server-snippet: |
+      location ~* ^/(healthz|readyz|metrics) {
+        deny all;
+        return 403;
+      }
+    # App-level rate limiting is defense-in-depth; nginx-ingress can add an
+    # outer limit here when traffic requires it (see docs/scaling.md §Tier-2).
+    # nginx.ingress.kubernetes.io/limit-rps: "100"
+spec:
+  tls:
+    - hosts:
+        - api.memere.app
+      secretName: memere-api-tls
+  rules:
+    - host: api.memere.app
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port:
+                  name: http

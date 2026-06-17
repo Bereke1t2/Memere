@@ -1,0 +1,52 @@
+# Root kustomization for production.
+# Apply with: kubectl apply -k k8s/
+# Dry-run:    kubectl apply -k k8s/ --dry-run=server
+#
+# ORDER OF OPERATIONS for a deploy:
+#   1. kubectl apply -f k8s/jobs/migrate-job.yaml -n production
+#   2. kubectl wait --for=condition=complete job/migrate -n production --timeout=120s
+#   3. kubectl apply -k k8s/ --prune --prune-allowlist=apps/v1/Deployment
+#   4. kubectl rollout status deploy/api deploy/worker -n production
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: production
+
+resources:
+  # Namespace first
+  - namespaces/production.yaml
+  - namespaces/staging.yaml
+
+  # RBAC
+  - rbac/service-accounts.yaml
+
+  # Config & Secrets (placeholders — real secrets via SealedSecrets/ESO)
+  - configmaps/app-config.yaml
+  - secrets/app-secrets.yaml
+
+  # Workloads
+  - deployments/api.yaml
+  - deployments/worker.yaml
+
+  # Network
+  - services/api-svc.yaml
+  - ingress/api-ingress.yaml
+
+  # Autoscaling
+  - hpa/api-hpa.yaml
+  - hpa/worker-hpa.yaml
+  - hpa/api-pdb.yaml
+
+  # Migrations (apply separately before rollout — see above)
+  - jobs/migrate-job.yaml
+
+  # Monitoring (requires prometheus-operator + grafana sidecar)
+  - monitoring/service-monitor.yaml
+  - monitoring/alert-rules.yaml
+  - monitoring/grafana-dashboards.yaml
+
+images:
+  - name: <REGISTRY>/memere-api
+    newTag: latest
+  - name: <REGISTRY>/memere-worker
+    newTag: latest

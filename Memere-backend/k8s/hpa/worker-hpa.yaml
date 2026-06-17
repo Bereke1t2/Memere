@@ -1,0 +1,45 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: worker
+  namespace: production
+  labels:
+    app.kubernetes.io/name: memere
+    app.kubernetes.io/component: worker
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: worker
+  minReplicas: 1
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    # Scale on transcode queue depth when Prometheus Adapter is available.
+    # Each worker pod handles VIDEO_CONCURRENCY=4 transcodes concurrently.
+    # Target: keep queue depth < 8 per pod (2 × concurrency as headroom).
+    # - type: External
+    #   external:
+    #     metric:
+    #       name: memere_transcode_queue_depth
+    #     target:
+    #       type: AverageValue
+    #       averageValue: "8"
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 600   # 10 min — transcodes are long-running; don't kill mid-job
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 120
+    scaleUp:
+      stabilizationWindowSeconds: 0    # scale up immediately when queue builds
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 30

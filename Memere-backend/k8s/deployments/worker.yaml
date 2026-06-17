@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  namespace: production
+  labels:
+    app.kubernetes.io/name: memere
+    app.kubernetes.io/component: worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: memere
+      app.kubernetes.io/component: worker
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: memere
+        app.kubernetes.io/component: worker
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: memere-worker
+      # Worker drain: 60s for in-flight transcodes + notification fan-out to finish.
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000     # 'worker' user from Dockerfile.worker
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: worker
+          image: <REGISTRY>/memere-worker:<TAG>
+          env:
+            - name: WORKER_MODE
+              value: "true"
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
+          ports:
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            # Workers are CPU-bound (FFmpeg) and need more headroom.
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              cpu: "2000m"
+              memory: "1Gi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false   # FFmpeg writes to /tmp during transcode
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: transcode-tmp
+              mountPath: /tmp/transcode
+      volumes:
+        - name: transcode-tmp
+          emptyDir:
+            sizeLimit: "5Gi"

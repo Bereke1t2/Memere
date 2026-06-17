@@ -1,5 +1,6 @@
 .PHONY: run build tidy lint test up down migrate-up migrate-down migrate-create sqlc minio-bucket \
-        ci docker-build docker-build-worker compose-up compose-down seed
+        ci docker-build docker-build-worker compose-up compose-down seed \
+        k8s-dry-run k8s-apply k8s-migrate k8s-status k8s-rollout kind-up kind-down
 
 # Auto-load .env so config.Load() (which reads the process environment) sees
 # DB_HOST, JWT_SECRET, etc. without the caller exporting them by hand. The
@@ -104,6 +105,54 @@ sqlc:
 seed:
 	go run ./scripts/seed
 
+# ---------------------------------------------------------------------------
+# Kubernetes targets (Phase 6 Skill 5)
+# ---------------------------------------------------------------------------
+NAMESPACE ?= production
+
+# k8s-dry-run — validate manifests against a running cluster without applying.
+# Requires kubectl and a configured kubeconfig (or KUBECONFIG env var).
+k8s-dry-run:
+	kubectl apply -k k8s/ --dry-run=server --namespace=$(NAMESPACE)
+
+# k8s-apply — apply all manifests. Run k8s-migrate first on a fresh deploy.
+k8s-apply:
+	kubectl apply -k k8s/ --namespace=$(NAMESPACE)
+
+# k8s-migrate — run the migration Job and wait for it to complete.
+# Always run before deploying new image tags that include schema changes.
+k8s-migrate:
+	kubectl apply -f k8s/jobs/migrate-job.yaml --namespace=$(NAMESPACE)
+	kubectl wait --for=condition=complete job/migrate --namespace=$(NAMESPACE) --timeout=120s
+
+# k8s-status — print pod and HPA status for the namespace.
+k8s-status:
+	@echo "=== Pods ==="
+	kubectl get pods --namespace=$(NAMESPACE)
+	@echo ""
+	@echo "=== HPA ==="
+	kubectl get hpa --namespace=$(NAMESPACE)
+	@echo ""
+	@echo "=== Ingress ==="
+	kubectl get ingress --namespace=$(NAMESPACE)
+
+# k8s-rollout — watch rollout status for api and worker deployments.
+k8s-rollout:
+	kubectl rollout status deployment/api --namespace=$(NAMESPACE)
+	kubectl rollout status deployment/worker --namespace=$(NAMESPACE)
+
+# kind-up — create a local kind cluster and apply all manifests for testing.
+# Requires: kind (https://kind.sigs.k8s.io) and kubectl.
+kind-up:
+	kind create cluster --name memere-local
+	kubectl apply -k k8s/ --dry-run=client   # validate before applying
+	@echo "Cluster ready. Apply manifests with: kubectl apply -k k8s/"
+
+# kind-down — delete the local kind cluster.
+kind-down:
+	kind delete cluster --name memere-local
+
+# ---------------------------------------------------------------------------
 # minio-bucket creates the dev media bucket in the running MinIO (make up first)
 # and ensures it is private (no anonymous access — Non-Negotiable #3).
 minio-bucket:

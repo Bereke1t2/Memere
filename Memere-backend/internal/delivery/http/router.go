@@ -73,7 +73,9 @@ func NewRouter(deps Deps) *gin.Engine {
 	r.Use(middleware.RateLimit(deps.Cache, deps.Config.HTTP.RateLimitRPM))
 	r.Use(middleware.Compress())
 
-	r.GET("/health", healthHandler(deps.DB, deps.Cache))
+	r.GET("/healthz", healthHandler(deps.DB, deps.Cache))
+	r.GET("/readyz", readyzHandler(deps.DB, deps.Cache))
+	r.GET("/health", healthHandler(deps.DB, deps.Cache)) // legacy alias kept for backwards compat
 	r.GET("/version", versionHandler())
 
 	requireAuth := middleware.RequireAuth(deps.JWT, deps.Sessions)

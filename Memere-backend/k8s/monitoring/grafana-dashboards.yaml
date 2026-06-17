@@ -1,0 +1,108 @@
+# Grafana dashboard ConfigMap for use with the Grafana sidecar (grafana.sidecar.dashboards.enabled=true).
+# The sidecar auto-loads ConfigMaps labelled grafana_dashboard: "1" into Grafana.
+#
+# Dashboards defined here:
+#  1. memere-red     — Rate/Error/Duration (RED) per API route
+#  2. memere-infra   — DB pool, Redis memory, worker queue depth
+#  3. memere-business — payments, enrollments, MRR, transcode backlog
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: memere-grafana-dashboards
+  namespace: production
+  labels:
+    grafana_dashboard: "1"
+    app.kubernetes.io/name: memere
+data:
+  memere-red.json: |
+    {
+      "title": "Memere — API RED",
+      "uid": "memere-red",
+      "tags": ["memere", "api"],
+      "refresh": "30s",
+      "panels": [
+        {
+          "title": "Request Rate (rps)",
+          "type": "timeseries",
+          "targets": [{"expr": "sum(rate(http_requests_total{namespace=\"production\"}[1m])) by (route)", "legendFormat": "{{route}}"}]
+        },
+        {
+          "title": "Error Rate (%)",
+          "type": "timeseries",
+          "targets": [{"expr": "sum(rate(http_requests_total{namespace=\"production\",status=~\"5..\"}[1m])) / sum(rate(http_requests_total{namespace=\"production\"}[1m])) * 100", "legendFormat": "5xx rate"}]
+        },
+        {
+          "title": "p50 / p95 / p99 Latency",
+          "type": "timeseries",
+          "targets": [
+            {"expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{namespace=\"production\"}[1m])) by (le)) * 1000", "legendFormat": "p50 ms"},
+            {"expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"production\"}[1m])) by (le)) * 1000", "legendFormat": "p95 ms"},
+            {"expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{namespace=\"production\"}[1m])) by (le)) * 1000", "legendFormat": "p99 ms"}
+          ]
+        }
+      ]
+    }
+
+  memere-infra.json: |
+    {
+      "title": "Memere — Infrastructure",
+      "uid": "memere-infra",
+      "tags": ["memere", "infra"],
+      "refresh": "30s",
+      "panels": [
+        {
+          "title": "DB Pool — Acquired vs Total",
+          "type": "timeseries",
+          "targets": [
+            {"expr": "memere_db_pool_acquired{namespace=\"production\"}", "legendFormat": "acquired"},
+            {"expr": "memere_db_pool_total{namespace=\"production\"}", "legendFormat": "total"}
+          ]
+        },
+        {
+          "title": "Redis Memory Used",
+          "type": "timeseries",
+          "targets": [{"expr": "redis_memory_used_bytes{namespace=\"production\"}", "legendFormat": "used bytes"}]
+        },
+        {
+          "title": "Transcode Queue Depth",
+          "type": "stat",
+          "targets": [{"expr": "memere_transcode_queue_depth{namespace=\"production\"}", "legendFormat": "queue depth"}]
+        },
+        {
+          "title": "Worker Pods",
+          "type": "stat",
+          "targets": [{"expr": "kube_deployment_status_replicas_available{namespace=\"production\",deployment=\"worker\"}", "legendFormat": "ready pods"}]
+        }
+      ]
+    }
+
+  memere-business.json: |
+    {
+      "title": "Memere — Business KPIs",
+      "uid": "memere-business",
+      "tags": ["memere", "business"],
+      "refresh": "5m",
+      "panels": [
+        {
+          "title": "Payments Initiated (last 24h)",
+          "type": "stat",
+          "targets": [{"expr": "increase(memere_payments_initiated_total{namespace=\"production\"}[24h])", "legendFormat": "payments"}]
+        },
+        {
+          "title": "Payment Webhook Failures (last 1h)",
+          "type": "stat",
+          "targets": [{"expr": "increase(memere_payment_webhook_failures_total{namespace=\"production\"}[1h])", "legendFormat": "failures"}]
+        },
+        {
+          "title": "New Enrollments (last 24h)",
+          "type": "stat",
+          "targets": [{"expr": "increase(memere_enrollments_total{namespace=\"production\"}[24h])", "legendFormat": "enrollments"}]
+        },
+        {
+          "title": "Transcode Backlog",
+          "type": "gauge",
+          "fieldConfig": {"defaults": {"thresholds": {"steps": [{"color":"green","value":0},{"color":"yellow","value":10},{"color":"red","value":30}]}}},
+          "targets": [{"expr": "memere_transcode_queue_depth{namespace=\"production\"}", "legendFormat": "backlog"}]
+        }
+      ]
+    }

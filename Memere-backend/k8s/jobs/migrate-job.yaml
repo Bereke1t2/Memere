@@ -1,0 +1,61 @@
+# Pre-rollout migration Job.
+# Run this BEFORE applying the new Deployment manifests to satisfy the
+# expand/contract zero-downtime migration contract (see docs/migrations.md).
+#
+# Usage:
+#   kubectl apply -f k8s/jobs/migrate-job.yaml -n production
+#   kubectl wait --for=condition=complete job/migrate --timeout=120s -n production
+#   # then apply the Deployment manifests
+#
+# The Job is idempotent: golang-migrate skips already-applied versions.
+# A failed Job (backoffLimit exhausted) blocks the deploy — check logs first.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate
+  namespace: production
+  labels:
+    app.kubernetes.io/name: memere
+    app.kubernetes.io/component: migrate
+  annotations:
+    # Helm hook equivalent for manual/ArgoCD deploys:
+    # "helm.sh/hook": pre-upgrade,pre-install
+    # "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  backoffLimit: 2
+  activeDeadlineSeconds: 300   # fail if migration takes longer than 5 min
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: memere
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: memere-api
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: <REGISTRY>/memere-api:<TAG>
+          command: ["/migrate", "-direction", "up"]
+          envFrom:
+            - configMapRef:
+                name: app-config
+            - secretRef:
+                name: app-secrets
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

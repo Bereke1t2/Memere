@@ -1,0 +1,137 @@
+# PrometheusRule — alert rules per §13.3 of the design specification.
+# Requires: prometheus-operator CRDs installed.
+# Route alerts to PagerDuty/OpsGenie/Slack via the Alertmanager config
+# (not stored here — credentials are secrets).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: memere-alerts
+  namespace: production
+  labels:
+    app.kubernetes.io/name: memere
+    release: prometheus
+spec:
+  groups:
+    - name: memere.api
+      interval: 30s
+      rules:
+        # 5xx error rate > 1% of requests over 5 minutes
+        - alert: HighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{namespace="production",status=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_total{namespace="production"}[5m]))
+            ) > 0.01
+          for: 5m
+          labels:
+            severity: critical
+            team: backend
+          annotations:
+            summary: "High HTTP 5xx error rate ({{ $value | humanizePercentage }})"
+            description: "More than 1% of API requests are returning 5xx errors. Check logs and recent deployments."
+            runbook_url: "https://github.com/Bereke1t2/Memere/wiki/runbooks/high-error-rate"
+
+        # p99 latency > 500ms over 5 minutes
+        - alert: HighP99Latency
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(http_request_duration_seconds_bucket{namespace="production"}[5m])) by (le, route)
+            ) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+            team: backend
+          annotations:
+            summary: "p99 latency > 500ms on route {{ $labels.route }}"
+            description: "The 99th percentile response time has exceeded 500ms. Review slow queries and cache hit rates."
+            runbook_url: "https://github.com/Bereke1t2/Memere/wiki/runbooks/high-latency"
+
+        # API pod count dropped below minReplicas
+        - alert: APIPodsDown
+          expr: |
+            kube_deployment_status_replicas_available{namespace="production",deployment="api"} < 2
+          for: 2m
+          labels:
+            severity: critical
+            team: backend
+          annotations:
+            summary: "API deployment has fewer than 2 available replicas"
+            description: "Available API pods: {{ $value }}. Minimum is 2. Check pod events and OOMKills."
+
+    - name: memere.worker
+      interval: 30s
+      rules:
+        # Transcode failure spike — more than 5 failures in 10 min
+        - alert: TranscodeFailureSpike
+          expr: |
+            increase(memere_transcode_failures_total{namespace="production"}[10m]) > 5
+          for: 0m
+          labels:
+            severity: warning
+            team: backend
+          annotations:
+            summary: "Transcode failure spike ({{ $value }} failures in 10m)"
+            description: "FFmpeg transcode jobs are failing at an elevated rate. Check worker logs and S3 access."
+            runbook_url: "https://github.com/Bereke1t2/Memere/wiki/runbooks/transcode-failures"
+
+        # Worker stalled — no jobs processed for 30 minutes despite queue depth > 0
+        - alert: WorkerStalled
+          expr: |
+            (memere_transcode_queue_depth{namespace="production"} > 0)
+            and
+            (rate(memere_transcode_processed_total{namespace="production"}[30m]) == 0)
+          for: 10m
+          labels:
+            severity: critical
+            team: backend
+          annotations:
+            summary: "Transcode worker appears stalled (queue depth {{ $value }})"
+            description: "Jobs are queued but none have been processed in 30 minutes. Worker may be deadlocked or crashed."
+
+    - name: memere.payments
+      interval: 60s
+      rules:
+        # Payment webhook failures > 10 in 15 minutes
+        - alert: PaymentWebhookFailures
+          expr: |
+            increase(memere_payment_webhook_failures_total{namespace="production"}[15m]) > 10
+          for: 0m
+          labels:
+            severity: critical
+            team: backend
+          annotations:
+            summary: "Payment webhook failures spiking ({{ $value }} in 15m)"
+            description: "Provider webhooks are failing signature verification or processing. Risk of missed payment confirmations."
+            runbook_url: "https://github.com/Bereke1t2/Memere/wiki/runbooks/payment-webhook-failures"
+
+    - name: memere.database
+      interval: 60s
+      rules:
+        # DB connection pool saturation
+        - alert: DBPoolSaturation
+          expr: |
+            (
+              memere_db_pool_acquired{namespace="production"}
+              /
+              memere_db_pool_total{namespace="production"}
+            ) > 0.90
+          for: 5m
+          labels:
+            severity: warning
+            team: backend
+          annotations:
+            summary: "DB connection pool > 90% utilized"
+            description: "The pgx connection pool is nearly exhausted. Queries may start queueing. Consider increasing DB_MAX_CONNS or adding a read replica."
+
+        # DB replication lag > 30s (when read replicas exist)
+        - alert: DBReplicationLag
+          expr: |
+            pg_replication_lag{namespace="production"} > 30
+          for: 5m
+          labels:
+            severity: warning
+            team: backend
+          annotations:
+            summary: "PostgreSQL replication lag > 30s"
+            description: "Read replica is {{ $value }}s behind the primary. Stale reads may affect user experience."
