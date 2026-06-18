@@ -20,6 +20,7 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { useQueryClient } from "@tanstack/react-query";
 import { clientAction } from "@/lib/client-action";
 import { CreateCourseInputSchema, type CreateCourseInput, type Course } from "@/lib/api/schemas";
 
@@ -29,6 +30,7 @@ interface TeacherCourseActionsProps {
 
 export function TeacherCourseActions({ course }: TeacherCourseActionsProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [dialog, setDialog] = useState<"edit" | "publish" | "delete" | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -50,15 +52,25 @@ export function TeacherCourseActions({ course }: TeacherCourseActionsProps) {
     },
   });
 
+  async function invalidate() {
+    await queryClient.invalidateQueries({ queryKey: ["teacher-courses"] });
+    router.refresh();
+  }
+
   async function handleEdit(values: CreateCourseInput) {
-    try {
-      await clientAction(`/api/teacher/courses/${course.id}`, values);
-      toast.success("Course updated.");
-      setDialog(null);
-      router.refresh();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update course.");
+    const res = await fetch(`/api/teacher/courses/${course.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(values),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error((data as { message?: string }).message ?? "Failed to update course.");
+      return;
     }
+    toast.success("Course updated.");
+    setDialog(null);
+    await invalidate();
   }
 
   async function handlePublish() {
@@ -67,7 +79,7 @@ export function TeacherCourseActions({ course }: TeacherCourseActionsProps) {
       await clientAction(`/api/teacher/courses/${course.id}/publish`);
       toast.success("Course published.");
       setDialog(null);
-      router.refresh();
+      await invalidate();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to publish.");
     } finally {
@@ -78,10 +90,11 @@ export function TeacherCourseActions({ course }: TeacherCourseActionsProps) {
   async function handleDelete() {
     setBusy(true);
     try {
-      await fetch(`/api/teacher/courses/${course.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/teacher/courses/${course.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete course.");
       toast.success("Course deleted.");
       setDialog(null);
-      router.refresh();
+      await invalidate();
     } catch {
       toast.error("Failed to delete course.");
     } finally {
@@ -120,7 +133,7 @@ export function TeacherCourseActions({ course }: TeacherCourseActionsProps) {
 
       {/* Edit dialog */}
       <Dialog open={dialog === "edit"} onOpenChange={(v) => !v && setDialog(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg" aria-describedby={undefined}>
           <DialogHeader><DialogTitle>Edit Course</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit(handleEdit)} className="flex flex-col gap-4 py-2">
             <div className="grid gap-1.5">
