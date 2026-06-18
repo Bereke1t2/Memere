@@ -12,9 +12,9 @@ export async function GET(req: Request) {
 
     const { searchParams } = new URL(req.url);
     const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 100);
-    const next_cursor = searchParams.get("next_cursor") ?? undefined;
+    const after = searchParams.get("after") ?? undefined;
 
-    const result = await listMyCourses({ teacherId: user.id, limit, next_cursor });
+    const result = await listMyCourses({ teacherId: user.id, limit, after });
     return Response.json({ items: result.data, next: result.next_cursor });
   } catch (err) {
     if (err instanceof ApiError) {
