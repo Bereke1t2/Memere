@@ -107,7 +107,7 @@ export const LessonListResponseSchema = z.object({ data: LessonSchema.array() })
 
 export const AddLessonInputSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  type: z.enum(["video", "text", "pdf"]),
+  type: z.enum(["video", "note", "quiz", "mixed"]),
   is_free_preview: z.boolean(),
   duration_seconds: z.number().min(0).optional(),
   is_published: z.boolean().optional(),
@@ -211,6 +211,17 @@ export const ExamStatsSchema = z.object({
   lowest_score: z.number().optional(),
 }).passthrough();
 export type ExamStats = z.infer<typeof ExamStatsSchema>;
+
+export const ExamQuestionInputSchema = z.object({
+  text: z.string().min(1, "Question text is required"),
+  type: z.enum(["multiple_choice", "true_false"]),
+  marks: z.number().min(1),
+  order_index: z.number().min(0),
+  answers: AnswerSchema.array().min(2, "At least 2 answers required"),
+  explanation: z.string().optional(),
+  question_id: z.string().optional(),
+});
+export type ExamQuestionInput = z.infer<typeof ExamQuestionInputSchema>;
 
 // ---- Video pipeline -----------------------------------------------------------
 
