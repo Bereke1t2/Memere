@@ -66,6 +66,11 @@ func NewService(
 	}
 }
 
+// ListByCourse returns all quizzes for a course. Used by the teacher authoring UI.
+func (s *Service) ListByCourse(ctx context.Context, courseID uuid.UUID) ([]*entity.Quiz, error) {
+	return s.quizzes.ListByCourse(ctx, courseID)
+}
+
 // GetQuizForStudent returns quiz metadata and the question count (not the
 // questions). Access is gated on FullAccess to the parent course (owner/admin,
 // free course, active enrollment, or active subscription) via access.Service.
