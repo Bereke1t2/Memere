@@ -77,6 +77,11 @@ func NewService(
 	}
 }
 
+// ListByCourse returns all exams for a course. Used by the teacher authoring UI.
+func (s *Service) ListByCourse(ctx context.Context, courseID uuid.UUID) ([]*entity.Exam, error) {
+	return s.exams.ListByCourse(ctx, courseID)
+}
+
 // StartExam begins (or resumes) a student's exam sitting. It is idempotent: an
 // in-progress attempt still within its window is resumed with remaining time. An
 // in-progress attempt found past its deadline is finalized (expired→graded) per
