@@ -122,7 +122,9 @@ func NewRouter(deps Deps) *gin.Engine {
 	}
 
 	// Quiz/exam authoring nested under a course (teacher/admin).
+	courses.GET("/:id/quizzes", requireAuth, teacherOrAdmin, deps.Quizzes.ListByCourse)
 	courses.POST("/:id/quizzes", requireAuth, teacherOrAdmin, deps.Quizzes.CreateQuiz)
+	courses.GET("/:id/exams", requireAuth, teacherOrAdmin, deps.Exams.ListByCourse)
 	courses.POST("/:id/exams", requireAuth, teacherOrAdmin, deps.Exams.CreateExam)
 
 	// Quiz authoring + taking. Authoring is teacher/admin; taking requires auth,
