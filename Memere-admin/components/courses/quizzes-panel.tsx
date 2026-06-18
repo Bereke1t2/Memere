@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Loader2, Trash2, CheckCircle2 } from "lucide-react";
+import { Plus, Loader2, Trash2, CheckCircle2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import {
 interface QuizzesPanelProps {
   courseId: string;
   quizzes: Quiz[];
+  canEdit?: boolean;
 }
 
 function AddQuestionDialog({ quizId, onDone }: { quizId: string; onDone: () => void }) {
@@ -68,7 +69,7 @@ function AddQuestionDialog({ quizId, onDone }: { quizId: string; onDone: () => v
         <Plus className="h-3 w-3 mr-1" /> Add Question
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader><DialogTitle>Add Question</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 py-2">
             <div className="grid gap-1.5">
@@ -129,7 +130,85 @@ function AddQuestionDialog({ quizId, onDone }: { quizId: string; onDone: () => v
   );
 }
 
-export function QuizzesPanel({ courseId, quizzes }: QuizzesPanelProps) {
+function EditQuizDialog({ quiz, onDone }: { quiz: Quiz; onDone: () => void }) {
+  const [open, setOpen] = useState(false);
+
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } =
+    useForm<CreateQuizInput>({
+      resolver: zodResolver(CreateQuizInputSchema),
+      defaultValues: {
+        title: quiz.title,
+        time_limit_seconds: quiz.time_limit_seconds ?? 1800,
+        pass_percentage: quiz.pass_percentage ?? 60,
+        randomize_questions: quiz.randomize_questions ?? false,
+        max_attempts: quiz.max_attempts ?? 3,
+      },
+    });
+
+  async function onSubmit(values: CreateQuizInput) {
+    const res = await fetch(`/api/teacher/quizzes/${quiz.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(values),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error((data as { message?: string }).message ?? "Failed to update quiz.");
+      return;
+    }
+    toast.success("Quiz updated.");
+    setOpen(false);
+    onDone();
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="ghost" className="text-xs h-7" onClick={() => setOpen(true)}>
+        <Pencil className="h-3 w-3 mr-1" /> Edit
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-sm" aria-describedby={undefined}>
+          <DialogHeader><DialogTitle>Edit Quiz</DialogTitle></DialogHeader>
+          <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 py-2">
+            <div className="grid gap-1.5">
+              <Label htmlFor="eqz-title">Title</Label>
+              <Input id="eqz-title" placeholder="e.g. Chapter 1 Quiz" {...register("title")} />
+              {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1.5">
+                <Label htmlFor="eqz-time">Time limit (seconds)</Label>
+                <Input id="eqz-time" type="number" min="0" {...register("time_limit_seconds", { valueAsNumber: true })} />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="eqz-pass">Pass % (0–100)</Label>
+                <Input id="eqz-pass" type="number" min="0" max="100" {...register("pass_percentage", { valueAsNumber: true })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1.5">
+                <Label htmlFor="eqz-att">Max attempts</Label>
+                <Input id="eqz-att" type="number" min="1" {...register("max_attempts", { valueAsNumber: true })} />
+              </div>
+              <div className="flex items-center gap-2 pt-5">
+                <input type="checkbox" id="eqz-rand" {...register("randomize_questions")} className="rounded" />
+                <Label htmlFor="eqz-rand" className="cursor-pointer text-sm">Randomize</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setOpen(false); reset(); }}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Saving…</> : "Save"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+export function QuizzesPanel({ courseId, quizzes, canEdit = true }: QuizzesPanelProps) {
   const [createOpen, setCreateOpen] = useState(false);
   const router = useRouter();
 
@@ -153,11 +232,13 @@ export function QuizzesPanel({ courseId, quizzes }: QuizzesPanelProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <Button size="sm" onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4 mr-1.5" /> New Quiz
-        </Button>
-      </div>
+      {canEdit && (
+        <div className="flex justify-end">
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4 mr-1.5" /> New Quiz
+          </Button>
+        </div>
+      )}
 
       {quizzes.length === 0 ? (
         <div className="py-10 text-center text-sm text-muted-foreground">No quizzes yet.</div>
@@ -179,7 +260,12 @@ export function QuizzesPanel({ courseId, quizzes }: QuizzesPanelProps) {
                     )}
                   </div>
                 </div>
-                <AddQuestionDialog quizId={quiz.id} onDone={() => router.refresh()} />
+                {canEdit && (
+                  <div className="flex items-center gap-1.5">
+                    <EditQuizDialog quiz={quiz} onDone={() => router.refresh()} />
+                    <AddQuestionDialog quizId={quiz.id} onDone={() => router.refresh()} />
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -187,7 +273,7 @@ export function QuizzesPanel({ courseId, quizzes }: QuizzesPanelProps) {
       )}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm" aria-describedby={undefined}>
           <DialogHeader><DialogTitle>Create Quiz</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit(onCreate)} className="flex flex-col gap-4 py-2">
             <div className="grid gap-1.5">
