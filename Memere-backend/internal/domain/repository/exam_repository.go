@@ -40,6 +40,9 @@ type ClientExamQuestion struct {
 type ExamRepository interface {
 	Create(ctx context.Context, e *entity.Exam) error
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.Exam, error)
+	// ListByCourse returns all non-deleted exams for a given course, ordered by
+	// created_at DESC. Used by the teacher authoring UI.
+	ListByCourse(ctx context.Context, courseID uuid.UUID) ([]*entity.Exam, error)
 	// List returns up to limit exams matching filter, ordered by (created_at, id)
 	// DESC starting after cursor (nil = first page). The returned cursor is
 	// non-nil only when more rows may exist.
