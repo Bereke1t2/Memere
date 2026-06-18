@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Plus, Loader2 } from "lucide-react";
@@ -21,6 +22,7 @@ import { CreateCourseInputSchema, type CreateCourseInput } from "@/lib/api/schem
 export function CreateCourseDialog() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const {
     register,
@@ -39,6 +41,7 @@ export function CreateCourseDialog() {
       toast.success("Course created.");
       setOpen(false);
       reset();
+      await queryClient.invalidateQueries({ queryKey: ["teacher-courses"] });
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create course.");
@@ -53,7 +56,7 @@ export function CreateCourseDialog() {
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Create Course</DialogTitle>
           </DialogHeader>
