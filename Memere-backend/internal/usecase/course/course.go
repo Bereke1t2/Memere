@@ -148,12 +148,9 @@ func (s *Service) ListCourses(ctx context.Context, actor *Actor, filter reposito
 	case actor.isAdmin():
 		// No published restriction; honor whatever filter was supplied.
 	case actor != nil && actor.Role == entity.RoleTeacher:
-		// Teacher: published OR own. The repo filter cannot express the OR, so we
-		// scope to the teacher's own courses when they ask for unpublished;
-		// otherwise force published. A full published-OR-own listing across all
-		// teachers is a Skill 5 concern (the handler decides the audience).
-		published := true
-		filter.IsPublished = &published
+		// Teacher: show all courses owned by this teacher (published + unpublished).
+		filter.TeacherID = &actor.UserID
+		filter.IsPublished = nil
 	default:
 		// Anonymous or student: published only.
 		published := true
