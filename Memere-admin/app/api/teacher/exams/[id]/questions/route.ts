@@ -1,13 +1,7 @@
-import { z } from "zod";
 import { requireStaff } from "@/lib/auth/session";
 import { addExamQuestion } from "@/lib/api/endpoints";
+import { ExamQuestionInputSchema } from "@/lib/api/schemas";
 import { ApiError, friendlyMessage } from "@/lib/api/errors";
-
-const ExamQuestionInputSchema = z.object({
-  marks: z.number().min(1),
-  order_index: z.number().min(0),
-  question_id: z.string().optional(),
-});
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -16,7 +10,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { id } = await params;
     const body = await req.json().catch(() => ({}));
     const parsed = ExamQuestionInputSchema.safeParse(body);
-    if (!parsed.success) return Response.json({ message: "Validation failed" }, { status: 400 });
+    if (!parsed.success) return Response.json({ message: "Validation failed", details: parsed.error.flatten().fieldErrors }, { status: 400 });
     await addExamQuestion(id, parsed.data);
     return new Response(null, { status: 204 });
   } catch (err) {
