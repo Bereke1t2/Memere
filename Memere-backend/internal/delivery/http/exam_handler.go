@@ -34,6 +34,21 @@ func examActor(c *gin.Context) *exam.Actor {
 	return &exam.Actor{UserID: a.UserID, Role: a.Role}
 }
 
+// ListByCourse handles GET /courses/:id/exams → 200.
+func (h *ExamHandler) ListByCourse(c *gin.Context) {
+	courseID, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	exams, err := h.svc.ListByCourse(c.Request.Context(), courseID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	respondJSON(c, http.StatusOK, gin.H{"data": dto.NewExamListResponse(exams)})
+}
+
 // CreateExam handles POST /courses/:id/exams → 201.
 func (h *ExamHandler) CreateExam(c *gin.Context) {
 	courseID, err := parseUUIDParam(c, "id")
