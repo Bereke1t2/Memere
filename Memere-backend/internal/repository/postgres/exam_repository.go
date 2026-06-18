@@ -18,14 +18,15 @@ import (
 
 // ExamRepo is the sqlc-backed implementation of repository.ExamRepository.
 type ExamRepo struct {
-	q *sqlcgen.Queries
+	q    *sqlcgen.Queries
+	pool *pgxpool.Pool
 }
 
 var _ repository.ExamRepository = (*ExamRepo)(nil)
 
 // NewExamRepo builds an ExamRepo over a pgx pool.
 func NewExamRepo(pool *pgxpool.Pool) *ExamRepo {
-	return &ExamRepo{q: sqlcgen.New(pool)}
+	return &ExamRepo{q: sqlcgen.New(pool), pool: pool}
 }
 
 func (r *ExamRepo) Create(ctx context.Context, e *entity.Exam) error {
@@ -92,6 +93,38 @@ func (r *ExamRepo) List(ctx context.Context, filter repository.ExamFilter, curso
 		exams[i] = examFromRow(row)
 	}
 	return exams, next, nil
+}
+
+func (r *ExamRepo) ListByCourse(ctx context.Context, courseID uuid.UUID) ([]*entity.Exam, error) {
+	const q = `SELECT id, course_id, title, subject, grade, duration_minutes, total_marks,
+		pass_marks, instructions, is_published, created_at, updated_at, deleted_at
+		FROM courses.exams
+		WHERE course_id = $1 AND deleted_at IS NULL
+		ORDER BY created_at DESC, id DESC`
+
+	conn := r.pool
+	rows, err := conn.Query(ctx, q, toPgUUID(courseID))
+	if err != nil {
+		return nil, apperror.Internal(err)
+	}
+	defer rows.Close()
+
+	var exams []*entity.Exam
+	for rows.Next() {
+		var row sqlcgen.CoursesExam
+		if err := rows.Scan(
+			&row.ID, &row.CourseID, &row.Title, &row.Subject, &row.Grade,
+			&row.DurationMinutes, &row.TotalMarks, &row.PassMarks, &row.Instructions,
+			&row.IsPublished, &row.CreatedAt, &row.UpdatedAt, &row.DeletedAt,
+		); err != nil {
+			return nil, apperror.Internal(err)
+		}
+		exams = append(exams, examFromRow(row))
+	}
+	if err := rows.Err(); err != nil {
+		return nil, apperror.Internal(err)
+	}
+	return exams, nil
 }
 
 func (r *ExamRepo) Update(ctx context.Context, e *entity.Exam) error {
