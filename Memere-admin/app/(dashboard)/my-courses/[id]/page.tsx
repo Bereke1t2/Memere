@@ -37,6 +37,8 @@ export default async function MyCourseDetailPage({
     throw err;
   }
 
+  const isOwner = course.teacher_id === user.id;
+
   // Fetch lessons for each section in parallel
   const lessonArrays: Lesson[][] = await Promise.all(
     sections.map((s) => listLessons(s.id).catch(() => []))
@@ -51,7 +53,12 @@ export default async function MyCourseDetailPage({
       <div className="flex flex-col gap-6">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-col gap-1">
+          {!isOwner && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-200 mb-2 w-full">
+            This course belongs to another teacher. You can view it but cannot make changes.
+          </div>
+        )}
+        <div className="flex flex-col gap-1">
             <h1 className="text-2xl font-semibold tracking-tight">{course.title}</h1>
             <div className="flex items-center gap-2 flex-wrap">
               <Badge variant={course.is_published ? "default" : "secondary"} className="text-xs">
@@ -63,7 +70,7 @@ export default async function MyCourseDetailPage({
               )}
             </div>
           </div>
-          <TeacherCourseActions course={course} />
+          {isOwner && <TeacherCourseActions course={course} />}
         </div>
 
         {/* Metadata card */}
@@ -114,15 +121,16 @@ export default async function MyCourseDetailPage({
               courseId={id}
               sections={sections}
               lessonsBySectionId={lessonsBySectionId}
+              canEdit={isOwner}
             />
           </TabsContent>
 
           <TabsContent value="quizzes">
-            <QuizzesPanel courseId={id} quizzes={quizzes} />
+            <QuizzesPanel courseId={id} quizzes={quizzes} canEdit={isOwner} />
           </TabsContent>
 
           <TabsContent value="exams">
-            <ExamsPanel courseId={id} exams={exams} />
+            <ExamsPanel courseId={id} exams={exams} canEdit={isOwner} />
           </TabsContent>
         </Tabs>
       </div>
