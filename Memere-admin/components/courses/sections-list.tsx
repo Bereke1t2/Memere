@@ -28,16 +28,19 @@ interface SectionsListProps {
   courseId: string;
   sections: Section[];
   lessonsBySectionId: Record<string, Lesson[]>;
+  canEdit?: boolean;
 }
 
 function SectionRow({
   section,
   lessons,
   index,
+  canEdit,
 }: {
   section: Section;
   lessons: Lesson[];
   index: number;
+  canEdit: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -63,14 +66,14 @@ function SectionRow({
       </button>
       {expanded && (
         <div className="border-t px-4 py-3 bg-muted/10">
-          <LessonsList sectionId={section.id} lessons={lessons} />
+          <LessonsList sectionId={section.id} lessons={lessons} canEdit={canEdit} />
         </div>
       )}
     </div>
   );
 }
 
-export function SectionsList({ courseId, sections, lessonsBySectionId }: SectionsListProps) {
+export function SectionsList({ courseId, sections, lessonsBySectionId, canEdit = true }: SectionsListProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -93,10 +96,12 @@ export function SectionsList({ courseId, sections, lessonsBySectionId }: Section
     <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-semibold">Sections & Lessons</p>
-        <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-          <Plus className="h-4 w-4 mr-1.5" />
-          Add Section
-        </Button>
+        {canEdit && (
+          <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
+            <Plus className="h-4 w-4 mr-1.5" />
+            Add Section
+          </Button>
+        )}
       </div>
 
       {sections.length === 0 ? (
@@ -114,13 +119,14 @@ export function SectionsList({ courseId, sections, lessonsBySectionId }: Section
               section={section}
               lessons={lessonsBySectionId[section.id] ?? []}
               index={idx}
+              canEdit={canEdit}
             />
           ))}
         </div>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm" aria-describedby={undefined}>
           <DialogHeader><DialogTitle>Add Section</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 py-2">
             <div className="grid gap-1.5">
