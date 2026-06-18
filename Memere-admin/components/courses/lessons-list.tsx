@@ -21,13 +21,15 @@ import { AddLessonInputSchema, type AddLessonInput, type Lesson } from "@/lib/ap
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
   video: <Video className="h-3.5 w-3.5" />,
-  text: <FileText className="h-3.5 w-3.5" />,
-  pdf: <FileCheck className="h-3.5 w-3.5" />,
+  note: <FileText className="h-3.5 w-3.5" />,
+  quiz: <FileCheck className="h-3.5 w-3.5" />,
+  mixed: <FileCheck className="h-3.5 w-3.5" />,
 };
 
 interface LessonsListProps {
   sectionId: string;
   lessons: Lesson[];
+  canEdit?: boolean;
 }
 
 function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: string | null }) {
@@ -131,7 +133,7 @@ function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: stri
   );
 }
 
-export function LessonsList({ sectionId, lessons }: LessonsListProps) {
+export function LessonsList({ sectionId, lessons, canEdit = true }: LessonsListProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -168,18 +170,20 @@ export function LessonsList({ sectionId, lessons }: LessonsListProps) {
             </span>
           )}
           {lesson.is_free_preview && <Badge variant="outline" className="text-xs h-5">Free preview</Badge>}
-          {lesson.type === "video" && (
+          {lesson.type === "video" && canEdit && (
             <VideoUploader lessonId={lesson.id} videoId={lesson.video_id} />
           )}
         </div>
       ))}
 
-      <Button size="sm" variant="outline" className="self-start mt-1 text-xs h-7" onClick={() => setOpen(true)}>
-        <Plus className="h-3 w-3 mr-1" /> Add Lesson
-      </Button>
+      {canEdit && (
+        <Button size="sm" variant="outline" className="self-start mt-1 text-xs h-7" onClick={() => setOpen(true)}>
+          <Plus className="h-3 w-3 mr-1" /> Add Lesson
+        </Button>
+      )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm" aria-describedby={undefined}>
           <DialogHeader><DialogTitle>Add Lesson</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 py-2">
             <div className="grid gap-1.5">
@@ -194,8 +198,9 @@ export function LessonsList({ sectionId, lessons }: LessonsListProps) {
                   <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="video">Video</SelectItem>
-                    <SelectItem value="text">Text</SelectItem>
-                    <SelectItem value="pdf">PDF</SelectItem>
+                    <SelectItem value="note">Note (text)</SelectItem>
+                    <SelectItem value="quiz">Quiz</SelectItem>
+                    <SelectItem value="mixed">Mixed</SelectItem>
                   </SelectContent>
                 </Select>
                 {errors.type && <p className="text-xs text-destructive">{errors.type.message}</p>}
