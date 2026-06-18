@@ -22,6 +22,7 @@ import {
   ExamSchema,
   ExamListResponseSchema,
   ExamStatsSchema,
+  ExamQuestionInputSchema,
   VideoUploadResponseSchema,
   VideoStatusSchema,
   EarningsSchema,
@@ -49,6 +50,7 @@ import {
   type Exam,
   type CreateExamInput,
   type ExamStats,
+  type ExamQuestionInput,
   type VideoUploadResponse,
   type VideoStatus,
   type Earnings,
@@ -247,12 +249,11 @@ export async function broadcast(input: {
 export async function listMyCourses(params: {
   teacherId: string;
   limit?: number;
-  next_cursor?: string;
+  after?: string;
 }): Promise<TeacherCourseList> {
   const qs = new URLSearchParams();
-  qs.set("teacher_id", params.teacherId);
   if (params.limit) qs.set("limit", String(params.limit));
-  if (params.next_cursor) qs.set("next_cursor", params.next_cursor);
+  if (params.after) qs.set("after", params.after);
   const data = await apiFetch(`/courses?${qs}`, { schema: TeacherCourseListSchema });
   return data!;
 }
@@ -310,10 +311,11 @@ export async function addLesson(sectionId: string, input: AddLessonInput): Promi
 // ---- Teacher: Quizzes (Phase 5 Skill 6) ----------------------------------------
 
 export async function listQuizzes(courseId: string): Promise<Quiz[]> {
-  // Backend has no list-quizzes endpoint in v1; returns empty list gracefully.
   try {
-    const data = await apiFetch(`/courses/${courseId}/quizzes`, { schema: QuizListResponseSchema });
-    return data?.data ?? [];
+    const raw = await apiFetch(`/courses/${courseId}/quizzes`);
+    if (!raw) return [];
+    const parsed = QuizListResponseSchema.safeParse(raw);
+    return parsed.success ? parsed.data.data : [];
   } catch {
     return [];
   }
@@ -343,10 +345,11 @@ export async function addQuizQuestion(quizId: string, input: AddQuizQuestionInpu
 // ---- Teacher: Exams (Phase 5 Skill 6) ------------------------------------------
 
 export async function listExams(courseId: string): Promise<Exam[]> {
-  // Backend has no list-exams endpoint in v1; returns empty list gracefully.
   try {
-    const data = await apiFetch(`/courses/${courseId}/exams`, { schema: ExamListResponseSchema });
-    return data?.data ?? [];
+    const raw = await apiFetch(`/courses/${courseId}/exams`);
+    if (!raw) return [];
+    const parsed = ExamListResponseSchema.safeParse(raw);
+    return parsed.success ? parsed.data.data : [];
   } catch {
     return [];
   }
@@ -359,7 +362,7 @@ export async function createExam(courseId: string, input: CreateExamInput): Prom
   return data!;
 }
 
-export async function addExamQuestion(examId: string, input: { marks: number; order_index: number; question_id?: string }): Promise<void> {
+export async function addExamQuestion(examId: string, input: ExamQuestionInput): Promise<void> {
   await apiFetch(`/exams/${examId}/questions`, { method: "POST", body: input });
 }
 
