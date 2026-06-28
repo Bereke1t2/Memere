@@ -1495,7 +1495,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
 To start Phase 2, tell Antigravity:
 ```
-Phase 1 is complete. Read SKILL.md and phase2/SKILL_1.md.
+Phase 1 is complete. Read SKILL.md and all phase2 skill files.
 We are starting Phase 2: Course Browsing.
 Reference: memere_mobile/docs/memere_Design_Specification.md
 ```
