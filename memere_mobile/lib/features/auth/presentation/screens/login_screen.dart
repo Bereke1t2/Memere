@@ -1,4 +1,3 @@
-// ignore_for_file: prefer_const_constructors, deprecated_member_use, use_build_context_synchronously, unused_import
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,8 +18,8 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _formKey    = GlobalKey<FormState>();
-  final _emailCtrl  = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
 
   @override
@@ -33,9 +32,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     await ref.read(authStateProvider.notifier).login(
-      _emailCtrl.text.trim(),
-      _passwordCtrl.text,
-    );
+          _emailCtrl.text.trim(),
+          _passwordCtrl.text,
+        );
   }
 
   @override
@@ -43,15 +42,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final authAsync = ref.watch(authStateProvider);
 
     ref.listen(authStateProvider, (_, next) {
+      final auth = next.valueOrNull;
+      if (auth?.isAuthenticated ?? false) {
+        context.go(AppRoutes.home);
+        return;
+      }
+
       if (next.hasError) {
-        final failure = next.error as Failure?;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(failure?.message ?? 'Login failed. Please try again.'),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(AppSizes.md),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
-        ));
+        final error = next.error;
+        final message = error is Failure
+            ? error.message
+            : 'Login failed. Please try again.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(AppSizes.md),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            ),
+          ),
+        );
       }
     });
 
@@ -69,28 +81,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: AppSizes.xl),
-
-                // ── Logo ────────────────────────────────────────────────
                 Container(
-                  width: 56, height: 56,
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
                     gradient: AppColors.primaryGradient,
                     borderRadius: BorderRadius.circular(AppSizes.radiusMd),
                   ),
-                  child: const Icon(Icons.school_rounded, size: 28, color: Colors.white),
+                  child: const Icon(Icons.school_rounded,
+                      size: 28, color: Colors.white),
                 ),
                 const SizedBox(height: AppSizes.xl),
-
-                // ── Headline ─────────────────────────────────────────────
-                Text('Welcome back', style: AppTextStyles.displayMedium),
+                const Text('Welcome back', style: AppTextStyles.displayMedium),
                 const SizedBox(height: AppSizes.sm),
                 Text(
-                  'Sign in to continue your exam prep',
-                  style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary),
+                  'Sign in to continue learning with Memere',
+                  style: AppTextStyles.bodyLarge
+                      .copyWith(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: AppSizes.xxxl),
-
-                // ── Email ────────────────────────────────────────────────
                 AppTextField(
                   controller: _emailCtrl,
                   hintText: 'your@email.com',
@@ -100,14 +109,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.email],
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Email is required';
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Email is required';
+                    }
                     if (!v.contains('@')) return 'Enter a valid email';
                     return null;
                   },
                 ),
                 const SizedBox(height: AppSizes.md),
-
-                // ── Password ─────────────────────────────────────────────
                 AppTextField(
                   controller: _passwordCtrl,
                   hintText: '••••••••',
@@ -122,45 +131,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     return null;
                   },
                 ),
-
-                // ── Forgot Password ──────────────────────────────────────
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {/* Phase 2 */},
                     child: Text('Forgot password?',
-                        style: AppTextStyles.labelMedium.copyWith(color: AppColors.accentPrimary)),
+                        style: AppTextStyles.labelMedium
+                            .copyWith(color: AppColors.accentPrimary)),
                   ),
                 ),
                 const SizedBox(height: AppSizes.lg),
-
-                // ── Sign In Button ───────────────────────────────────────
                 AppButton(
                   label: 'Sign In',
                   onPressed: authAsync.isLoading ? null : _submit,
                   isLoading: authAsync.isLoading,
                 ),
                 const SizedBox(height: AppSizes.xl),
-
-                // ── Divider ──────────────────────────────────────────────
                 Row(children: [
                   const Expanded(child: Divider(color: AppColors.border)),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
-                    child: Text('or', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textDisabled)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: AppSizes.md),
+                    child: Text('or',
+                        style: AppTextStyles.bodySmall
+                            .copyWith(color: AppColors.textDisabled)),
                   ),
                   const Expanded(child: Divider(color: AppColors.border)),
                 ]),
                 const SizedBox(height: AppSizes.xl),
-
-                // ── Register CTA ─────────────────────────────────────────
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text("Don't have an account? ", style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                    Text("Don't have an account? ",
+                        style: AppTextStyles.bodyMedium
+                            .copyWith(color: AppColors.textSecondary)),
                     GestureDetector(
                       onTap: () => context.go(AppRoutes.register),
-                      child: Text('Create one', style: AppTextStyles.labelMedium.copyWith(color: AppColors.accentPrimary)),
+                      child: Text('Create one',
+                          style: AppTextStyles.labelMedium
+                              .copyWith(color: AppColors.accentPrimary)),
                     ),
                   ],
                 ),

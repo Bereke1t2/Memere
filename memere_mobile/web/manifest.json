@@ -1,6 +1,6 @@
 {
-    "name": "memere_mobile",
-    "short_name": "memere_mobile",
+    "name": "Memere",
+    "short_name": "Memere",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

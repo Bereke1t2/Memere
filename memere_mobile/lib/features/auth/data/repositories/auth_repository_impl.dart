@@ -12,8 +12,11 @@ class AuthRepositoryImpl implements AuthRepository {
   final SecureStorageService _secureStorage;
 
   @override
-  Future<Either<Failure, ({UserEntity user, String accessToken, String refreshToken})>> login({
-    required String email, required String password,
+  Future<
+      Either<Failure,
+          ({UserEntity user, String accessToken, String refreshToken})>> login({
+    required String email,
+    required String password,
   }) async {
     try {
       final result = await _remote.login(email: email, password: password);
@@ -21,7 +24,11 @@ class AuthRepositoryImpl implements AuthRepository {
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
       );
-      return Right((user: result.user, accessToken: result.accessToken, refreshToken: result.refreshToken));
+      return Right((
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken
+      ));
     } on DioException catch (e) {
       return Left(ServerFailure.fromDioError(e));
     } catch (e) {
@@ -30,21 +37,35 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, ({UserEntity user, String accessToken, String refreshToken})>> register({
-    required String email, required String password,
-    required String firstName, required String lastName,
-    UserRole role = UserRole.student, String? phone,
+  Future<
+          Either<Failure,
+              ({UserEntity user, String accessToken, String refreshToken})>>
+      register({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    UserRole role = UserRole.student,
+    String? phone,
   }) async {
     try {
-      final result = await _remote.register(
-        email: email, password: password,
-        firstName: firstName, lastName: lastName, phone: phone,
+      await _remote.register(
+        email: email,
+        password: password,
+        firstName: firstName,
+        lastName: lastName,
+        phone: phone,
       );
+      final result = await _remote.login(email: email, password: password);
       await _secureStorage.saveTokens(
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
       );
-      return Right((user: result.user, accessToken: result.accessToken, refreshToken: result.refreshToken));
+      return Right((
+        user: result.user,
+        accessToken: result.accessToken,
+        refreshToken: result.refreshToken
+      ));
     } on DioException catch (e) {
       return Left(ServerFailure.fromDioError(e));
     } catch (e) {

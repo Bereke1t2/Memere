@@ -1,4 +1,3 @@
-// ignore_for_file: prefer_const_constructors, deprecated_member_use, use_build_context_synchronously, unused_import
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,31 +19,35 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
-  final _formKey     = GlobalKey<FormState>();
-  final _firstCtrl   = TextEditingController();
-  final _lastCtrl    = TextEditingController();
-  final _emailCtrl   = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
+  final _firstCtrl = TextEditingController();
+  final _lastCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
-  final _phoneCtrl   = TextEditingController();
+  final _phoneCtrl = TextEditingController();
 
   @override
   void dispose() {
-    _firstCtrl.dispose(); _lastCtrl.dispose();
-    _emailCtrl.dispose(); _passwordCtrl.dispose(); _phoneCtrl.dispose();
+    _firstCtrl.dispose();
+    _lastCtrl.dispose();
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
+    _phoneCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     await ref.read(authStateProvider.notifier).register(
-      RegisterParams(
-        email: _emailCtrl.text.trim(),
-        password: _passwordCtrl.text,
-        firstName: _firstCtrl.text.trim(),
-        lastName: _lastCtrl.text.trim(),
-        phone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
-      ),
-    );
+          RegisterParams(
+            email: _emailCtrl.text.trim(),
+            password: _passwordCtrl.text,
+            firstName: _firstCtrl.text.trim(),
+            lastName: _lastCtrl.text.trim(),
+            phone:
+                _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+          ),
+        );
   }
 
   @override
@@ -52,15 +55,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final authAsync = ref.watch(authStateProvider);
 
     ref.listen(authStateProvider, (_, next) {
+      final auth = next.valueOrNull;
+      if (auth?.isAuthenticated ?? false) {
+        context.go(AppRoutes.home);
+        return;
+      }
+
       if (next.hasError) {
-        final failure = next.error as Failure?;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(failure?.message ?? 'Registration failed. Please try again.'),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(AppSizes.md),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSizes.radiusSm)),
-        ));
+        final error = next.error;
+        final message = error is Failure
+            ? error.message
+            : 'Registration failed. Please try again.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(AppSizes.md),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+            ),
+          ),
+        );
       }
     });
 
@@ -76,57 +92,79 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(
-            horizontal: AppSizes.screenPaddingH, vertical: AppSizes.md,
+            horizontal: AppSizes.screenPaddingH,
+            vertical: AppSizes.md,
           ),
           child: Form(
             key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Create account', style: AppTextStyles.displayMedium),
+                const Text('Create account',
+                    style: AppTextStyles.displayMedium),
                 const SizedBox(height: AppSizes.sm),
-                Text('Start your exam prep journey today',
-                    style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary)),
+                Text('Start learning with Memere today',
+                    style: AppTextStyles.bodyLarge
+                        .copyWith(color: AppColors.textSecondary)),
                 const SizedBox(height: AppSizes.xxl),
-
-                Row(children: [
-                  Expanded(child: AppTextField(
-                    controller: _firstCtrl, hintText: 'First name', labelText: 'First Name',
-                    textInputAction: TextInputAction.next,
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                  )),
-                  const SizedBox(width: AppSizes.md),
-                  Expanded(child: AppTextField(
-                    controller: _lastCtrl, hintText: 'Last name', labelText: 'Last Name',
-                    textInputAction: TextInputAction.next,
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                  )),
-                ]),
+                Row(
+                  children: [
+                    Expanded(
+                      child: AppTextField(
+                        controller: _firstCtrl,
+                        hintText: 'First name',
+                        labelText: 'First Name',
+                        textInputAction: TextInputAction.next,
+                        validator: (v) =>
+                            (v == null || v.trim().isEmpty) ? 'Required' : null,
+                      ),
+                    ),
+                    const SizedBox(width: AppSizes.md),
+                    Expanded(
+                      child: AppTextField(
+                        controller: _lastCtrl,
+                        hintText: 'Last name',
+                        labelText: 'Last Name',
+                        textInputAction: TextInputAction.next,
+                        validator: (v) =>
+                            (v == null || v.trim().isEmpty) ? 'Required' : null,
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: AppSizes.md),
-
                 AppTextField(
-                  controller: _emailCtrl, hintText: 'your@email.com', labelText: 'Email',
-                  prefixIcon: Icons.email_outlined, keyboardType: TextInputType.emailAddress,
+                  controller: _emailCtrl,
+                  hintText: 'your@email.com',
+                  labelText: 'Email',
+                  prefixIcon: Icons.email_outlined,
+                  keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.email],
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Email is required';
+                    if (v == null || v.trim().isEmpty) {
+                      return 'Email is required';
+                    }
                     if (!v.contains('@')) return 'Enter a valid email';
                     return null;
                   },
                 ),
                 const SizedBox(height: AppSizes.md),
-
                 AppTextField(
-                  controller: _phoneCtrl, hintText: '+251 9XX XXX XXX', labelText: 'Phone (optional)',
-                  prefixIcon: Icons.phone_outlined, keyboardType: TextInputType.phone,
+                  controller: _phoneCtrl,
+                  hintText: '+251 9XX XXX XXX',
+                  labelText: 'Phone (optional)',
+                  prefixIcon: Icons.phone_outlined,
+                  keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
                 ),
                 const SizedBox(height: AppSizes.md),
-
                 AppTextField(
-                  controller: _passwordCtrl, hintText: 'Min. 8 characters', labelText: 'Password',
-                  prefixIcon: Icons.lock_outline_rounded, isPassword: true,
+                  controller: _passwordCtrl,
+                  hintText: 'Min. 8 characters',
+                  labelText: 'Password',
+                  prefixIcon: Icons.lock_outline_rounded,
+                  isPassword: true,
                   textInputAction: TextInputAction.done,
                   autofillHints: const [AutofillHints.newPassword],
                   onFieldSubmitted: (_) => _submit(),
@@ -137,23 +175,32 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   },
                 ),
                 const SizedBox(height: AppSizes.xl),
-
                 AppButton(
                   label: 'Create Account',
                   onPressed: authAsync.isLoading ? null : _submit,
                   isLoading: authAsync.isLoading,
                 ),
                 const SizedBox(height: AppSizes.lg),
-
-                Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text('Already have an account? ',
-                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
-                  GestureDetector(
-                    onTap: () => context.go(AppRoutes.login),
-                    child: Text('Sign In',
-                        style: AppTextStyles.labelMedium.copyWith(color: AppColors.accentPrimary)),
-                  ),
-                ]),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Already have an account? ',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => context.go(AppRoutes.login),
+                      child: Text(
+                        'Sign In',
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: AppColors.accentPrimary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: AppSizes.lg),
               ],
             ),

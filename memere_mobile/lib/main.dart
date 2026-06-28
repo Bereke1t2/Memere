@@ -27,12 +27,16 @@ void main() async {
   // Initialize Hive
   await Hive.initFlutter();
 
-  // Initialize Firebase
-  await Firebase.initializeApp();
+  // Initialize Firebase only when platform configuration exists.
+  try {
+    await Firebase.initializeApp();
+  } on Exception {
+    // Phase 1 can run without Firebase project files. Notifications wire up later.
+  }
 
   runApp(
     const ProviderScope(
-      child: ExamPrepApp(),
+      child: MemereApp(),
     ),
   );
 }

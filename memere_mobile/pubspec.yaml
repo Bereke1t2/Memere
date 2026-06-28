@@ -1,5 +1,5 @@
 name: memere_mobile
-description: ExamPrep — Grade 12 University Entrance Exam Prep Platform
+description: Memere - Grade 12 University Entrance Learning Platform
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -56,7 +56,7 @@ dependencies:
   package_info_plus: ^8.0.0
 
   # ── Offline / Sync ───────────────────────────────────────
-  workmanager: ^0.5.2
+  workmanager: ^0.9.0+3
 
   # ── Notifications ────────────────────────────────────────
   firebase_core: ^3.3.0
@@ -88,4 +88,3 @@ flutter:
     - assets/icons/
     - assets/lottie/
     - .env                        # loaded via envied — not committed to git
-
