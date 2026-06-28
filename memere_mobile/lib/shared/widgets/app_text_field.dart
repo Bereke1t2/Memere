@@ -52,7 +52,9 @@ class _AppTextFieldState extends State<AppTextField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (widget.labelText != null) ...[
-          Text(widget.labelText!, style: AppTextStyles.labelMedium.copyWith(color: AppColors.textSecondary)),
+          Text(widget.labelText!,
+              style: AppTextStyles.labelMedium
+                  .copyWith(color: AppColors.textSecondary)),
           const SizedBox(height: AppSizes.xs),
         ],
         TextFormField(
@@ -71,16 +73,20 @@ class _AppTextFieldState extends State<AppTextField> {
           decoration: InputDecoration(
             hintText: widget.hintText,
             prefixIcon: widget.prefixIcon != null
-                ? Icon(widget.prefixIcon, size: AppSizes.iconSm, color: AppColors.textSecondary)
+                ? Icon(widget.prefixIcon,
+                    size: AppSizes.iconSm, color: AppColors.textSecondary)
                 : null,
             suffixIcon: widget.isPassword
                 ? IconButton(
                     icon: Icon(
-                      _obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      _obscureText
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
                       size: AppSizes.iconSm,
                       color: AppColors.textSecondary,
                     ),
-                    onPressed: () => setState(() => _obscureText = !_obscureText),
+                    onPressed: () =>
+                        setState(() => _obscureText = !_obscureText),
                   )
                 : widget.suffixIcon,
           ),
