@@ -6,7 +6,7 @@
 ## YOUR FIRST PROMPT (copy-paste this exactly)
 
 ```
-You are building a Flutter mobile app called ExamPrep (project folder: memere_mobile).
+You are building a Flutter mobile app called Memere (project folder: memere_mobile).
 
 Before writing any code, read these files in this exact order:
 1. SKILL.md               — master rules, architecture, naming, design system overview
@@ -54,15 +54,46 @@ Build in order as specified in the phase2 skill files.
 ### → Phase 3 (Video Player)
 ```
 Phase 2 is complete.
-Read SKILL.md and phase3/SKILL_1.md.
+Read SKILL.md and all phase3 skill files.
 We are starting Phase 3: HLS Video Player + Offline Download.
+Reference: memere_mobile/docs/memere_Design_Specification.md
+Build in order as specified in the phase3 skill files.
 ```
 
 ### → Phase 4 (Quiz Engine)
 ```
 Phase 3 is complete.
-Read SKILL.md and phase4/SKILL_1.md.
+Read SKILL.md and all phase4 skill files.
 We are starting Phase 4: Quiz Engine.
+Reference: memere_mobile/docs/memere_Design_Specification.md
+Build in order as specified in the phase4 skill files.
+```
+
+### → Phase 5 (Mock Exam)
+```
+Phase 4 is complete.
+Read SKILL.md and all phase5 skill files.
+We are starting Phase 5: Mock Exam Engine.
+Reference: memere_mobile/docs/memere_Design_Specification.md
+Build in order as specified in the phase5 skill files.
+```
+
+### → Phase 6 (Payment & Enrollment)
+```
+Phase 5 is complete.
+Read SKILL.md and all phase6 skill files.
+We are starting Phase 6: Payment & Enrollment.
+Reference: memere_mobile/docs/memere_Design_Specification.md
+Build in order as specified in the phase6 skill files.
+```
+
+### → Phase 7 (Progress Dashboard)
+```
+Phase 6 is complete.
+Read SKILL.md and all phase7 skill files.
+We are starting Phase 7: Progress Dashboard.
+Reference: memere_mobile/docs/memere_Design_Specification.md
+Build in order as specified in the phase7 skill files.
 ```
 
 _(Continue this pattern for each phase)_
@@ -98,6 +129,47 @@ When Phase 2 skill files are ready, add:
 phase2/
   SKILL_1.md
   SKILL_2.md
+  SKILL_3.md
+```
+
+When Phase 3 skill files are ready, add:
+```
+phase3/
+  SKILL_1.md
+  SKILL_2.md
+  SKILL_3.md
+```
+
+When Phase 4 skill files are ready, add:
+```
+phase4/
+  SKILL_1.md
+  SKILL_2.md
+  SKILL_3.md
+```
+
+When Phase 5 skill files are ready, add:
+```
+phase5/
+  SKILL_1.md
+  SKILL_2.md
+  SKILL_3.md
+```
+
+When Phase 6 skill files are ready, add:
+```
+phase6/
+  SKILL_1.md
+  SKILL_2.md
+  SKILL_3.md
+```
+
+When Phase 7 skill files are ready, add:
+```
+phase7/
+  SKILL_1.md
+  SKILL_2.md
+  SKILL_3.md
 ```
 
 ---

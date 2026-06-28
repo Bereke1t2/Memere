@@ -1,4 +1,4 @@
-# memere_mobile
+# Memere
 
 A new Flutter project.
 

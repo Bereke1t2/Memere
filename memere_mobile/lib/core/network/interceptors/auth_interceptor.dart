@@ -1,6 +1,4 @@
-// ignore_for_file: unused_import
 import 'package:dio/dio.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../constants/app_constants.dart';
 import '../../constants/env.dart';
@@ -12,7 +10,8 @@ class AuthInterceptor extends Interceptor {
   bool _isRefreshing = false;
 
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  void onRequest(
+      RequestOptions options, RequestInterceptorHandler handler) async {
     const storage = FlutterSecureStorage();
     final token = await storage.read(key: AppConstants.accessTokenKey);
     if (token != null) {
@@ -47,13 +46,24 @@ class AuthInterceptor extends Interceptor {
     final refreshToken = await storage.read(key: AppConstants.refreshTokenKey);
     if (refreshToken == null) return null;
 
-    final response = await Dio().post(
+    final response = await Dio().post<Map<String, dynamic>>(
       '${Env.baseUrl}/auth/refresh',
       data: {'refresh_token': refreshToken},
     );
-    final data = response.data as Map<String, dynamic>;
+    final data = response.data;
+    if (data == null) {
+      return null;
+    }
     final newAccessToken = data['access_token'] as String;
-    await storage.write(key: AppConstants.accessTokenKey, value: newAccessToken);
+    final newRefreshToken = data['refresh_token'] as String?;
+    await Future.wait([
+      storage.write(key: AppConstants.accessTokenKey, value: newAccessToken),
+      if (newRefreshToken != null)
+        storage.write(
+          key: AppConstants.refreshTokenKey,
+          value: newRefreshToken,
+        ),
+    ]);
     return newAccessToken;
   }
 

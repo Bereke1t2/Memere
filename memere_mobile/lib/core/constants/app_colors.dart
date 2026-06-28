@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// ExamPrep Color System — Dark First
+/// Memere Color System — Dark First
 /// All colors reference the dark theme. Light theme values noted where different.
 abstract class AppColors {
   // ── Backgrounds ──────────────────────────────────────────────────────────

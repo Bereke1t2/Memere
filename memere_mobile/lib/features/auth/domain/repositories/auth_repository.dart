@@ -3,12 +3,17 @@ import '../../../../core/errors/failures.dart';
 import '../entities/user_entity.dart';
 
 abstract class AuthRepository {
-  Future<Either<Failure, ({UserEntity user, String accessToken, String refreshToken})>> login({
+  Future<
+      Either<Failure,
+          ({UserEntity user, String accessToken, String refreshToken})>> login({
     required String email,
     required String password,
   });
 
-  Future<Either<Failure, ({UserEntity user, String accessToken, String refreshToken})>> register({
+  Future<
+          Either<Failure,
+              ({UserEntity user, String accessToken, String refreshToken})>>
+      register({
     required String email,
     required String password,
     required String firstName,

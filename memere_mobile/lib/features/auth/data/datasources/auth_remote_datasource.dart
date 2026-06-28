@@ -1,15 +1,17 @@
-// ignore_for_file: unused_import
-import '../../../../core/errors/failures.dart';
 import '../../../../core/network/dio_client.dart';
 import '../models/user_model.dart';
 
 abstract class AuthRemoteDataSource {
   Future<({UserModel user, String accessToken, String refreshToken})> login({
-    required String email, required String password,
+    required String email,
+    required String password,
   });
-  Future<({UserModel user, String accessToken, String refreshToken})> register({
-    required String email, required String password,
-    required String firstName, required String lastName, String? phone,
+  Future<UserModel> register({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    String? phone,
   });
   Future<UserModel> getCurrentUser();
   Future<void> logout(String refreshToken);
@@ -22,41 +24,49 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<({UserModel user, String accessToken, String refreshToken})> login({
-    required String email, required String password,
+    required String email,
+    required String password,
   }) async {
-    final response = await _client.post('/auth/login', data: {
-      'email': email, 'password': password,
+    final response =
+        await _client.post<Map<String, dynamic>>('/auth/login', data: {
+      'email': email,
+      'password': password,
     });
-    final data = response.data as Map<String, dynamic>;
-    return (
-      user: UserModel.fromJson(data['user'] as Map<String, dynamic>),
-      accessToken: data['access_token'] as String,
-      refreshToken: data['refresh_token'] as String,
-    );
+    return _authPayloadFromResponse(response.data);
   }
 
   @override
-  Future<({UserModel user, String accessToken, String refreshToken})> register({
-    required String email, required String password,
-    required String firstName, required String lastName, String? phone,
+  Future<UserModel> register({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    String? phone,
   }) async {
-    final response = await _client.post('/auth/register', data: {
-      'email': email, 'password': password,
-      'first_name': firstName, 'last_name': lastName,
+    final response =
+        await _client.post<Map<String, dynamic>>('/auth/register', data: {
+      'email': email,
+      'password': password,
+      'first_name': firstName,
+      'last_name': lastName,
+      'role': 'student',
       if (phone != null) 'phone': phone,
     });
-    final data = response.data as Map<String, dynamic>;
-    return (
-      user: UserModel.fromJson(data['user'] as Map<String, dynamic>),
-      accessToken: data['access_token'] as String,
-      refreshToken: data['refresh_token'] as String,
-    );
+    final data = response.data;
+    if (data == null) {
+      throw const FormatException('Missing registration response body');
+    }
+    return UserModel.fromJson(data);
   }
 
   @override
   Future<UserModel> getCurrentUser() async {
-    final response = await _client.get('/auth/me');
-    return UserModel.fromJson(response.data as Map<String, dynamic>);
+    final response = await _client.get<Map<String, dynamic>>('/auth/me');
+    final data = response.data;
+    if (data == null) {
+      throw const FormatException('Missing user response body');
+    }
+    return UserModel.fromJson(data);
   }
 
   @override
@@ -67,5 +77,21 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<void> forgotPassword(String email) async {
     await _client.post('/auth/forgot-password', data: {'email': email});
+  }
+
+  ({UserModel user, String accessToken, String refreshToken})
+      _authPayloadFromResponse(Map<String, dynamic>? data) {
+    if (data == null) {
+      throw const FormatException('Missing auth response body');
+    }
+    final userJson = data['user'];
+    if (userJson is! Map<String, dynamic>) {
+      throw const FormatException('Missing auth user payload');
+    }
+    return (
+      user: UserModel.fromJson(userJson),
+      accessToken: data['access_token'] as String,
+      refreshToken: data['refresh_token'] as String,
+    );
   }
 }

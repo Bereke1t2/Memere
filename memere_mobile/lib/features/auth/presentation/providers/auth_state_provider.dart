@@ -3,6 +3,7 @@ import '../../domain/entities/user_entity.dart';
 import '../../data/datasources/auth_remote_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/storage/local_storage.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../../domain/usecases/login_usecase.dart';
 import '../../domain/usecases/register_usecase.dart';
@@ -20,15 +21,23 @@ final authRepositoryProvider = Provider((ref) {
   );
 });
 
-final loginUseCaseProvider = Provider((ref) => LoginUseCase(ref.watch(authRepositoryProvider)));
-final registerUseCaseProvider = Provider((ref) => RegisterUseCase(ref.watch(authRepositoryProvider)));
+final loginUseCaseProvider =
+    Provider((ref) => LoginUseCase(ref.watch(authRepositoryProvider)));
+final registerUseCaseProvider =
+    Provider((ref) => RegisterUseCase(ref.watch(authRepositoryProvider)));
 
 // ── Auth State ────────────────────────────────────────────────────────────────
 
 class AuthState {
-  const AuthState({this.user, this.isAuthenticated = false});
+  const AuthState({
+    this.user,
+    this.isAuthenticated = false,
+    this.hasSeenOnboarding = false,
+  });
+
   final UserEntity? user;
   final bool isAuthenticated;
+  final bool hasSeenOnboarding;
 }
 
 final authStateProvider = AsyncNotifierProvider<AuthStateNotifier, AuthState>(
@@ -39,13 +48,33 @@ class AuthStateNotifier extends AsyncNotifier<AuthState> {
   @override
   Future<AuthState> build() async {
     final repo = ref.watch(authRepositoryProvider);
+    final prefs = ref.watch(preferencesServiceProvider);
+    final hasSeenOnboarding = await prefs.hasSeenOnboarding();
     final isLoggedIn = await repo.isLoggedIn();
-    if (!isLoggedIn) return const AuthState();
+    if (!isLoggedIn) {
+      return AuthState(hasSeenOnboarding: hasSeenOnboarding);
+    }
 
     final result = await repo.getCurrentUser();
     return result.fold(
-      (_) => const AuthState(),
-      (user) => AuthState(user: user, isAuthenticated: true),
+      (_) => AuthState(hasSeenOnboarding: hasSeenOnboarding),
+      (user) => AuthState(
+        user: user,
+        isAuthenticated: true,
+        hasSeenOnboarding: hasSeenOnboarding,
+      ),
+    );
+  }
+
+  Future<void> markOnboardingSeen() async {
+    await ref.read(preferencesServiceProvider).markOnboardingSeen();
+    final previous = state.valueOrNull;
+    state = AsyncData(
+      AuthState(
+        user: previous?.user,
+        isAuthenticated: previous?.isAuthenticated ?? false,
+        hasSeenOnboarding: true,
+      ),
     );
   }
 
@@ -53,9 +82,20 @@ class AuthStateNotifier extends AsyncNotifier<AuthState> {
     state = const AsyncLoading();
     final useCase = ref.read(loginUseCaseProvider);
     final result = await useCase(LoginParams(email: email, password: password));
-    state = result.fold(
-      (failure) => AsyncError(failure, StackTrace.current),
-      (data) => AsyncData(AuthState(user: data.user, isAuthenticated: true)),
+    await result.fold(
+      (failure) async {
+        state = AsyncError(failure, StackTrace.current);
+      },
+      (data) async {
+        await ref.read(preferencesServiceProvider).markOnboardingSeen();
+        state = AsyncData(
+          AuthState(
+            user: data.user,
+            isAuthenticated: true,
+            hasSeenOnboarding: true,
+          ),
+        );
+      },
     );
   }
 
@@ -63,15 +103,28 @@ class AuthStateNotifier extends AsyncNotifier<AuthState> {
     state = const AsyncLoading();
     final useCase = ref.read(registerUseCaseProvider);
     final result = await useCase(params);
-    state = result.fold(
-      (failure) => AsyncError(failure, StackTrace.current),
-      (data) => AsyncData(AuthState(user: data.user, isAuthenticated: true)),
+    await result.fold(
+      (failure) async {
+        state = AsyncError(failure, StackTrace.current);
+      },
+      (data) async {
+        await ref.read(preferencesServiceProvider).markOnboardingSeen();
+        state = AsyncData(
+          AuthState(
+            user: data.user,
+            isAuthenticated: true,
+            hasSeenOnboarding: true,
+          ),
+        );
+      },
     );
   }
 
   Future<void> logout() async {
     final repo = ref.read(authRepositoryProvider);
     await repo.logout();
-    state = const AsyncData(AuthState());
+    final hasSeenOnboarding =
+        await ref.read(preferencesServiceProvider).hasSeenOnboarding();
+    state = AsyncData(AuthState(hasSeenOnboarding: hasSeenOnboarding));
   }
 }

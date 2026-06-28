@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'app_colors.dart';
 
-/// ExamPrep Typography System
+/// Memere Typography System
 /// Display font: Sora (headings, titles)
 /// Body font: DM Sans (body, labels, buttons)
 abstract class AppTextStyles {
