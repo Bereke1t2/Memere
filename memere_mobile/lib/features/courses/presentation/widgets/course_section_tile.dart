@@ -12,11 +12,13 @@ class CourseSectionTile extends StatelessWidget {
     required this.section,
     required this.sectionNumber,
     this.initiallyExpanded = false,
+    this.canOpenLessons = false,
   });
 
   final CourseSectionEntity section;
   final int sectionNumber;
   final bool initiallyExpanded;
+  final bool canOpenLessons;
 
   @override
   Widget build(BuildContext context) {
@@ -83,6 +85,7 @@ class CourseSectionTile extends StatelessWidget {
                     (entry) => LessonTile(
                       lesson: entry.value,
                       lessonNumber: entry.key + 1,
+                      canOpen: canOpenLessons || entry.value.isFreePreview,
                     ),
                   ),
           ],

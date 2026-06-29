@@ -11,6 +11,7 @@ class LessonEntity {
     required this.isPublished,
     required this.createdAt,
     required this.updatedAt,
+    this.videoId,
   });
 
   final String id;
@@ -24,6 +25,9 @@ class LessonEntity {
   final bool isPublished;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final String? videoId;
+
+  bool get hasVideo => videoId != null && videoId!.trim().isNotEmpty;
 
   String get durationLabel {
     if (durationSeconds <= 0) return '0m';

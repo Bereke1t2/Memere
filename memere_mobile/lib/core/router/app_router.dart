@@ -7,6 +7,7 @@ import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/providers/auth_state_provider.dart';
 import '../../features/courses/presentation/screens/course_detail_screen.dart';
 import '../../features/courses/presentation/screens/course_list_screen.dart';
+import '../../features/video_player/presentation/screens/video_player_screen.dart';
 
 abstract class AppRoutes {
   static const splash = '/';
@@ -15,8 +16,23 @@ abstract class AppRoutes {
   static const register = '/register';
   static const home = '/home';
   static const courseDetail = '/courses/:courseId';
+  static const videoPlayer = '/videos/:videoId';
 
   static String courseDetailPath(String courseId) => '/courses/$courseId';
+
+  static String videoPlayerPath({
+    required String videoId,
+    required String lessonId,
+    required String courseId,
+    String? title,
+  }) {
+    final query = {
+      'lessonId': lessonId,
+      'courseId': courseId,
+      if (title != null && title.isNotEmpty) 'title': title,
+    };
+    return Uri(path: '/videos/$videoId', queryParameters: query).toString();
+  }
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -67,6 +83,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (_, state) {
           final courseId = state.pathParameters['courseId']!;
           return CourseDetailScreen(courseId: courseId);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.videoPlayer,
+        builder: (_, state) {
+          final videoId = state.pathParameters['videoId']!;
+          final query = state.uri.queryParameters;
+          return VideoPlayerScreen(
+            videoId: videoId,
+            lessonId: query['lessonId'] ?? '',
+            courseId: query['courseId'] ?? '',
+            title: query['title'],
+          );
         },
       ),
     ],

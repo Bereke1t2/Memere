@@ -14,6 +14,7 @@ class LessonModel extends LessonEntity {
     required super.isPublished,
     required super.createdAt,
     required super.updatedAt,
+    super.videoId,
   });
 
   factory LessonModel.fromJson(Map<String, dynamic> json) {
@@ -29,6 +30,7 @@ class LessonModel extends LessonEntity {
       isPublished: modelBoolValue(json['is_published'], fallback: true),
       createdAt: modelDateValue(json['created_at']),
       updatedAt: modelDateValue(json['updated_at']),
+      videoId: modelNullableString(json['video_id']),
     );
   }
 
@@ -44,6 +46,7 @@ class LessonModel extends LessonEntity {
         'is_published': isPublished,
         'created_at': createdAt?.toIso8601String(),
         'updated_at': updatedAt?.toIso8601String(),
+        'video_id': videoId,
       };
 
   static LessonType _parseLessonType(String value) {

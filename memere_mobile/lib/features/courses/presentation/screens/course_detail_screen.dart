@@ -130,6 +130,7 @@ class CourseDetailScreen extends ConsumerWidget {
                               section: entry.value,
                               sectionNumber: entry.key + 1,
                               initiallyExpanded: entry.key == 0,
+                              canOpenLessons: course.isFree,
                             ),
                           ),
                         ),

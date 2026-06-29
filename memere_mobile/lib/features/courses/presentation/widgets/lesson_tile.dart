@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../core/router/app_router.dart';
 import '../../domain/entities/lesson_entity.dart';
 
 class LessonTile extends StatelessWidget {
@@ -10,15 +12,17 @@ class LessonTile extends StatelessWidget {
     super.key,
     required this.lesson,
     required this.lessonNumber,
+    this.canOpen = false,
   });
 
   final LessonEntity lesson;
   final int lessonNumber;
+  final bool canOpen;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => _showPhaseMessage(context),
+      onTap: () => _handleTap(context),
       borderRadius: BorderRadius.circular(AppSizes.radiusSm),
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -72,7 +76,13 @@ class LessonTile extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSizes.sm),
-            if (lesson.isFreePreview)
+            if (canOpen && lesson.hasVideo)
+              const Icon(
+                Icons.play_arrow_rounded,
+                size: AppSizes.iconSm,
+                color: AppColors.accentPrimary,
+              )
+            else if (lesson.isFreePreview)
               _PreviewBadge()
             else
               const Icon(
@@ -86,10 +96,28 @@ class LessonTile extends StatelessWidget {
     );
   }
 
-  void _showPhaseMessage(BuildContext context) {
-    final message = lesson.isFreePreview
-        ? 'Video playback starts in Phase 3.'
-        : 'Enrollment starts in Phase 6.';
+  void _handleTap(BuildContext context) {
+    if (!canOpen) {
+      _showMessage(context, 'Enrollment starts in Phase 6.');
+      return;
+    }
+
+    if (!lesson.hasVideo) {
+      _showMessage(context, 'This lesson does not have a video attached yet.');
+      return;
+    }
+
+    context.go(
+      AppRoutes.videoPlayerPath(
+        videoId: lesson.videoId!,
+        lessonId: lesson.id,
+        courseId: lesson.courseId,
+        title: lesson.title,
+      ),
+    );
+  }
+
+  void _showMessage(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
