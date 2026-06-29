@@ -102,6 +102,20 @@ class LessonTile extends StatelessWidget {
       return;
     }
 
+    if (lesson.type == LessonType.quiz) {
+      if (!lesson.hasQuiz) {
+        _showMessage(context, 'This lesson does not have a quiz attached yet.');
+        return;
+      }
+      context.go(AppRoutes.quizDetailPath(lesson.quizId!));
+      return;
+    }
+
+    if (lesson.type != LessonType.video) {
+      _showMessage(context, 'This lesson type opens in a later phase.');
+      return;
+    }
+
     if (!lesson.hasVideo) {
       _showMessage(context, 'This lesson does not have a video attached yet.');
       return;

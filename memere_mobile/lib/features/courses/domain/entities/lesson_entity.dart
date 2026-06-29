@@ -12,6 +12,7 @@ class LessonEntity {
     required this.createdAt,
     required this.updatedAt,
     this.videoId,
+    this.quizId,
   });
 
   final String id;
@@ -26,8 +27,10 @@ class LessonEntity {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final String? videoId;
+  final String? quizId;
 
   bool get hasVideo => videoId != null && videoId!.trim().isNotEmpty;
+  bool get hasQuiz => quizId != null && quizId!.trim().isNotEmpty;
 
   String get durationLabel {
     if (durationSeconds <= 0) return '0m';

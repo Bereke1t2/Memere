@@ -15,6 +15,7 @@ class LessonModel extends LessonEntity {
     required super.createdAt,
     required super.updatedAt,
     super.videoId,
+    super.quizId,
   });
 
   factory LessonModel.fromJson(Map<String, dynamic> json) {
@@ -31,6 +32,7 @@ class LessonModel extends LessonEntity {
       createdAt: modelDateValue(json['created_at']),
       updatedAt: modelDateValue(json['updated_at']),
       videoId: modelNullableString(json['video_id']),
+      quizId: modelNullableString(json['quiz_id']),
     );
   }
 
@@ -47,6 +49,7 @@ class LessonModel extends LessonEntity {
         'created_at': createdAt?.toIso8601String(),
         'updated_at': updatedAt?.toIso8601String(),
         'video_id': videoId,
+        'quiz_id': quizId,
       };
 
   static LessonType _parseLessonType(String value) {
