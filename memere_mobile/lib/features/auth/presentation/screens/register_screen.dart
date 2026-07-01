@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_surface.dart';
 import '../../../../shared/widgets/app_text_field.dart';
 import '../providers/auth_state_provider.dart';
 import '../../domain/usecases/register_usecase.dart';
@@ -83,126 +85,157 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
-        backgroundColor: AppColors.bgPrimary,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.go(AppRoutes.login),
         ),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSizes.screenPaddingH,
-            vertical: AppSizes.md,
-          ),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Create account',
-                    style: AppTextStyles.displayMedium),
-                const SizedBox(height: AppSizes.sm),
-                Text('Start learning with Memere today',
-                    style: AppTextStyles.bodyLarge
-                        .copyWith(color: AppColors.textSecondary)),
-                const SizedBox(height: AppSizes.xxl),
-                Row(
-                  children: [
-                    Expanded(
-                      child: AppTextField(
-                        controller: _firstCtrl,
-                        hintText: 'First name',
-                        labelText: 'First Name',
-                        textInputAction: TextInputAction.next,
-                        validator: (v) =>
-                            (v == null || v.trim().isEmpty) ? 'Required' : null,
+      body: AppPageBackground(
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSizes.screenPaddingH,
+              vertical: AppSizes.md,
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      AppIconTile(
+                        icon: Icons.school_rounded,
+                        gradient: AppColors.primaryGradient,
+                        size: 48,
+                        iconSize: AppSizes.iconMd,
                       ),
+                      SizedBox(width: AppSizes.md),
+                      Text('Memere', style: AppTextStyles.titleLarge),
+                    ],
+                  ),
+                  const SizedBox(height: AppSizes.xl),
+                  const Text('Create account',
+                      style: AppTextStyles.displayMedium),
+                  const SizedBox(height: AppSizes.sm),
+                  Text('Start learning with Memere today',
+                      style: AppTextStyles.bodyLarge
+                          .copyWith(color: AppColors.textSecondary)),
+                  const SizedBox(height: AppSizes.xl),
+                  AppSurface(
+                    padding: const EdgeInsets.all(AppSizes.lg),
+                    gradient: AppColors.cardGradient,
+                    shadows: AppShadows.md,
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: AppTextField(
+                                controller: _firstCtrl,
+                                hintText: 'First name',
+                                labelText: 'First Name',
+                                textInputAction: TextInputAction.next,
+                                validator: (v) =>
+                                    (v == null || v.trim().isEmpty)
+                                        ? 'Required'
+                                        : null,
+                              ),
+                            ),
+                            const SizedBox(width: AppSizes.md),
+                            Expanded(
+                              child: AppTextField(
+                                controller: _lastCtrl,
+                                hintText: 'Last name',
+                                labelText: 'Last Name',
+                                textInputAction: TextInputAction.next,
+                                validator: (v) =>
+                                    (v == null || v.trim().isEmpty)
+                                        ? 'Required'
+                                        : null,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: AppSizes.md),
+                        AppTextField(
+                          controller: _emailCtrl,
+                          hintText: 'your@email.com',
+                          labelText: 'Email',
+                          prefixIcon: Icons.email_outlined,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.email],
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) {
+                              return 'Email is required';
+                            }
+                            if (!v.contains('@')) return 'Enter a valid email';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: AppSizes.md),
+                        AppTextField(
+                          controller: _phoneCtrl,
+                          hintText: '+251 9XX XXX XXX',
+                          labelText: 'Phone (optional)',
+                          prefixIcon: Icons.phone_outlined,
+                          keyboardType: TextInputType.phone,
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: AppSizes.md),
+                        AppTextField(
+                          controller: _passwordCtrl,
+                          hintText: 'Min. 8 characters',
+                          labelText: 'Password',
+                          prefixIcon: Icons.lock_outline_rounded,
+                          isPassword: true,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.newPassword],
+                          onFieldSubmitted: (_) => _submit(),
+                          validator: (v) {
+                            if (v == null || v.isEmpty) {
+                              return 'Password is required';
+                            }
+                            if (v.length < 8) return 'Min. 8 characters';
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: AppSizes.xl),
+                        AppButton(
+                          label: 'Create Account',
+                          onPressed: authAsync.isLoading ? null : _submit,
+                          isLoading: authAsync.isLoading,
+                          suffixIcon: Icons.arrow_forward_rounded,
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: AppSizes.md),
-                    Expanded(
-                      child: AppTextField(
-                        controller: _lastCtrl,
-                        hintText: 'Last name',
-                        labelText: 'Last Name',
-                        textInputAction: TextInputAction.next,
-                        validator: (v) =>
-                            (v == null || v.trim().isEmpty) ? 'Required' : null,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSizes.md),
-                AppTextField(
-                  controller: _emailCtrl,
-                  hintText: 'your@email.com',
-                  labelText: 'Email',
-                  prefixIcon: Icons.email_outlined,
-                  keyboardType: TextInputType.emailAddress,
-                  textInputAction: TextInputAction.next,
-                  autofillHints: const [AutofillHints.email],
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Email is required';
-                    }
-                    if (!v.contains('@')) return 'Enter a valid email';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: AppSizes.md),
-                AppTextField(
-                  controller: _phoneCtrl,
-                  hintText: '+251 9XX XXX XXX',
-                  labelText: 'Phone (optional)',
-                  prefixIcon: Icons.phone_outlined,
-                  keyboardType: TextInputType.phone,
-                  textInputAction: TextInputAction.next,
-                ),
-                const SizedBox(height: AppSizes.md),
-                AppTextField(
-                  controller: _passwordCtrl,
-                  hintText: 'Min. 8 characters',
-                  labelText: 'Password',
-                  prefixIcon: Icons.lock_outline_rounded,
-                  isPassword: true,
-                  textInputAction: TextInputAction.done,
-                  autofillHints: const [AutofillHints.newPassword],
-                  onFieldSubmitted: (_) => _submit(),
-                  validator: (v) {
-                    if (v == null || v.isEmpty) return 'Password is required';
-                    if (v.length < 8) return 'Min. 8 characters';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: AppSizes.xl),
-                AppButton(
-                  label: 'Create Account',
-                  onPressed: authAsync.isLoading ? null : _submit,
-                  isLoading: authAsync.isLoading,
-                ),
-                const SizedBox(height: AppSizes.lg),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Already have an account? ',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => context.go(AppRoutes.login),
-                      child: Text(
-                        'Sign In',
-                        style: AppTextStyles.labelMedium.copyWith(
-                          color: AppColors.accentPrimary,
+                  ),
+                  const SizedBox(height: AppSizes.lg),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Already have an account? ',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.textSecondary,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSizes.lg),
-              ],
+                      GestureDetector(
+                        onTap: () => context.go(AppRoutes.login),
+                        child: Text(
+                          'Sign In',
+                          style: AppTextStyles.labelMedium.copyWith(
+                            color: AppColors.accentPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSizes.lg),
+                ],
+              ),
             ),
           ),
         ),

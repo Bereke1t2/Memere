@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_motion.dart';
+import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/app_surface.dart';
 import '../providers/auth_state_provider.dart';
 
 class _OnboardingPage {
@@ -69,7 +72,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   void _next() {
     if (_currentPage < _pages.length - 1) {
       _pageController.nextPage(
-          duration: const Duration(milliseconds: 350), curve: Curves.easeInOut);
+        duration: AppMotion.slow,
+        curve: AppMotion.standard,
+      );
     } else {
       _finish();
     }
@@ -79,80 +84,103 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: _finish,
-                child: Text('Skip',
-                    style: AppTextStyles.labelMedium
-                        .copyWith(color: AppColors.textSecondary)),
+      body: AppPageBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSizes.screenPaddingH,
+                  AppSizes.sm,
+                  AppSizes.screenPaddingH,
+                  0,
+                ),
+                child: Row(
+                  children: [
+                    const AppIconTile(
+                      icon: Icons.school_rounded,
+                      gradient: AppColors.primaryGradient,
+                      size: 44,
+                      iconSize: AppSizes.iconSm,
+                    ),
+                    const SizedBox(width: AppSizes.sm),
+                    const Text('Memere', style: AppTextStyles.titleLarge),
+                    const Spacer(),
+                    TextButton(
+                      onPressed: _finish,
+                      child: Text(
+                        'Skip',
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                itemCount: _pages.length,
-                onPageChanged: (i) => setState(() => _currentPage = i),
-                itemBuilder: (_, i) => _OnboardingPageWidget(page: _pages[i]),
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: _pages.length,
+                  onPageChanged: (i) => setState(() => _currentPage = i),
+                  itemBuilder: (_, i) => _OnboardingPageWidget(page: _pages[i]),
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppSizes.screenPaddingH),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      _pages.length,
-                      (i) => AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: _currentPage == i ? 24 : 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: _currentPage == i
-                              ? AppColors.accentPrimary
-                              : AppColors.border,
-                          borderRadius: BorderRadius.circular(
-                            AppSizes.radiusFull,
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSizes.screenPaddingH),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        _pages.length,
+                        (i) => AnimatedContainer(
+                          duration: const Duration(milliseconds: 250),
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          width: _currentPage == i ? 24 : 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _currentPage == i
+                                ? AppColors.accentPrimary
+                                : AppColors.border,
+                            borderRadius: BorderRadius.circular(
+                              AppSizes.radiusFull,
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: AppSizes.xl),
-                  AppButton(
-                    label: _currentPage == _pages.length - 1
-                        ? 'Get Started'
-                        : 'Next',
-                    onPressed: _next,
-                    suffixIcon: Icons.arrow_forward_rounded,
-                  ),
-                  const SizedBox(height: AppSizes.md),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text(
-                        'Already have an account? ',
-                        style: AppTextStyles.bodySmall,
-                      ),
-                      GestureDetector(
-                        onTap: _finish,
-                        child: Text('Sign In',
-                            style: AppTextStyles.labelMedium
-                                .copyWith(color: AppColors.accentPrimary)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSizes.lg),
-                ],
+                    const SizedBox(height: AppSizes.xl),
+                    AppButton(
+                      label: _currentPage == _pages.length - 1
+                          ? 'Get Started'
+                          : 'Next',
+                      onPressed: _next,
+                      suffixIcon: Icons.arrow_forward_rounded,
+                    ),
+                    const SizedBox(height: AppSizes.md),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Already have an account? ',
+                          style: AppTextStyles.bodySmall,
+                        ),
+                        GestureDetector(
+                          onTap: _finish,
+                          child: Text('Sign In',
+                              style: AppTextStyles.labelMedium
+                                  .copyWith(color: AppColors.accentPrimary)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSizes.lg),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -170,19 +198,57 @@ class _OnboardingPageWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              color: page.color.withAlpha(30),
-              shape: BoxShape.circle,
-              border: Border.all(color: page.color.withAlpha(76), width: 1.5),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: 1),
+            duration: AppMotion.slow,
+            curve: AppMotion.emphasized,
+            builder: (context, value, child) {
+              return Transform.scale(
+                scale: 0.86 + (value * 0.14),
+                child: Opacity(opacity: value.clamp(0, 1), child: child),
+              );
+            },
+            child: Container(
+              width: 188,
+              height: 188,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    page.color.withAlpha(66),
+                    page.color.withAlpha(18),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              child: Center(
+                child: Container(
+                  width: 124,
+                  height: 124,
+                  decoration: BoxDecoration(
+                    color: AppColors.bgSecondary,
+                    borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+                    border: Border.all(color: page.color.withAlpha(88)),
+                    boxShadow: [
+                      ...AppShadows.md,
+                      BoxShadow(
+                        color: page.color.withAlpha(46),
+                        blurRadius: 28,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  child: Icon(page.icon, size: 56, color: page.color),
+                ),
+              ),
             ),
-            child: Icon(page.icon, size: 54, color: page.color),
           ),
           const SizedBox(height: AppSizes.xl),
-          Text(page.title,
-              style: AppTextStyles.headlineLarge, textAlign: TextAlign.center),
+          Text(
+            page.title,
+            style: AppTextStyles.displayMedium,
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: AppSizes.md),
           Text(
             page.body,
