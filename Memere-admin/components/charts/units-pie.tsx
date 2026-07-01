@@ -4,7 +4,13 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { RevenueBreakdownItem } from "@/lib/api/schemas";
 
-const PALETTE = ["hsl(0,0%,9%)", "hsl(0,0%,25%)", "hsl(0,0%,42%)", "hsl(0,0%,58%)", "hsl(0,0%,72%)", "hsl(0,0%,84%)"];
+const PALETTE = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+];
 
 interface UnitsPieProps {
   data: RevenueBreakdownItem[];
@@ -28,7 +34,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Toolti
 export function UnitsPie({ data }: UnitsPieProps) {
   if (!data.length) {
     return (
-      <Card className="border shadow-none">
+      <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold">Payments by Provider</CardTitle>
         </CardHeader>
@@ -45,7 +51,7 @@ export function UnitsPie({ data }: UnitsPieProps) {
   }));
 
   return (
-    <Card className="border shadow-none">
+    <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold">Payments by Provider</CardTitle>
       </CardHeader>

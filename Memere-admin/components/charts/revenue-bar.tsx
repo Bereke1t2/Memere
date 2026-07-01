@@ -30,7 +30,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Toolti
 export function RevenueBar({ data }: RevenueBarProps) {
   if (!data.length) {
     return (
-      <Card className="border shadow-none">
+      <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold">Revenue by Provider</CardTitle>
         </CardHeader>
@@ -47,7 +47,7 @@ export function RevenueBar({ data }: RevenueBarProps) {
   }));
 
   return (
-    <Card className="border shadow-none">
+    <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold">Revenue by Provider</CardTitle>
       </CardHeader>
@@ -69,7 +69,7 @@ export function RevenueBar({ data }: RevenueBarProps) {
               tickFormatter={(v: number) => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))" }} />
-            <Bar dataKey="grossNum" name="Revenue" radius={[4, 4, 0, 0]} fill="hsl(var(--foreground))" />
+            <Bar dataKey="grossNum" name="Revenue" radius={[5, 5, 0, 0]} fill="hsl(var(--chart-1))" />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

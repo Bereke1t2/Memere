@@ -34,7 +34,7 @@ export function RevenueTrend({ data }: RevenueTrendProps) {
   const hasData = data.some((d) => d.gross > 0);
 
   return (
-    <Card className="border shadow-none">
+    <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold">Gross Revenue Trend</CardTitle>
       </CardHeader>
@@ -48,8 +48,8 @@ export function RevenueTrend({ data }: RevenueTrendProps) {
             <AreaChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--foreground))" stopOpacity={0.1} />
-                  <stop offset="95%" stopColor="hsl(var(--foreground))" stopOpacity={0} />
+                  <stop offset="5%" stopColor="hsl(var(--chart-1))" stopOpacity={0.18} />
+                  <stop offset="95%" stopColor="hsl(var(--chart-1))" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -69,11 +69,11 @@ export function RevenueTrend({ data }: RevenueTrendProps) {
               <Area
                 type="monotone"
                 dataKey="gross"
-                stroke="hsl(var(--foreground))"
-                strokeWidth={1.5}
+                stroke="hsl(var(--chart-1))"
+                strokeWidth={2}
                 fill="url(#trendFill)"
                 dot={false}
-                activeDot={{ r: 3, fill: "hsl(var(--foreground))", strokeWidth: 0 }}
+                activeDot={{ r: 3, fill: "hsl(var(--chart-1))", strokeWidth: 0 }}
               />
             </AreaChart>
           </ResponsiveContainer>
