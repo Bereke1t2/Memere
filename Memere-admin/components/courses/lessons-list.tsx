@@ -38,6 +38,22 @@ function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: stri
   const [status, setStatus] = useState<string | null>(null);
   const router = useRouter();
 
+  async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+    const res = await fetch(url, init);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error((data as { message?: string }).message ?? `Request failed: ${res.status}`);
+    }
+    return data as T;
+  }
+
+  async function fetchNoContent(url: string, init?: RequestInit): Promise<void> {
+    const res = await fetch(url, init);
+    if (res.ok) return;
+    const data = await res.json().catch(() => ({}));
+    throw new Error((data as { message?: string }).message ?? `Request failed: ${res.status}`);
+  }
+
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -64,14 +80,14 @@ function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: stri
       });
 
       setStatus("Confirming…");
-      await fetch(`/api/teacher/videos/${video_id}/confirm`, { method: "POST" });
+      await fetchNoContent(`/api/teacher/videos/${video_id}/confirm`, { method: "POST" });
       setStatus("Processing…");
 
       let attempts = 0;
       const poll = setInterval(async () => {
         attempts++;
         try {
-          const s = await fetch(`/api/teacher/videos/${video_id}/status`).then((r) => r.json());
+          const s = await fetchJson<{ status?: string; processing_error?: string }>(`/api/teacher/videos/${video_id}/status`);
           if (s.status === "ready") {
             clearInterval(poll);
             setStatus("ready");
@@ -82,13 +98,19 @@ function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: stri
             clearInterval(poll);
             setStatus("failed");
             setUploading(false);
-            toast.error("Transcode failed. Use Retry below.");
+            toast.error(s.processing_error ?? "Transcode failed. Use Retry below.");
           } else if (attempts > 60) {
             clearInterval(poll);
             setStatus("timeout");
             setUploading(false);
+            toast.error("Video is still processing. Check status again later.");
           }
-        } catch { /* continue polling */ }
+        } catch (err) {
+          clearInterval(poll);
+          setStatus("error");
+          setUploading(false);
+          toast.error(err instanceof Error ? err.message : "Failed to check video status.");
+        }
       }, 5000);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed.");
@@ -100,11 +122,11 @@ function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: stri
   async function handleRetry() {
     if (!videoId) return;
     try {
-      await fetch(`/api/teacher/videos/${videoId}/retry`, { method: "POST" });
+      await fetchNoContent(`/api/teacher/videos/${videoId}/retry`, { method: "POST" });
       toast.success("Retry queued.");
       router.refresh();
-    } catch {
-      toast.error("Failed to retry.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to retry.");
     }
   }
 

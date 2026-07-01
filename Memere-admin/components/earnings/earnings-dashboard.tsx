@@ -13,10 +13,10 @@ interface EarningsDashboardProps {
 
 function KpiCard({ title, value, sub }: { title: string; value: string; sub?: string }) {
   return (
-    <Card className="border shadow-none">
+    <Card>
       <CardContent className="p-6">
         <p className="text-sm text-muted-foreground">{title}</p>
-        <p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
+        <p className="mt-2 text-2xl font-semibold tabular-nums">{value}</p>
         {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
       </CardContent>
     </Card>
@@ -32,7 +32,7 @@ export function EarningsDashboard({ earnings, courses, sales, from, to }: Earnin
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Earnings</h1>
+          <h1 className="text-2xl font-semibold">Earnings</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Your revenue for the selected period</p>
         </div>
         <DateRange from={from} to={to} />
@@ -61,7 +61,7 @@ export function EarningsDashboard({ earnings, courses, sales, from, to }: Earnin
       </div>
 
       {courses.length > 0 && (
-        <Card className="border shadow-none">
+        <Card>
           <CardContent className="p-0">
             <div className="px-6 py-4 border-b">
               <p className="text-sm font-semibold">Per-Course Sales</p>
@@ -69,10 +69,10 @@ export function EarningsDashboard({ earnings, courses, sales, from, to }: Earnin
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Course</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">Gross</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">Your Cut</th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">Sales</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-muted-foreground">Course</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-muted-foreground">Gross</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-muted-foreground">Your Cut</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-muted-foreground">Sales</th>
                 </tr>
               </thead>
               <tbody>
