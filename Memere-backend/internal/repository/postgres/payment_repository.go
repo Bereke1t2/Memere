@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -18,14 +19,15 @@ import (
 
 // PaymentRepo is the sqlc-backed implementation of repository.PaymentRepository.
 type PaymentRepo struct {
-	q *sqlcgen.Queries
+	q    *sqlcgen.Queries
+	pool *pgxpool.Pool
 }
 
 var _ repository.PaymentRepository = (*PaymentRepo)(nil)
 
 // NewPaymentRepo builds a PaymentRepo over a pgx pool.
 func NewPaymentRepo(pool *pgxpool.Pool) *PaymentRepo {
-	return &PaymentRepo{q: sqlcgen.New(pool)}
+	return &PaymentRepo{q: sqlcgen.New(pool), pool: pool}
 }
 
 func (r *PaymentRepo) Create(ctx context.Context, p *entity.Payment) error {
@@ -155,7 +157,96 @@ func paymentFromRow(row sqlcgen.PaymentsPayment) *entity.Payment {
 }
 
 // ListAll returns payments matching filter for admin reconciliation views.
-// Full scan stub — filter logic added in Skill 5 HTTP layer.
-func (r *PaymentRepo) ListAll(_ context.Context, _ repository.AdminPaymentFilter, _ *pagination.Cursor, _ int) ([]*entity.Payment, *pagination.Cursor, error) {
-	return nil, nil, nil
+func (r *PaymentRepo) ListAll(ctx context.Context, filter repository.AdminPaymentFilter, cursor *pagination.Cursor, limit int) ([]*entity.Payment, *pagination.Cursor, error) {
+	limit = pagination.NormalizeLimit(limit)
+
+	var (
+		where []string
+		args  []any
+	)
+
+	if filter.Status != nil && *filter.Status != "" {
+		args = append(args, *filter.Status)
+		where = append(where, "status = $"+itoa(len(args)))
+	}
+	if filter.Provider != nil && *filter.Provider != "" {
+		args = append(args, *filter.Provider)
+		where = append(where, "provider = $"+itoa(len(args)))
+	}
+	if filter.From != nil {
+		args = append(args, pgTimestamptzValue(*filter.From))
+		where = append(where, "created_at >= $"+itoa(len(args)))
+	}
+	if filter.To != nil {
+		args = append(args, pgTimestamptzValue(*filter.To))
+		where = append(where, "created_at <= $"+itoa(len(args)))
+	}
+	if filter.StudentID != nil {
+		args = append(args, toPgUUID(*filter.StudentID))
+		where = append(where, "student_id = $"+itoa(len(args)))
+	}
+	if cursor != nil {
+		args = append(args, pgTimestamptzValue(cursor.CreatedAt), toPgUUID(cursor.ID))
+		where = append(where, "(created_at, id) < ($"+itoa(len(args)-1)+", $"+itoa(len(args))+")")
+	}
+
+	whereSQL := ""
+	if len(where) > 0 {
+		whereSQL = "WHERE " + strings.Join(where, " AND ")
+	}
+
+	args = append(args, int32(limit+1))
+	query := `
+SELECT id, student_id, course_id, amount, currency, provider,
+       provider_transaction_id, status, coupon_id, idempotency_key, metadata,
+       paid_at, created_at, updated_at, provider_checkout_id, subscription_id,
+       failure_reason
+FROM payments.payments
+` + whereSQL + `
+ORDER BY created_at DESC, id DESC
+LIMIT $` + itoa(len(args))
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, nil, apperror.Internal(err)
+	}
+	defer rows.Close()
+
+	payments := make([]*entity.Payment, 0, limit+1)
+	for rows.Next() {
+		var row sqlcgen.PaymentsPayment
+		if err := rows.Scan(
+			&row.ID,
+			&row.StudentID,
+			&row.CourseID,
+			&row.Amount,
+			&row.Currency,
+			&row.Provider,
+			&row.ProviderTransactionID,
+			&row.Status,
+			&row.CouponID,
+			&row.IdempotencyKey,
+			&row.Metadata,
+			&row.PaidAt,
+			&row.CreatedAt,
+			&row.UpdatedAt,
+			&row.ProviderCheckoutID,
+			&row.SubscriptionID,
+			&row.FailureReason,
+		); err != nil {
+			return nil, nil, apperror.Internal(err)
+		}
+		payments = append(payments, paymentFromRow(row))
+	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, apperror.Internal(err)
+	}
+
+	var next *pagination.Cursor
+	if len(payments) > limit {
+		last := payments[limit-1]
+		next = &pagination.Cursor{CreatedAt: last.CreatedAt, ID: last.ID}
+		payments = payments[:limit]
+	}
+	return payments, next, nil
 }
