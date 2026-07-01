@@ -45,5 +45,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 .env
+auth.json
 *.g.dart
 lib/core/constants/env.g.dart

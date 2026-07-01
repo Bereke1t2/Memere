@@ -1,6 +1,7 @@
 bin/
 api
 seed-admin
+seed-teacher
 .env
 *.out
 coverage.txt
