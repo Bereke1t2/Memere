@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_motion.dart';
+import '../../core/constants/app_shadows.dart';
 import '../../core/constants/app_sizes.dart';
 import '../../core/constants/app_text_styles.dart';
 
@@ -45,9 +47,41 @@ class AppTextField extends StatefulWidget {
 
 class _AppTextFieldState extends State<AppTextField> {
   bool _obscureText = true;
+  late FocusNode _focusNode;
+  late bool _ownsFocusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    _ownsFocusNode = widget.focusNode == null;
+    _focusNode = widget.focusNode ?? FocusNode();
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void didUpdateWidget(covariant AppTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.focusNode == widget.focusNode) return;
+    _focusNode.removeListener(_handleFocusChange);
+    if (_ownsFocusNode) _focusNode.dispose();
+    _ownsFocusNode = widget.focusNode == null;
+    _focusNode = widget.focusNode ?? FocusNode();
+    _focusNode.addListener(_handleFocusChange);
+  }
+
+  @override
+  void dispose() {
+    _focusNode.removeListener(_handleFocusChange);
+    if (_ownsFocusNode) _focusNode.dispose();
+    super.dispose();
+  }
+
+  void _handleFocusChange() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
+    final focused = _focusNode.hasFocus;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -57,38 +91,51 @@ class _AppTextFieldState extends State<AppTextField> {
                   .copyWith(color: AppColors.textSecondary)),
           const SizedBox(height: AppSizes.xs),
         ],
-        TextFormField(
-          controller: widget.controller,
-          focusNode: widget.focusNode,
-          obscureText: widget.isPassword && _obscureText,
-          keyboardType: widget.keyboardType,
-          textInputAction: widget.textInputAction,
-          validator: widget.validator,
-          onChanged: widget.onChanged,
-          onFieldSubmitted: widget.onFieldSubmitted,
-          autofillHints: widget.autofillHints,
-          enabled: widget.enabled,
-          maxLines: widget.isPassword ? 1 : widget.maxLines,
-          style: AppTextStyles.bodyMedium,
-          decoration: InputDecoration(
-            hintText: widget.hintText,
-            prefixIcon: widget.prefixIcon != null
-                ? Icon(widget.prefixIcon,
-                    size: AppSizes.iconSm, color: AppColors.textSecondary)
-                : null,
-            suffixIcon: widget.isPassword
-                ? IconButton(
-                    icon: Icon(
-                      _obscureText
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
+        AnimatedContainer(
+          duration: AppMotion.base,
+          curve: AppMotion.standard,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+            boxShadow: focused ? AppShadows.focus : null,
+          ),
+          child: TextFormField(
+            controller: widget.controller,
+            focusNode: _focusNode,
+            obscureText: widget.isPassword && _obscureText,
+            keyboardType: widget.keyboardType,
+            textInputAction: widget.textInputAction,
+            validator: widget.validator,
+            onChanged: widget.onChanged,
+            onFieldSubmitted: widget.onFieldSubmitted,
+            autofillHints: widget.autofillHints,
+            enabled: widget.enabled,
+            maxLines: widget.isPassword ? 1 : widget.maxLines,
+            style: AppTextStyles.bodyMedium,
+            decoration: InputDecoration(
+              hintText: widget.hintText,
+              prefixIcon: widget.prefixIcon != null
+                  ? Icon(
+                      widget.prefixIcon,
                       size: AppSizes.iconSm,
-                      color: AppColors.textSecondary,
-                    ),
-                    onPressed: () =>
-                        setState(() => _obscureText = !_obscureText),
-                  )
-                : widget.suffixIcon,
+                      color: focused
+                          ? AppColors.accentPrimary
+                          : AppColors.textSecondary,
+                    )
+                  : null,
+              suffixIcon: widget.isPassword
+                  ? IconButton(
+                      icon: Icon(
+                        _obscureText
+                            ? Icons.visibility_off_outlined
+                            : Icons.visibility_outlined,
+                        size: AppSizes.iconSm,
+                        color: AppColors.textSecondary,
+                      ),
+                      onPressed: () =>
+                          setState(() => _obscureText = !_obscureText),
+                    )
+                  : widget.suffixIcon,
+            ),
           ),
         ),
       ],
