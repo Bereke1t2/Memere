@@ -12,7 +12,7 @@ abstract class AppTextStyles {
     fontWeight: FontWeight.w700,
     color: AppColors.textPrimary,
     height: 1.2,
-    letterSpacing: -0.5,
+    letterSpacing: 0,
   );
 
   static const TextStyle displayMedium = TextStyle(
@@ -21,7 +21,7 @@ abstract class AppTextStyles {
     fontWeight: FontWeight.w700,
     color: AppColors.textPrimary,
     height: 1.25,
-    letterSpacing: -0.3,
+    letterSpacing: 0,
   );
 
   // ── Headlines (Sora) ─────────────────────────────────────────────────────
@@ -98,7 +98,7 @@ abstract class AppTextStyles {
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
     height: 1.2,
-    letterSpacing: 0.2,
+    letterSpacing: 0,
   );
 
   static const TextStyle labelMedium = TextStyle(
@@ -115,7 +115,7 @@ abstract class AppTextStyles {
     fontWeight: FontWeight.w500,
     color: AppColors.textSecondary,
     height: 1.2,
-    letterSpacing: 0.3,
+    letterSpacing: 0,
   );
 
   // ── Caption ──────────────────────────────────────────────────────────────

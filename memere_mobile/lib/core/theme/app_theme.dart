@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../constants/app_colors.dart';
-import '../constants/app_text_styles.dart';
+import '../constants/app_motion.dart';
 import '../constants/app_sizes.dart';
+import '../constants/app_text_styles.dart';
 
 abstract class AppTheme {
   static ThemeData dark() {
@@ -15,21 +16,26 @@ abstract class AppTheme {
         primary: AppColors.accentPrimary,
         secondary: AppColors.accentSecondary,
         surface: AppColors.bgSecondary,
+        surfaceContainerHighest: AppColors.bgTertiary,
         error: AppColors.error,
-        onPrimary: AppColors.textInverse,
+        onPrimary: Colors.white,
         onSecondary: AppColors.textInverse,
         onSurface: AppColors.textPrimary,
         onError: AppColors.textPrimary,
       ),
+      splashColor: AppColors.pressedOverlay,
+      highlightColor: AppColors.pressedOverlay,
+      hoverColor: AppColors.pressedOverlay,
 
       // ── AppBar ─────────────────────────────────────────────────────────
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.bgPrimary,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: AppTextStyles.titleLarge,
-        iconTheme: IconThemeData(color: AppColors.textPrimary, size: AppSizes.iconMd),
+        iconTheme:
+            IconThemeData(color: AppColors.textPrimary, size: AppSizes.iconMd),
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.light,
@@ -43,8 +49,14 @@ abstract class AppTheme {
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-          side: const BorderSide(color: AppColors.border, width: 1),
         ),
+      ),
+
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: _SharedAxisFadeTransitionBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        },
       ),
 
       // ── Input Fields ───────────────────────────────────────────────────
@@ -65,7 +77,8 @@ abstract class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-          borderSide: const BorderSide(color: AppColors.borderFocused, width: 1.5),
+          borderSide:
+              const BorderSide(color: AppColors.borderFocused, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSizes.radiusMd),
@@ -75,8 +88,10 @@ abstract class AppTheme {
           borderRadius: BorderRadius.circular(AppSizes.radiusMd),
           borderSide: const BorderSide(color: AppColors.error, width: 1.5),
         ),
-        hintStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textDisabled),
-        labelStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+        hintStyle:
+            AppTextStyles.bodyMedium.copyWith(color: AppColors.textDisabled),
+        labelStyle:
+            AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
         errorStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.error),
         prefixIconColor: AppColors.textSecondary,
         suffixIconColor: AppColors.textSecondary,
@@ -92,6 +107,8 @@ abstract class AppTheme {
             borderRadius: BorderRadius.circular(AppSizes.radiusMd),
           ),
           elevation: 0,
+          shadowColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
           textStyle: AppTextStyles.labelLarge,
         ),
       ),
@@ -101,11 +118,12 @@ abstract class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.accentPrimary,
           minimumSize: const Size(double.infinity, AppSizes.buttonHeight),
-          side: const BorderSide(color: AppColors.accentPrimary),
+          side: const BorderSide(color: AppColors.borderFocused),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppSizes.radiusMd),
           ),
           textStyle: AppTextStyles.labelLarge,
+          surfaceTintColor: Colors.transparent,
         ),
       ),
 
@@ -113,7 +131,32 @@ abstract class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: AppColors.accentPrimary,
+          overlayColor: AppColors.accentGlow,
           textStyle: AppTextStyles.labelMedium,
+        ),
+      ),
+
+      navigationBarTheme: NavigationBarThemeData(
+        height: AppSizes.bottomNavHeight,
+        backgroundColor: AppColors.bgSecondary,
+        indicatorColor: AppColors.accentGlow,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            size: AppSizes.iconMd,
+            color: states.contains(WidgetState.selected)
+                ? AppColors.success
+                : AppColors.textSecondary,
+          ),
+        ),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => AppTextStyles.labelSmall.copyWith(
+            color: states.contains(WidgetState.selected)
+                ? AppColors.success
+                : AppColors.textSecondary,
+          ),
         ),
       ),
 
@@ -131,11 +174,14 @@ abstract class AppTheme {
         backgroundColor: AppColors.bgTertiary,
         selectedColor: AppColors.accentGlow,
         labelStyle: AppTextStyles.labelSmall,
+        secondaryLabelStyle:
+            AppTextStyles.labelSmall.copyWith(color: Colors.white),
         side: const BorderSide(color: AppColors.border),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSizes.radiusFull),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: AppSizes.sm, vertical: AppSizes.xs),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSizes.sm, vertical: AppSizes.xs),
       ),
 
       // ── Divider ────────────────────────────────────────────────────────
@@ -145,21 +191,115 @@ abstract class AppTheme {
         space: 1,
       ),
 
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: AppColors.bgTertiary,
+        contentTextStyle: AppTextStyles.bodyMedium,
+        behavior: SnackBarBehavior.floating,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+          side: const BorderSide(color: AppColors.hairline),
+        ),
+      ),
+
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.bgSecondary,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+        ),
+      ),
+
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.bgSecondary,
+        modalBackgroundColor: AppColors.bgSecondary,
+        surfaceTintColor: Colors.transparent,
+        showDragHandle: true,
+        dragHandleColor: AppColors.borderStrong,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppSizes.radiusLg),
+          ),
+        ),
+      ),
+
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+            ),
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) return Colors.white;
+            return AppColors.textSecondary;
+          }),
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return AppColors.accentPrimaryDeep;
+            }
+            return AppColors.bgSecondary;
+          }),
+          side: const WidgetStatePropertyAll(
+            BorderSide(color: AppColors.hairline),
+          ),
+        ),
+      ),
+
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.accentPrimary,
+        linearTrackColor: AppColors.bgTertiary,
+        circularTrackColor: AppColors.bgTertiary,
+      ),
+
       // ── Text ───────────────────────────────────────────────────────────
       textTheme: const TextTheme(
-        displayLarge:   AppTextStyles.displayLarge,
-        displayMedium:  AppTextStyles.displayMedium,
-        headlineLarge:  AppTextStyles.headlineLarge,
+        displayLarge: AppTextStyles.displayLarge,
+        displayMedium: AppTextStyles.displayMedium,
+        headlineLarge: AppTextStyles.headlineLarge,
         headlineMedium: AppTextStyles.headlineMedium,
-        headlineSmall:  AppTextStyles.headlineSmall,
-        titleLarge:     AppTextStyles.titleLarge,
-        titleMedium:    AppTextStyles.titleMedium,
-        bodyLarge:      AppTextStyles.bodyLarge,
-        bodyMedium:     AppTextStyles.bodyMedium,
-        bodySmall:      AppTextStyles.bodySmall,
-        labelLarge:     AppTextStyles.labelLarge,
-        labelMedium:    AppTextStyles.labelMedium,
-        labelSmall:     AppTextStyles.labelSmall,
+        headlineSmall: AppTextStyles.headlineSmall,
+        titleLarge: AppTextStyles.titleLarge,
+        titleMedium: AppTextStyles.titleMedium,
+        bodyLarge: AppTextStyles.bodyLarge,
+        bodyMedium: AppTextStyles.bodyMedium,
+        bodySmall: AppTextStyles.bodySmall,
+        labelLarge: AppTextStyles.labelLarge,
+        labelMedium: AppTextStyles.labelMedium,
+        labelSmall: AppTextStyles.labelSmall,
+      ),
+    );
+  }
+}
+
+class _SharedAxisFadeTransitionBuilder extends PageTransitionsBuilder {
+  const _SharedAxisFadeTransitionBuilder();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    if (route.fullscreenDialog) return child;
+
+    final curvedAnimation = CurvedAnimation(
+      parent: animation,
+      curve: AppMotion.standard,
+      reverseCurve: AppMotion.exit,
+    );
+
+    return FadeTransition(
+      opacity: curvedAnimation,
+      child: SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(0.03, 0),
+          end: Offset.zero,
+        ).animate(curvedAnimation),
+        child: child,
       ),
     );
   }
