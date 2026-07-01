@@ -10,8 +10,8 @@ class CourseDetailSkeleton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: AppColors.bgSecondary,
-      highlightColor: AppColors.bgTertiary,
+      baseColor: AppColors.skeletonBase,
+      highlightColor: AppColors.skeletonHighlight,
       child: ListView(
         padding: const EdgeInsets.all(AppSizes.screenPaddingH),
         children: [

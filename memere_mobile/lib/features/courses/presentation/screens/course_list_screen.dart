@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
-import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../shared/widgets/app_surface.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../providers/course_list_provider.dart';
 import '../widgets/course_card.dart';
@@ -66,55 +66,51 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      body: SafeArea(
-        child: coursesAsync.when(
-          loading: () {
-            final previous = coursesAsync.valueOrNull;
-            if (previous != null && previous.courses.isNotEmpty) {
-              return _CourseListContent(
-                controller: _scrollController,
-                searchController: _searchController,
-                state: previous,
+      body: AppPageBackground(
+        child: SafeArea(
+          child: coursesAsync.when(
+            loading: () {
+              final previous = coursesAsync.valueOrNull;
+              if (previous != null && previous.courses.isNotEmpty) {
+                return _CourseListContent(
+                  controller: _scrollController,
+                  searchController: _searchController,
+                  state: previous,
+                );
+              }
+              return Column(
+                children: [
+                  const _CourseListHeader(),
+                  _SearchAndFilters(searchController: _searchController),
+                  const Expanded(child: CourseListSkeleton()),
+                ],
               );
-            }
-            return Column(
+            },
+            error: (error, _) => Column(
               children: [
-                _CourseListHeader(onLogout: _logout),
-                _SearchAndFilters(searchController: _searchController),
-                const Expanded(child: CourseListSkeleton()),
-              ],
-            );
-          },
-          error: (error, _) => Column(
-            children: [
-              _CourseListHeader(onLogout: _logout),
-              Expanded(
-                child: CourseEmptyState(
-                  icon: Icons.wifi_off_rounded,
-                  title: 'Could not load courses',
-                  body: error is Failure
-                      ? error.message
-                      : 'Check your connection and try again.',
-                  buttonLabel: 'Retry',
-                  onPressed: () => ref.invalidate(courseListProvider),
+                const _CourseListHeader(),
+                Expanded(
+                  child: CourseEmptyState(
+                    icon: Icons.wifi_off_rounded,
+                    title: 'Could not load courses',
+                    body: error is Failure
+                        ? error.message
+                        : 'Check your connection and try again.',
+                    buttonLabel: 'Retry',
+                    onPressed: () => ref.invalidate(courseListProvider),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          data: (state) => _CourseListContent(
-            controller: _scrollController,
-            searchController: _searchController,
-            state: state,
-            onLogout: _logout,
+              ],
+            ),
+            data: (state) => _CourseListContent(
+              controller: _scrollController,
+              searchController: _searchController,
+              state: state,
+            ),
           ),
         ),
       ),
     );
-  }
-
-  Future<void> _logout() async {
-    await ref.read(authStateProvider.notifier).logout();
-    if (mounted) context.go(AppRoutes.login);
   }
 }
 
@@ -123,13 +119,11 @@ class _CourseListContent extends ConsumerWidget {
     required this.controller,
     required this.searchController,
     required this.state,
-    this.onLogout,
   });
 
   final ScrollController controller;
   final TextEditingController searchController;
   final CourseListState state;
-  final VoidCallback? onLogout;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -145,7 +139,7 @@ class _CourseListContent extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _CourseListHeader(onLogout: onLogout),
+                const _CourseListHeader(),
                 _SearchAndFilters(searchController: searchController),
               ],
             ),
@@ -176,7 +170,10 @@ class _CourseListContent extends ConsumerWidget {
                 separatorBuilder: (_, __) =>
                     const SizedBox(height: AppSizes.md),
                 itemBuilder: (context, index) {
-                  return CourseCard(course: state.filteredCourses[index]);
+                  return AppStaggeredReveal(
+                    index: index,
+                    child: CourseCard(course: state.filteredCourses[index]),
+                  );
                 },
               ),
             ),
@@ -190,9 +187,7 @@ class _CourseListContent extends ConsumerWidget {
 }
 
 class _CourseListHeader extends ConsumerWidget {
-  const _CourseListHeader({this.onLogout});
-
-  final VoidCallback? onLogout;
+  const _CourseListHeader();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -206,50 +201,46 @@ class _CourseListHeader extends ConsumerWidget {
         AppSizes.screenPaddingH,
         AppSizes.lg,
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
+      child: AppSurface(
+        padding: const EdgeInsets.all(AppSizes.md),
+        gradient: AppColors.cardGradient,
+        shadows: AppShadows.md,
+        child: Row(
+          children: [
+            const AppIconTile(
+              icon: Icons.school_rounded,
               gradient: AppColors.primaryGradient,
-              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
             ),
-            child: const Icon(
-              Icons.school_rounded,
-              color: Colors.white,
-              size: AppSizes.iconMd,
+            const SizedBox(width: AppSizes.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    firstName == null || firstName.isEmpty
+                        ? 'Explore courses'
+                        : 'Hi, $firstName',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.headlineMedium,
+                  ),
+                  const SizedBox(height: AppSizes.xs),
+                  const Text(
+                    'Build your Grade 12 exam plan',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTextStyles.bodySmall,
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: AppSizes.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  firstName == null || firstName.isEmpty
-                      ? 'Explore courses'
-                      : 'Hi, $firstName',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.headlineMedium,
-                ),
-                const SizedBox(height: AppSizes.xs),
-                const Text(
-                  'Build your Grade 12 exam plan',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.bodySmall,
-                ),
-              ],
+            const AppBadge(
+              label: 'Grade 12',
+              color: AppColors.warning,
+              icon: Icons.workspace_premium_outlined,
             ),
-          ),
-          IconButton(
-            tooltip: 'Sign out',
-            onPressed: onLogout,
-            icon: const Icon(Icons.logout_rounded),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -302,33 +293,20 @@ class _SearchAndFilters extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: AppSizes.md),
-              SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(value: 11, label: Text('11')),
-                  ButtonSegment(value: 12, label: Text('12')),
-                ],
-                selected: {selectedGrade},
-                onSelectionChanged: (selection) {
-                  ref
-                      .read(courseListProvider.notifier)
-                      .setGrade(selection.first);
-                },
-                style: ButtonStyle(
-                  visualDensity: VisualDensity.compact,
-                  foregroundColor: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return Colors.white;
-                    }
-                    return AppColors.textSecondary;
-                  }),
-                  backgroundColor: WidgetStateProperty.resolveWith((states) {
-                    if (states.contains(WidgetState.selected)) {
-                      return AppColors.accentPrimary;
-                    }
-                    return AppColors.bgTertiary;
-                  }),
-                  side: WidgetStateProperty.all(
-                    const BorderSide(color: AppColors.border),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: SegmentedButton<int>(
+                    segments: const [
+                      ButtonSegment(value: 11, label: Text('11')),
+                      ButtonSegment(value: 12, label: Text('12')),
+                    ],
+                    selected: {selectedGrade},
+                    onSelectionChanged: (selection) {
+                      ref
+                          .read(courseListProvider.notifier)
+                          .setGrade(selection.first);
+                    },
                   ),
                 ),
               ),

@@ -25,14 +25,14 @@ class _SkeletonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Shimmer.fromColors(
-      baseColor: AppColors.bgSecondary,
-      highlightColor: AppColors.bgTertiary,
+      baseColor: AppColors.skeletonBase,
+      highlightColor: AppColors.skeletonHighlight,
       child: Container(
         height: 230,
         decoration: BoxDecoration(
           color: AppColors.bgSecondary,
           borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: AppColors.hairline),
         ),
       ),
     );

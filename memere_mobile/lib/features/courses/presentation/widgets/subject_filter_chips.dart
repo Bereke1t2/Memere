@@ -38,9 +38,11 @@ class SubjectFilterChips extends StatelessWidget {
               color: selected ? Colors.white : AppColors.textSecondary,
             ),
             selectedColor: AppColors.accentPrimary,
-            backgroundColor: AppColors.bgTertiary,
+            backgroundColor: AppColors.bgSecondary,
+            pressElevation: 0,
             side: BorderSide(
-              color: selected ? AppColors.accentPrimary : AppColors.border,
+              color:
+                  selected ? AppColors.borderFocused : AppColors.hairline,
             ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppSizes.radiusFull),

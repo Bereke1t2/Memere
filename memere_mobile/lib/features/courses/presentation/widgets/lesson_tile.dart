@@ -107,7 +107,7 @@ class LessonTile extends StatelessWidget {
         _showMessage(context, 'This lesson does not have a quiz attached yet.');
         return;
       }
-      context.go(AppRoutes.quizDetailPath(lesson.quizId!));
+      context.push(AppRoutes.quizDetailPath(lesson.quizId!));
       return;
     }
 
@@ -121,7 +121,7 @@ class LessonTile extends StatelessWidget {
       return;
     }
 
-    context.go(
+    context.push(
       AppRoutes.videoPlayerPath(
         videoId: lesson.videoId!,
         lessonId: lesson.id,

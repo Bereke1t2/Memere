@@ -2,8 +2,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../shared/widgets/app_surface.dart';
 import '../../domain/entities/course_entity.dart';
 
 class CourseDetailHeader extends StatelessWidget {
@@ -21,35 +23,68 @@ class CourseDetailHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-          child: SizedBox(
-            height: 188,
-            width: double.infinity,
-            child: course.thumbnailUrl == null
-                ? _FallbackHeader(subject: course.subject, color: subjectColor)
-                : CachedNetworkImage(
-                    imageUrl: course.thumbnailUrl!,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => const ColoredBox(
-                      color: AppColors.bgTertiary,
-                    ),
-                    errorWidget: (_, __, ___) => _FallbackHeader(
-                      subject: course.subject,
-                      color: subjectColor,
+        AppSurface(
+          padding: EdgeInsets.zero,
+          radius: AppSizes.radiusLg,
+          shadows: AppShadows.md,
+          child: Stack(
+            children: [
+              SizedBox(
+                height: 212,
+                width: double.infinity,
+                child: course.thumbnailUrl == null
+                    ? _FallbackHeader(
+                        subject: course.subject,
+                        color: subjectColor,
+                      )
+                    : CachedNetworkImage(
+                        imageUrl: course.thumbnailUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => const ColoredBox(
+                          color: AppColors.bgTertiary,
+                        ),
+                        errorWidget: (_, __, ___) => _FallbackHeader(
+                          subject: course.subject,
+                          color: subjectColor,
+                        ),
+                      ),
+              ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        AppColors.bgPrimary.withAlpha(165),
+                      ],
                     ),
                   ),
+                ),
+              ),
+              Positioned(
+                left: AppSizes.md,
+                right: AppSizes.md,
+                bottom: AppSizes.md,
+                child: Wrap(
+                  spacing: AppSizes.sm,
+                  runSpacing: AppSizes.sm,
+                  children: [
+                    AppBadge(label: course.subject, color: subjectColor),
+                    AppBadge(
+                      label: 'Grade ${course.grade}',
+                      color: AppColors.info,
+                    ),
+                    AppBadge(
+                      label: course.levelLabel,
+                      color: AppColors.accentSecondary,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: AppSizes.md),
-        Wrap(
-          spacing: AppSizes.sm,
-          runSpacing: AppSizes.sm,
-          children: [
-            _Chip(label: course.subject, color: subjectColor),
-            _Chip(label: 'Grade ${course.grade}', color: AppColors.info),
-            _Chip(label: course.levelLabel, color: AppColors.accentSecondary),
-          ],
         ),
         const SizedBox(height: AppSizes.md),
         Text(course.title, style: AppTextStyles.headlineLarge),
@@ -92,35 +127,6 @@ class _FallbackHeader extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.label,
-    required this.color,
-  });
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSizes.sm,
-        vertical: AppSizes.xs,
-      ),
-      decoration: BoxDecoration(
-        color: color.withAlpha(28),
-        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-        border: Border.all(color: color.withAlpha(120)),
-      ),
-      child: Text(
-        label,
-        style: AppTextStyles.labelSmall.copyWith(color: color),
       ),
     );
   }

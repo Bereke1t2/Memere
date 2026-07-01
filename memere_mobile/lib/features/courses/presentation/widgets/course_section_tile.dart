@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../domain/entities/course_section_entity.dart';
@@ -26,7 +27,8 @@ class CourseSectionTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.bgSecondary,
         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: AppColors.hairline),
+        boxShadow: AppShadows.sm,
       ),
       clipBehavior: Clip.antiAlias,
       child: Theme(

@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../shared/widgets/app_surface.dart';
 import '../../../../shared/utils/formatters.dart';
 import '../../domain/entities/course_entity.dart';
 
@@ -21,105 +23,120 @@ class CourseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final subjectColor = _subjectColor(course.subject);
 
-    return InkWell(
-      onTap: () => context.go(AppRoutes.courseDetailPath(course.id)),
-      borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.bgSecondary,
-          borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-          border: Border.all(color: AppColors.border),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              height: 116,
-              width: double.infinity,
-              child: course.thumbnailUrl == null
-                  ? _CourseFallbackVisual(
-                      subject: course.subject,
-                      color: subjectColor,
-                    )
-                  : CachedNetworkImage(
-                      imageUrl: course.thumbnailUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (_, __) => const ColoredBox(
-                        color: AppColors.bgTertiary,
-                      ),
-                      errorWidget: (_, __, ___) => _CourseFallbackVisual(
+    return AppSurface(
+      onTap: () => context.push(AppRoutes.courseDetailPath(course.id)),
+      padding: EdgeInsets.zero,
+      gradient: AppColors.cardGradient,
+      radius: AppSizes.radiusLg,
+      shadows: AppShadows.md,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            children: [
+              SizedBox(
+                height: 128,
+                width: double.infinity,
+                child: course.thumbnailUrl == null
+                    ? _CourseFallbackVisual(
                         subject: course.subject,
                         color: subjectColor,
+                      )
+                    : CachedNetworkImage(
+                        imageUrl: course.thumbnailUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => const ColoredBox(
+                          color: AppColors.bgTertiary,
+                        ),
+                        errorWidget: (_, __, ___) => _CourseFallbackVisual(
+                          subject: course.subject,
+                          color: subjectColor,
+                        ),
                       ),
-                    ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppSizes.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      _Badge(
-                        label: course.subject,
-                        color: subjectColor,
-                      ),
-                      const Spacer(),
-                      _Badge(
-                        label: course.priceLabel,
-                        color: course.isFree
-                            ? AppColors.success
-                            : AppColors.accentSecondary,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSizes.sm),
-                  Text(
-                    course.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.titleMedium,
-                  ),
-                  const SizedBox(height: AppSizes.xs),
-                  Text(
-                    course.shortDescription.isNotEmpty
-                        ? course.shortDescription
-                        : course.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodySmall,
-                  ),
-                  const SizedBox(height: AppSizes.md),
-                  Wrap(
-                    spacing: AppSizes.md,
-                    runSpacing: AppSizes.xs,
-                    children: [
-                      _MetaItem(
-                        icon: Icons.menu_book_outlined,
-                        label: course.lessonCountLabel,
-                      ),
-                      _MetaItem(
-                        icon: Icons.schedule_rounded,
-                        label: course.durationLabel,
-                      ),
-                      _MetaItem(
-                        icon: Icons.star_rounded,
-                        label: course.ratingAvg > 0
-                            ? course.ratingAvg.toStringAsFixed(1)
-                            : 'New',
-                      ),
-                      _MetaItem(
-                        icon: Icons.group_outlined,
-                        label: formatCompactCount(course.enrollmentCount),
-                      ),
-                    ],
-                  ),
-                ],
               ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        AppColors.bgPrimary.withAlpha(120),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: AppSizes.sm,
+                right: AppSizes.sm,
+                child: AppBadge(
+                  label: course.priceLabel,
+                  color: course.isFree
+                      ? AppColors.success
+                      : AppColors.accentSecondary,
+                ),
+              ),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.all(AppSizes.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppBadge(
+                  label: course.subject,
+                  color: subjectColor,
+                  icon: Icons.auto_stories_outlined,
+                ),
+                const SizedBox(height: AppSizes.sm),
+                Text(
+                  course.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.titleMedium,
+                ),
+                const SizedBox(height: AppSizes.xs),
+                Text(
+                  course.shortDescription.isNotEmpty
+                      ? course.shortDescription
+                      : course.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.bodySmall,
+                ),
+                const SizedBox(height: AppSizes.md),
+                const Divider(color: AppColors.divider),
+                const SizedBox(height: AppSizes.sm),
+                Wrap(
+                  spacing: AppSizes.md,
+                  runSpacing: AppSizes.xs,
+                  children: [
+                    _MetaItem(
+                      icon: Icons.menu_book_outlined,
+                      label: course.lessonCountLabel,
+                    ),
+                    _MetaItem(
+                      icon: Icons.schedule_rounded,
+                      label: course.durationLabel,
+                    ),
+                    _MetaItem(
+                      icon: Icons.star_rounded,
+                      label: course.ratingAvg > 0
+                          ? course.ratingAvg.toStringAsFixed(1)
+                          : 'New',
+                    ),
+                    _MetaItem(
+                      icon: Icons.group_outlined,
+                      label: formatCompactCount(course.enrollmentCount),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -137,7 +154,17 @@ class _CourseFallbackVisual extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: color.withAlpha(35),
+      decoration: BoxDecoration(
+        color: color.withAlpha(28),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withAlpha(44),
+            AppColors.bgTertiary,
+          ],
+        ),
+      ),
       alignment: Alignment.center,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -149,37 +176,6 @@ class _CourseFallbackVisual extends StatelessWidget {
             style: AppTextStyles.labelLarge.copyWith(color: color),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  const _Badge({
-    required this.label,
-    required this.color,
-  });
-
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSizes.sm,
-        vertical: AppSizes.xs,
-      ),
-      decoration: BoxDecoration(
-        color: color.withAlpha(28),
-        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-        border: Border.all(color: color.withAlpha(120)),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: AppTextStyles.labelSmall.copyWith(color: color),
       ),
     );
   }

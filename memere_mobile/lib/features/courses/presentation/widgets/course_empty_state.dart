@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../shared/widgets/app_button.dart';
@@ -35,7 +36,8 @@ class CourseEmptyState extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.bgTertiary,
                 borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: AppColors.hairline),
+                boxShadow: AppShadows.sm,
               ),
               child: Icon(icon, color: AppColors.accentPrimary),
             ),
