@@ -26,6 +26,10 @@ abstract class AppConstants {
   // ── Exam ─────────────────────────────────────────────────────────────────
   static const int examAutoSaveIntervalSeconds = 30;
 
+  // ── Payments ─────────────────────────────────────────────────────────────
+  static const int paymentPollIntervalSeconds = 3;
+  static const int paymentPollTimeoutSeconds = 120;
+
   // ── Connectivity ─────────────────────────────────────────────────────────
   static const Duration connectionTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
