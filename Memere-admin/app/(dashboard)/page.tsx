@@ -56,11 +56,11 @@ async function AdminDashboardContent({ from, to }: { from: string; to: string })
         <KpiCards data={overview} />
       </section>
       <section className="flex flex-col gap-3">
-        <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Engagement</p>
+        <p className="text-sm font-semibold text-muted-foreground">Engagement</p>
         <Engagement data={engagement} />
       </section>
       <section className="flex flex-col gap-3">
-        <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Revenue Breakdown</p>
+        <p className="text-sm font-semibold text-muted-foreground">Revenue Breakdown</p>
         <RevenueBar data={breakdown} />
       </section>
     </div>
@@ -104,7 +104,7 @@ export default async function DashboardPage({
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Platform overview and analytics</p>
         </div>
         <DateRange from={from} to={to} />

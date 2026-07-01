@@ -57,7 +57,7 @@ export function DateRange({ from, to }: DateRangeProps) {
             onClick={() => apply(p.days)}
             className={
               active
-                ? "rounded-md bg-foreground text-background h-7 px-3 text-xs font-medium transition-colors"
+                ? "rounded-md bg-primary text-primary-foreground h-7 px-3 text-xs font-medium transition-colors"
                 : "rounded-md text-muted-foreground hover:text-foreground hover:bg-muted h-7 px-3 text-xs font-medium transition-colors"
             }
           >

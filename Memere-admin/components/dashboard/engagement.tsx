@@ -19,7 +19,7 @@ export function Engagement({ data }: EngagementProps) {
         const pct = value(data);
         const width = Math.min(100, Math.max(0, pct * 100));
         return (
-          <Card key={title} className="border shadow-none">
+          <Card key={title}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm text-muted-foreground">{title}</p>
@@ -34,7 +34,7 @@ export function Engagement({ data }: EngagementProps) {
                 aria-label={title}
               >
                 <div
-                  className="h-full rounded-full bg-foreground transition-all duration-700"
+                  className="h-full rounded-full bg-primary transition-all duration-700"
                   style={{ width: `${width}%` }}
                 />
               </div>
