@@ -19,7 +19,7 @@ export function Sidebar({ appName = "Memere", role }: SidebarProps) {
     <>
       <aside
         className={cn(
-          "hidden md:flex flex-col transition-all duration-200",
+          "hidden md:flex flex-col transition-all duration-200 shadow-2xl shadow-emerald-950/20",
           collapsed ? "w-16" : "w-[220px]"
         )}
         style={{ background: "hsl(var(--sidebar-bg))", color: "hsl(var(--sidebar-fg))" }}
@@ -28,8 +28,8 @@ export function Sidebar({ appName = "Memere", role }: SidebarProps) {
           className={cn("flex h-16 items-center border-b px-3", collapsed ? "justify-center" : "justify-start")}
           style={{ borderColor: "hsl(var(--sidebar-border))" }}
         >
-          <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center shrink-0">
-            <GraduationCap className="h-4 w-4 text-white" />
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 shadow-sm shadow-emerald-950/30">
+            <GraduationCap className="h-4 w-4 text-primary-foreground" />
           </div>
           {!collapsed && (
             <span className="font-semibold text-sm ml-2.5 truncate" style={{ color: "hsl(var(--sidebar-fg))" }}>
@@ -50,7 +50,7 @@ export function Sidebar({ appName = "Memere", role }: SidebarProps) {
             size="icon"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             onClick={() => setCollapsed((c) => !c)}
-            className="hover:text-white"
+            className="hover:bg-sidebar-hover-bg hover:text-sidebar-fg"
             style={{ color: "hsl(var(--sidebar-muted))" }}
           >
             {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
@@ -83,8 +83,8 @@ export function MobileSidebar({
           className="flex h-16 items-center border-b px-3"
           style={{ borderColor: "hsl(var(--sidebar-border))" }}
         >
-          <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center shrink-0">
-            <GraduationCap className="h-4 w-4 text-white" />
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shrink-0 shadow-sm shadow-emerald-950/30">
+            <GraduationCap className="h-4 w-4 text-primary-foreground" />
           </div>
           <span className="font-semibold text-sm ml-2.5 truncate" style={{ color: "hsl(var(--sidebar-fg))" }}>
             {appName}

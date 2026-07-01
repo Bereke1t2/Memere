@@ -58,7 +58,7 @@ export function Header({ user, onMenuClick }: HeaderProps) {
   }
 
   return (
-    <header className="flex h-14 shrink-0 items-center border-b bg-background px-4 gap-3">
+    <header className="flex h-14 shrink-0 items-center border-b bg-card/90 px-4 gap-3 shadow-sm shadow-emerald-950/5 backdrop-blur">
       <Button
         variant="ghost"
         size="icon"
@@ -93,7 +93,7 @@ export function Header({ user, onMenuClick }: HeaderProps) {
             aria-label="Open user menu"
           >
             <Avatar className="h-8 w-8">
-              <AvatarFallback className="h-8 w-8 bg-foreground text-background text-xs font-semibold">
+              <AvatarFallback className="h-8 w-8 bg-primary text-primary-foreground text-xs font-semibold">
                 {initials(user)}
               </AvatarFallback>
             </Avatar>
@@ -107,7 +107,7 @@ export function Header({ user, onMenuClick }: HeaderProps) {
                   {user.first_name} {user.last_name}
                 </span>
                 <span className="shrink-0 rounded border text-xs px-1.5 py-0.5 text-muted-foreground">
-                  Admin
+                  {user.role}
                 </span>
               </div>
               <span className="text-xs text-muted-foreground truncate">{user.email}</span>

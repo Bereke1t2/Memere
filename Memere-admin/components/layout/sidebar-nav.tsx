@@ -52,8 +52,8 @@ export function SidebarNav({ collapsed, role }: SidebarNavProps) {
             className={cn(
               "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               isActive
-                ? "bg-white text-zinc-900"
-                : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100",
+                ? "bg-sidebar-active-bg text-sidebar-active-fg shadow-sm"
+                : "text-sidebar-muted hover:bg-sidebar-hover-bg hover:text-sidebar-fg",
               collapsed && "justify-center px-0 w-10 h-10 mx-auto"
             )}
           >
