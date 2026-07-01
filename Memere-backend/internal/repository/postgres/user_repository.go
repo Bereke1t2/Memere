@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,9 +13,9 @@ import (
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
-	"github.com/Bereke1t2/Memere/memere-backend/pkg/pagination"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/repository/postgres/sqlcgen"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
+	"github.com/Bereke1t2/Memere/memere-backend/pkg/pagination"
 )
 
 // uniqueViolation is the PostgreSQL SQLSTATE for a unique_violation. We map the
@@ -156,13 +157,87 @@ func userFromRow(row sqlcgen.AuthUser) *entity.User {
 	}
 }
 
-// List returns users matching filter (admin use). Full-scan with simple OFFSET
-// pagination — acceptable for admin tools with bounded result sets.
-// Phase 6 will add cursor-based pagination with a composite index.
-func (r *UserRepo) List(_ context.Context, _ repository.AdminUserFilter, _ *pagination.Cursor, _ int) ([]*entity.User, *pagination.Cursor, error) {
-	// Stub: full implementation requires a dynamic SQL builder.
-	// Admin HTTP handler drives this; the filter logic will be added in Skill 5.
-	return nil, nil, nil
+// List returns users matching filter (admin use), newest first.
+func (r *UserRepo) List(ctx context.Context, filter repository.AdminUserFilter, cursor *pagination.Cursor, limit int) ([]*entity.User, *pagination.Cursor, error) {
+	limit = pagination.NormalizeLimit(limit)
+
+	var (
+		where []string
+		args  []any
+	)
+	where = append(where, "deleted_at IS NULL")
+
+	if filter.Role != nil && *filter.Role != "" {
+		args = append(args, *filter.Role)
+		where = append(where, "role = $"+itoa(len(args)))
+	}
+	if filter.IsActive != nil {
+		args = append(args, *filter.IsActive)
+		where = append(where, "is_active = $"+itoa(len(args)))
+	}
+	if filter.Email != nil && *filter.Email != "" {
+		args = append(args, "%"+strings.ToLower(*filter.Email)+"%")
+		where = append(where, "LOWER(email) LIKE $"+itoa(len(args)))
+	}
+	if cursor != nil {
+		args = append(args, pgTimestamptzValue(cursor.CreatedAt), toPgUUID(cursor.ID))
+		where = append(where, "(created_at, id) < ($"+itoa(len(args)-1)+", $"+itoa(len(args))+")")
+	}
+
+	args = append(args, int32(limit+1))
+	query := `
+SELECT id, email, phone, password_hash, role, first_name, last_name, avatar_url,
+       is_active, is_email_verified, email_verification_token,
+       password_reset_token, password_reset_expires_at, last_login_at,
+       created_at, updated_at, deleted_at
+FROM auth.users
+WHERE ` + strings.Join(where, " AND ") + `
+ORDER BY created_at DESC, id DESC
+LIMIT $` + itoa(len(args))
+
+	rows, err := r.pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, nil, apperror.Internal(err)
+	}
+	defer rows.Close()
+
+	users := make([]*entity.User, 0, limit+1)
+	for rows.Next() {
+		var row sqlcgen.AuthUser
+		if err := rows.Scan(
+			&row.ID,
+			&row.Email,
+			&row.Phone,
+			&row.PasswordHash,
+			&row.Role,
+			&row.FirstName,
+			&row.LastName,
+			&row.AvatarUrl,
+			&row.IsActive,
+			&row.IsEmailVerified,
+			&row.EmailVerificationToken,
+			&row.PasswordResetToken,
+			&row.PasswordResetExpiresAt,
+			&row.LastLoginAt,
+			&row.CreatedAt,
+			&row.UpdatedAt,
+			&row.DeletedAt,
+		); err != nil {
+			return nil, nil, apperror.Internal(err)
+		}
+		users = append(users, userFromRow(row))
+	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, apperror.Internal(err)
+	}
+
+	var next *pagination.Cursor
+	if len(users) > limit {
+		last := users[limit-1]
+		next = &pagination.Cursor{CreatedAt: last.CreatedAt, ID: last.ID}
+		users = users[:limit]
+	}
+	return users, next, nil
 }
 
 // CountByRole returns the number of active (non-deleted, non-suspended) users
