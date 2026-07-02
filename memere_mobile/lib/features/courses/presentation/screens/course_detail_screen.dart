@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_motion.dart';
 import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
@@ -24,7 +25,7 @@ import '../widgets/course_empty_state.dart';
 import '../widgets/course_section_tile.dart';
 import '../widgets/course_stats_row.dart';
 
-class CourseDetailScreen extends ConsumerWidget {
+class CourseDetailScreen extends ConsumerStatefulWidget {
   const CourseDetailScreen({
     super.key,
     required this.courseId,
@@ -33,16 +34,22 @@ class CourseDetailScreen extends ConsumerWidget {
   final String courseId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CourseDetailScreen> createState() => _CourseDetailScreenState();
+}
+
+class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
+  int _selectedTab = 0;
+
+  String get courseId => widget.courseId;
+
+  @override
+  Widget build(BuildContext context) {
     final detailAsync = ref.watch(courseDetailProvider(courseId));
     final accessAsync = ref.watch(courseAccessProvider(courseId));
     final hasAccess = accessAsync.valueOrNull?.hasAccess ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      appBar: AppBar(
-        title: const Text('Course detail'),
-      ),
       bottomNavigationBar: detailAsync.maybeWhen(
         data: (detail) => _CheckoutCtaBar(
           course: detail.course,
@@ -73,7 +80,6 @@ class CourseDetailScreen extends ConsumerWidget {
               );
             },
             data: (detail) {
-              final course = detail.course;
               return RefreshIndicator(
                 color: AppColors.accentPrimary,
                 backgroundColor: AppColors.bgSecondary,
@@ -84,66 +90,344 @@ class CourseDetailScreen extends ConsumerWidget {
                 },
                 child: ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSizes.screenPaddingH,
-                    AppSizes.md,
-                    AppSizes.screenPaddingH,
-                    AppSizes.xl,
-                  ),
+                  padding: EdgeInsets.zero,
                   children: [
-                    CourseDetailHeader(course: course),
-                    const SizedBox(height: AppSizes.lg),
-                    CourseStatsRow(course: course),
-                    const SizedBox(height: AppSizes.lg),
-                    _PriceBand(
-                      label: course.priceLabel,
-                      isFree: course.isFree,
+                    _DetailTopBand(title: detail.course.title),
+                    _DetailContent(
+                      detail: detail,
                       hasAccess: hasAccess,
+                      selectedTab: _selectedTab,
+                      onTabChanged: (index) {
+                        setState(() => _selectedTab = index);
+                      },
                     ),
-                    const SizedBox(height: AppSizes.lg),
-                    const AppSectionHeader(title: 'About course'),
-                    const SizedBox(height: AppSizes.sm),
-                    Text(
-                      course.description.isNotEmpty
-                          ? course.description
-                          : course.shortDescription,
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSizes.lg),
-                    AppSectionHeader(
-                      title: 'Curriculum',
-                      subtitle: detail.sections.isEmpty
-                          ? null
-                          : '${detail.sections.length} sections',
-                    ),
-                    const SizedBox(height: AppSizes.md),
-                    if (detail.sections.isEmpty)
-                      const CourseEmptyState(
-                        icon: Icons.menu_book_outlined,
-                        title: 'No curriculum yet',
-                        body:
-                            'Lessons will appear here when this course is ready.',
-                      )
-                    else
-                      ...detail.sections.asMap().entries.map(
-                            (entry) => Padding(
-                              padding:
-                                  const EdgeInsets.only(bottom: AppSizes.md),
-                              child: CourseSectionTile(
-                                section: entry.value,
-                                sectionNumber: entry.key + 1,
-                                initiallyExpanded: entry.key == 0,
-                                canOpenLessons: course.isFree || hasAccess,
-                              ),
-                            ),
-                          ),
                   ],
                 ),
               );
             },
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailTopBand extends StatelessWidget {
+  const _DetailTopBand({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final topPadding = MediaQuery.paddingOf(context).top;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        AppSizes.screenPaddingH,
+        topPadding + AppSizes.sm,
+        AppSizes.screenPaddingH,
+        AppSizes.lg,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.bgSecondary,
+        borderRadius: BorderRadius.vertical(
+          bottom: Radius.circular(AppSizes.radiusLg),
+        ),
+        border: Border(
+          bottom: BorderSide(color: AppColors.borderStrong),
+        ),
+      ),
+      child: Row(
+        children: [
+          _TopIconButton(
+            icon: Icons.arrow_back_ios_new_rounded,
+            onTap: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go(AppRoutes.home);
+              }
+            },
+          ),
+          const SizedBox(width: AppSizes.md),
+          Expanded(
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.titleLarge,
+            ),
+          ),
+          const SizedBox(width: AppSizes.md),
+          _TopIconButton(
+            icon: Icons.more_horiz_rounded,
+            onTap: () {},
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TopIconButton extends StatelessWidget {
+  const _TopIconButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppPressable(
+      onTap: onTap,
+      borderRadius: AppSizes.radiusFull,
+      child: Container(
+        width: 36,
+        height: 36,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.bgTertiary,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.borderStrong),
+        ),
+        child:
+            Icon(icon, color: AppColors.textSecondary, size: AppSizes.iconSm),
+      ),
+    );
+  }
+}
+
+class _DetailContent extends StatelessWidget {
+  const _DetailContent({
+    required this.detail,
+    required this.hasAccess,
+    required this.selectedTab,
+    required this.onTabChanged,
+  });
+
+  final CourseDetailEntity detail;
+  final bool hasAccess;
+  final int selectedTab;
+  final ValueChanged<int> onTabChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final course = detail.course;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        AppSizes.screenPaddingH,
+        AppSizes.md,
+        AppSizes.screenPaddingH,
+        AppSizes.xxxl + AppSizes.buttonHeight + bottomInset,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.bgPrimary,
+        borderRadius: BorderRadius.zero,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CourseDetailHeader(course: course),
+          const SizedBox(height: AppSizes.md),
+          CourseStatsRow(course: course),
+          const SizedBox(height: AppSizes.md),
+          _PriceBand(
+            label: course.priceLabel,
+            isFree: course.isFree,
+            hasAccess: hasAccess,
+          ),
+          const SizedBox(height: AppSizes.md),
+          _DetailTabs(
+            selectedIndex: selectedTab,
+            onChanged: onTabChanged,
+          ),
+          const SizedBox(height: AppSizes.md),
+          AnimatedSwitcher(
+            duration: AppMotion.slow,
+            switchInCurve: AppMotion.standard,
+            switchOutCurve: AppMotion.exit,
+            child: selectedTab == 0
+                ? _CurriculumTab(
+                    key: const ValueKey('classes'),
+                    detail: detail,
+                    canOpenLessons: course.isFree || hasAccess,
+                  )
+                : _DescriptionTab(
+                    key: const ValueKey('description'),
+                    course: course,
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailTabs extends StatelessWidget {
+  const _DetailTabs({
+    required this.selectedIndex,
+    required this.onChanged,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: AppColors.bgTertiary,
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+        border: Border.all(color: AppColors.borderStrong),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final width = constraints.maxWidth / 2;
+          return Stack(
+            children: [
+              AnimatedPositioned(
+                duration: AppMotion.base,
+                curve: AppMotion.standard,
+                left: selectedIndex * width,
+                top: 4,
+                bottom: 4,
+                width: width,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.textPrimary.withAlpha(28),
+                    borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                    boxShadow: AppShadows.sm,
+                  ),
+                ),
+              ),
+              Row(
+                children: [
+                  _TabButton(
+                    label: 'All Classes',
+                    selected: selectedIndex == 0,
+                    onTap: () => onChanged(0),
+                  ),
+                  _TabButton(
+                    label: 'Description',
+                    selected: selectedIndex == 1,
+                    onTap: () => onChanged(1),
+                  ),
+                ],
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  const _TabButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: AppPressable(
+        onTap: onTap,
+        borderRadius: AppSizes.radiusFull,
+        child: Center(
+          child: AnimatedDefaultTextStyle(
+            duration: AppMotion.base,
+            style: AppTextStyles.labelMedium.copyWith(
+              color: selected ? AppColors.textPrimary : AppColors.textSecondary,
+            ),
+            child: Text(label),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CurriculumTab extends StatelessWidget {
+  const _CurriculumTab({
+    super.key,
+    required this.detail,
+    required this.canOpenLessons,
+  });
+
+  final CourseDetailEntity detail;
+  final bool canOpenLessons;
+
+  @override
+  Widget build(BuildContext context) {
+    if (detail.sections.isEmpty) {
+      return const CourseEmptyState(
+        icon: Icons.menu_book_outlined,
+        title: 'No curriculum yet',
+        body: 'Lessons will appear here when this course is ready.',
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppSectionHeader(
+          title: 'All Classes',
+          subtitle: '${detail.sections.length} sections',
+        ),
+        const SizedBox(height: AppSizes.md),
+        ...detail.sections.asMap().entries.map(
+              (entry) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSizes.md),
+                child: CourseSectionTile(
+                  section: entry.value,
+                  sectionNumber: entry.key + 1,
+                  initiallyExpanded: entry.key == 0,
+                  canOpenLessons: canOpenLessons,
+                ),
+              ),
+            ),
+      ],
+    );
+  }
+}
+
+class _DescriptionTab extends StatelessWidget {
+  const _DescriptionTab({
+    super.key,
+    required this.course,
+  });
+
+  final CourseEntity course;
+
+  @override
+  Widget build(BuildContext context) {
+    final description = course.description.isNotEmpty
+        ? course.description
+        : course.shortDescription;
+
+    return AppSurface(
+      padding: const EdgeInsets.all(AppSizes.lg),
+      color: AppColors.bgSecondary,
+      radius: AppSizes.radiusXl,
+      shadows: AppShadows.sm,
+      child: Text(
+        description.isNotEmpty
+            ? description
+            : 'Course details will appear here when this class is ready.',
+        style: AppTextStyles.bodyMedium.copyWith(
+          color: AppColors.textSecondary,
         ),
       ),
     );
@@ -180,58 +464,66 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
       top: false,
       child: AppSurface(
         padding: const EdgeInsets.all(AppSizes.md),
-        radius: AppSizes.radiusLg,
+        radius: AppSizes.radiusXl,
         color: AppColors.bgSecondary,
         shadows: AppShadows.lg,
-        child: accessAsync.when(
-          loading: () => const AppButton(
-            label: 'Checking access…',
-            onPressed: null,
-            isLoading: true,
-          ),
-          error: (_, __) => AppButton(
-            label: 'Retry',
-            variant: AppButtonVariant.outline,
-            onPressed: () => ref.invalidate(courseAccessProvider(_courseId)),
-          ),
-          data: (access) {
-            if (access.hasAccess) {
-              return AppButton(
-                label: 'Continue learning',
-                onPressed: _continueLearning,
-                suffixIcon: Icons.play_arrow_rounded,
-              );
-            }
-            if (widget.course.isFree) {
-              return AppButton(
-                label: 'Start learning',
-                isLoading: busy,
-                onPressed: busy ? null : _startFree,
-                suffixIcon: Icons.arrow_forward_rounded,
-              );
-            }
-            // Surface an in-flight payment so the user can resume verification.
-            final latestPayment =
-                ref.watch(latestCoursePaymentProvider(_courseId));
-            if (latestPayment != null && latestPayment.isPending) {
-              return AppButton(
-                label: 'Payment pending',
-                variant: AppButtonVariant.secondary,
-                onPressed: () => context.push(
-                  AppRoutes.paymentResultPath(
-                    paymentId: latestPayment.paymentId,
-                    courseId: _courseId,
-                  ),
+        child: Row(
+          children: [
+            const _BookmarkAction(),
+            const SizedBox(width: AppSizes.md),
+            Expanded(
+              child: accessAsync.when(
+                loading: () => const AppButton(
+                  label: 'Checking access...',
+                  onPressed: null,
+                  isLoading: true,
                 ),
-              );
-            }
-            return AppButton(
-              label: 'Enroll for ${widget.course.priceLabel}',
-              isLoading: busy,
-              onPressed: busy ? null : _startPaid,
-              suffixIcon: Icons.arrow_forward_rounded,
-            );
-          },
+                error: (_, __) => AppButton(
+                  label: 'Retry',
+                  variant: AppButtonVariant.outline,
+                  onPressed: () =>
+                      ref.invalidate(courseAccessProvider(_courseId)),
+                ),
+                data: (access) {
+                  if (access.hasAccess) {
+                    return AppButton(
+                      label: 'Continue Learning',
+                      onPressed: _continueLearning,
+                      suffixIcon: Icons.play_arrow_rounded,
+                    );
+                  }
+                  if (widget.course.isFree) {
+                    return AppButton(
+                      label: 'Start Learning',
+                      isLoading: busy,
+                      onPressed: busy ? null : _startFree,
+                      suffixIcon: Icons.arrow_forward_rounded,
+                    );
+                  }
+                  final latestPayment =
+                      ref.watch(latestCoursePaymentProvider(_courseId));
+                  if (latestPayment != null && latestPayment.isPending) {
+                    return AppButton(
+                      label: 'Payment Pending',
+                      variant: AppButtonVariant.secondary,
+                      onPressed: () => context.push(
+                        AppRoutes.paymentResultPath(
+                          paymentId: latestPayment.paymentId,
+                          courseId: _courseId,
+                        ),
+                      ),
+                    );
+                  }
+                  return AppButton(
+                    label: 'Enroll for ${widget.course.priceLabel}',
+                    isLoading: busy,
+                    onPressed: busy ? null : _startPaid,
+                    suffixIcon: Icons.arrow_forward_rounded,
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -326,6 +618,37 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
   }
 }
 
+class _BookmarkAction extends StatelessWidget {
+  const _BookmarkAction();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppPressable(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Saved for later.')),
+        );
+      },
+      borderRadius: AppSizes.radiusFull,
+      child: Container(
+        width: AppSizes.buttonHeight,
+        height: AppSizes.buttonHeight,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.bgTertiary,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.border),
+        ),
+        child: const Icon(
+          Icons.bookmark_border_rounded,
+          color: AppColors.accentPrimary,
+          size: AppSizes.iconMd,
+        ),
+      ),
+    );
+  }
+}
+
 class _PriceBand extends StatelessWidget {
   const _PriceBand({
     required this.label,
@@ -362,6 +685,9 @@ class _PriceBand extends StatelessWidget {
 
     return AppSurface(
       padding: const EdgeInsets.all(AppSizes.md),
+      radius: AppSizes.radiusXl,
+      color: AppColors.bgSecondary,
+      borderColor: AppColors.border,
       shadows: AppShadows.sm,
       child: Row(
         children: [
@@ -378,7 +704,12 @@ class _PriceBand extends StatelessWidget {
               children: [
                 Text(title, style: AppTextStyles.titleMedium),
                 const SizedBox(height: AppSizes.xs),
-                Text(body, style: AppTextStyles.bodySmall),
+                Text(
+                  body,
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
               ],
             ),
           ),
