@@ -66,8 +66,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.school_rounded,
-                      size: 44, color: Colors.white),
+                  child: const Icon(
+                    Icons.school_rounded,
+                    size: 44,
+                    color: AppColors.textInverse,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 const Text('Memere', style: AppTextStyles.displayMedium),
