@@ -12,6 +12,7 @@ const phase2Subjects = [
   'Chemistry',
   'Biology',
   'English',
+  'Civics',
   'History',
   'Geography',
   'Economics',

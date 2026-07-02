@@ -15,13 +15,14 @@ abstract class AppTheme {
       colorScheme: const ColorScheme.dark(
         primary: AppColors.accentPrimary,
         secondary: AppColors.accentSecondary,
+        tertiary: AppColors.accentTertiary,
         surface: AppColors.bgSecondary,
         surfaceContainerHighest: AppColors.bgTertiary,
         error: AppColors.error,
-        onPrimary: Colors.white,
+        onPrimary: AppColors.textInverse,
         onSecondary: AppColors.textInverse,
         onSurface: AppColors.textPrimary,
-        onError: AppColors.textPrimary,
+        onError: AppColors.textInverse,
       ),
       splashColor: AppColors.pressedOverlay,
       highlightColor: AppColors.pressedOverlay,
@@ -39,6 +40,7 @@ abstract class AppTheme {
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
         ),
       ),
 
@@ -101,10 +103,10 @@ abstract class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.accentPrimary,
-          foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, AppSizes.buttonHeight),
+          foregroundColor: AppColors.textInverse,
+          minimumSize: const Size(0, AppSizes.buttonHeight),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+            borderRadius: BorderRadius.circular(AppSizes.radiusFull),
           ),
           elevation: 0,
           shadowColor: Colors.transparent,
@@ -117,10 +119,10 @@ abstract class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.accentPrimary,
-          minimumSize: const Size(double.infinity, AppSizes.buttonHeight),
+          minimumSize: const Size(0, AppSizes.buttonHeight),
           side: const BorderSide(color: AppColors.borderFocused),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+            borderRadius: BorderRadius.circular(AppSizes.radiusFull),
           ),
           textStyle: AppTextStyles.labelLarge,
           surfaceTintColor: Colors.transparent,
@@ -147,14 +149,14 @@ abstract class AppTheme {
           (states) => IconThemeData(
             size: AppSizes.iconMd,
             color: states.contains(WidgetState.selected)
-                ? AppColors.success
+                ? AppColors.accentPrimary
                 : AppColors.textSecondary,
           ),
         ),
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => AppTextStyles.labelSmall.copyWith(
             color: states.contains(WidgetState.selected)
-                ? AppColors.success
+                ? AppColors.accentPrimary
                 : AppColors.textSecondary,
           ),
         ),
@@ -175,7 +177,7 @@ abstract class AppTheme {
         selectedColor: AppColors.accentGlow,
         labelStyle: AppTextStyles.labelSmall,
         secondaryLabelStyle:
-            AppTextStyles.labelSmall.copyWith(color: Colors.white),
+            AppTextStyles.labelSmall.copyWith(color: AppColors.textInverse),
         side: const BorderSide(color: AppColors.border),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppSizes.radiusFull),
@@ -232,12 +234,14 @@ abstract class AppTheme {
             ),
           ),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) return Colors.white;
+            if (states.contains(WidgetState.selected)) {
+              return AppColors.textInverse;
+            }
             return AppColors.textSecondary;
           }),
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.selected)) {
-              return AppColors.accentPrimaryDeep;
+              return AppColors.accentPrimary;
             }
             return AppColors.bgSecondary;
           }),

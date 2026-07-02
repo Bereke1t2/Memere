@@ -17,6 +17,7 @@ import '../../features/payment/presentation/screens/payment_result_screen.dart';
 import '../../features/payment/presentation/screens/payment_webview_screen.dart';
 import '../../features/payment/presentation/screens/purchase_history_screen.dart';
 import '../../features/payment/presentation/screens/subscription_plans_screen.dart';
+import '../../features/saved/presentation/screens/saved_screen.dart';
 import '../../features/quiz/presentation/screens/quiz_attempt_screen.dart';
 import '../../features/quiz/presentation/screens/quiz_detail_screen.dart';
 import '../../features/quiz/presentation/screens/quiz_result_screen.dart';
@@ -30,6 +31,7 @@ abstract class AppRoutes {
   static const register = '/register';
   static const home = '/home';
   static const learn = '/learn';
+  static const saved = '/saved';
   static const profile = '/profile';
   static const courseDetail = '/courses/:courseId';
   static const videoPlayer = '/videos/:videoId';
@@ -181,6 +183,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutes.mockExams,
                 builder: (_, __) => const MockExamCatalogScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.saved,
+                builder: (_, __) => const SavedScreen(),
               ),
             ],
           ),

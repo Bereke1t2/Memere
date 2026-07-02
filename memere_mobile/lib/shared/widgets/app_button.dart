@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_motion.dart';
 import '../../core/constants/app_shadows.dart';
@@ -54,7 +55,7 @@ class _AppButtonState extends State<AppButton> {
       onTapCancel: _disabled ? null : () => _setPressed(false),
       onTapUp: _disabled ? null : (_) => _setPressed(false),
       child: AnimatedScale(
-        scale: _pressed ? 0.985 : 1,
+        scale: _pressed ? 0.95 : 1,
         duration: AppMotion.fast,
         curve: AppMotion.standard,
         child: SizedBox(
@@ -67,47 +68,60 @@ class _AppButtonState extends State<AppButton> {
   }
 
   Widget _buildButton(bool disabled) {
+    final onPressed = disabled ? null : _withHaptic(widget.onPressed);
     switch (widget.variant) {
       case AppButtonVariant.primary:
         return _PrimaryButton(
           label: widget.label,
-          onPressed: disabled ? null : widget.onPressed,
+          onPressed: onPressed,
           isLoading: widget.isLoading,
           prefixIcon: widget.prefixIcon,
           suffixIcon: widget.suffixIcon,
+          height: widget.height,
         );
       case AppButtonVariant.secondary:
         return _SecondaryButton(
           label: widget.label,
-          onPressed: disabled ? null : widget.onPressed,
+          onPressed: onPressed,
           isLoading: widget.isLoading,
           prefixIcon: widget.prefixIcon,
           suffixIcon: widget.suffixIcon,
+          height: widget.height,
         );
       case AppButtonVariant.outline:
         return _OutlineButton(
           label: widget.label,
-          onPressed: disabled ? null : widget.onPressed,
+          onPressed: onPressed,
           isLoading: widget.isLoading,
           prefixIcon: widget.prefixIcon,
           suffixIcon: widget.suffixIcon,
+          height: widget.height,
         );
       case AppButtonVariant.ghost:
         return _GhostButton(
           label: widget.label,
-          onPressed: disabled ? null : widget.onPressed,
+          onPressed: onPressed,
           prefixIcon: widget.prefixIcon,
           suffixIcon: widget.suffixIcon,
         );
       case AppButtonVariant.danger:
         return _DangerButton(
           label: widget.label,
-          onPressed: disabled ? null : widget.onPressed,
+          onPressed: onPressed,
           isLoading: widget.isLoading,
           prefixIcon: widget.prefixIcon,
           suffixIcon: widget.suffixIcon,
+          height: widget.height,
         );
     }
+  }
+
+  VoidCallback? _withHaptic(VoidCallback? onPressed) {
+    if (onPressed == null) return null;
+    return () {
+      HapticFeedback.selectionClick();
+      onPressed();
+    };
   }
 }
 
@@ -118,7 +132,7 @@ class _ButtonContent extends StatelessWidget {
     this.isLoading = false,
     this.prefixIcon,
     this.suffixIcon,
-    this.loadingColor = Colors.white,
+    this.loadingColor = AppColors.textPrimary,
   });
 
   final String label;
@@ -170,12 +184,14 @@ class _PrimaryButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     required this.isLoading,
+    required this.height,
     this.prefixIcon,
     this.suffixIcon,
   });
   final String label;
   final VoidCallback? onPressed;
   final bool isLoading;
+  final double height;
   final IconData? prefixIcon;
   final IconData? suffixIcon;
 
@@ -183,10 +199,11 @@ class _PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        gradient: onPressed != null ? AppColors.primaryGradient : null,
-        color: onPressed == null ? AppColors.textDisabled : null,
-        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        boxShadow: onPressed != null ? AppShadows.accentGlow : null,
+        color: onPressed != null
+            ? AppColors.accentPrimary
+            : AppColors.bgQuaternary,
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+        boxShadow: onPressed != null ? AppShadows.sm : null,
       ),
       child: ElevatedButton(
         onPressed: onPressed,
@@ -194,15 +211,19 @@ class _PrimaryButton extends StatelessWidget {
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+            borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+            side: BorderSide.none,
           ),
+          minimumSize: Size(0, height),
+          padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
         ),
         child: _ButtonContent(
           label: label,
-          labelColor: Colors.white,
+          labelColor: AppColors.textInverse,
           isLoading: isLoading,
           prefixIcon: prefixIcon,
           suffixIcon: suffixIcon,
+          loadingColor: AppColors.textInverse,
         ),
       ),
     );
@@ -214,12 +235,14 @@ class _SecondaryButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     required this.isLoading,
+    required this.height,
     this.prefixIcon,
     this.suffixIcon,
   });
   final String label;
   final VoidCallback? onPressed;
   final bool isLoading;
+  final double height;
   final IconData? prefixIcon;
   final IconData? suffixIcon;
 
@@ -229,9 +252,11 @@ class _SecondaryButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.bgTertiary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-            side: const BorderSide(color: AppColors.hairline),
+            borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+            side: const BorderSide(color: AppColors.borderStrong),
           ),
+          minimumSize: Size(0, height),
+          padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
         ),
         child: _ButtonContent(
           label: label,
@@ -248,18 +273,24 @@ class _OutlineButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     required this.isLoading,
+    required this.height,
     this.prefixIcon,
     this.suffixIcon,
   });
   final String label;
   final VoidCallback? onPressed;
   final bool isLoading;
+  final double height;
   final IconData? prefixIcon;
   final IconData? suffixIcon;
 
   @override
   Widget build(BuildContext context) => OutlinedButton(
         onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          minimumSize: Size(0, height),
+          padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
+        ),
         child: _ButtonContent(
           label: label,
           labelColor: AppColors.accentPrimary,
@@ -300,20 +331,25 @@ class _DangerButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     required this.isLoading,
+    required this.height,
     this.prefixIcon,
     this.suffixIcon,
   });
   final String label;
   final VoidCallback? onPressed;
   final bool isLoading;
+  final double height;
   final IconData? prefixIcon;
   final IconData? suffixIcon;
 
   @override
   Widget build(BuildContext context) => ElevatedButton(
         onPressed: onPressed,
-        style:
-            ElevatedButton.styleFrom(backgroundColor: AppColors.errorSurface),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.errorSurface,
+          minimumSize: Size(0, height),
+          padding: const EdgeInsets.symmetric(horizontal: AppSizes.md),
+        ),
         child: _ButtonContent(
           label: label,
           labelColor: AppColors.error,

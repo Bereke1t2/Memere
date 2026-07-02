@@ -103,12 +103,17 @@ class _MockExamCardState extends ConsumerState<MockExamCard> {
               ),
             ),
           ],
-          const SizedBox(height: AppSizes.lg),
-          AppButton(
-            label: 'Start exam',
-            isLoading: _isStarting,
-            onPressed: () => _confirmStart(context),
-            suffixIcon: Icons.arrow_forward_rounded,
+          const SizedBox(height: AppSizes.md),
+          Align(
+            alignment: Alignment.centerRight,
+            child: AppButton(
+              label: 'Start exam',
+              isLoading: _isStarting,
+              onPressed: () => _confirmStart(context),
+              suffixIcon: Icons.arrow_forward_rounded,
+              width: 148,
+              height: AppSizes.buttonHeightSm,
+            ),
           ),
         ],
       ),
@@ -178,18 +183,19 @@ class _MockExamCardState extends ConsumerState<MockExamCard> {
               const SizedBox(height: AppSizes.lg),
               Row(
                 children: [
-                  Expanded(
-                    child: AppButton(
-                      label: 'Cancel',
-                      onPressed: () => Navigator.of(sheetContext).pop(false),
-                      variant: AppButtonVariant.secondary,
-                    ),
+                  AppButton(
+                    label: 'Cancel',
+                    onPressed: () => Navigator.of(sheetContext).pop(false),
+                    variant: AppButtonVariant.secondary,
+                    width: 112,
+                    height: AppSizes.buttonHeightSm,
                   ),
                   const SizedBox(width: AppSizes.md),
                   Expanded(
                     child: AppButton(
                       label: 'Start exam',
                       onPressed: () => Navigator.of(sheetContext).pop(true),
+                      height: AppSizes.buttonHeightSm,
                     ),
                   ),
                 ],

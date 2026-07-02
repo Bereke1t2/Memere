@@ -5,29 +5,38 @@ import 'app_colors.dart';
 /// Display font: Sora (headings, titles)
 /// Body font: DM Sans (body, labels, buttons)
 abstract class AppTextStyles {
+  static const List<String> fontFallback = [
+    'Noto Sans Ethiopic',
+    'Noto Sans',
+    'Roboto',
+  ];
+
   // ── Display (Sora) ───────────────────────────────────────────────────────
   static const TextStyle displayLarge = TextStyle(
     fontFamily: 'Sora',
-    fontSize: 36,
-    fontWeight: FontWeight.w700,
+    fontFamilyFallback: fontFallback,
+    fontSize: 28,
+    fontWeight: FontWeight.w800,
     color: AppColors.textPrimary,
-    height: 1.2,
+    height: 1.08,
     letterSpacing: 0,
   );
 
   static const TextStyle displayMedium = TextStyle(
     fontFamily: 'Sora',
-    fontSize: 28,
-    fontWeight: FontWeight.w700,
+    fontFamilyFallback: fontFallback,
+    fontSize: 22,
+    fontWeight: FontWeight.w800,
     color: AppColors.textPrimary,
-    height: 1.25,
+    height: 1.12,
     letterSpacing: 0,
   );
 
   // ── Headlines (Sora) ─────────────────────────────────────────────────────
   static const TextStyle headlineLarge = TextStyle(
     fontFamily: 'Sora',
-    fontSize: 22,
+    fontFamilyFallback: fontFallback,
+    fontSize: 18,
     fontWeight: FontWeight.w700,
     color: AppColors.textPrimary,
     height: 1.3,
@@ -35,7 +44,8 @@ abstract class AppTextStyles {
 
   static const TextStyle headlineMedium = TextStyle(
     fontFamily: 'Sora',
-    fontSize: 18,
+    fontFamilyFallback: fontFallback,
+    fontSize: 16,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
     height: 1.35,
@@ -43,7 +53,8 @@ abstract class AppTextStyles {
 
   static const TextStyle headlineSmall = TextStyle(
     fontFamily: 'Sora',
-    fontSize: 16,
+    fontFamilyFallback: fontFallback,
+    fontSize: 14,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
     height: 1.4,
@@ -52,7 +63,8 @@ abstract class AppTextStyles {
   // ── Title (Sora) ─────────────────────────────────────────────────────────
   static const TextStyle titleLarge = TextStyle(
     fontFamily: 'Sora',
-    fontSize: 18,
+    fontFamilyFallback: fontFallback,
+    fontSize: 16,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
     height: 1.4,
@@ -60,7 +72,8 @@ abstract class AppTextStyles {
 
   static const TextStyle titleMedium = TextStyle(
     fontFamily: 'Sora',
-    fontSize: 15,
+    fontFamilyFallback: fontFallback,
+    fontSize: 14,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
     height: 1.4,
@@ -69,7 +82,8 @@ abstract class AppTextStyles {
   // ── Body (DM Sans) ───────────────────────────────────────────────────────
   static const TextStyle bodyLarge = TextStyle(
     fontFamily: 'DM_Sans',
-    fontSize: 16,
+    fontFamilyFallback: fontFallback,
+    fontSize: 14,
     fontWeight: FontWeight.w400,
     color: AppColors.textPrimary,
     height: 1.5,
@@ -77,7 +91,8 @@ abstract class AppTextStyles {
 
   static const TextStyle bodyMedium = TextStyle(
     fontFamily: 'DM_Sans',
-    fontSize: 14,
+    fontFamilyFallback: fontFallback,
+    fontSize: 13,
     fontWeight: FontWeight.w400,
     color: AppColors.textPrimary,
     height: 1.5,
@@ -85,7 +100,8 @@ abstract class AppTextStyles {
 
   static const TextStyle bodySmall = TextStyle(
     fontFamily: 'DM_Sans',
-    fontSize: 12,
+    fontFamilyFallback: fontFallback,
+    fontSize: 11,
     fontWeight: FontWeight.w400,
     color: AppColors.textSecondary,
     height: 1.5,
@@ -94,7 +110,8 @@ abstract class AppTextStyles {
   // ── Labels / Buttons (DM Sans) ───────────────────────────────────────────
   static const TextStyle labelLarge = TextStyle(
     fontFamily: 'DM_Sans',
-    fontSize: 15,
+    fontFamilyFallback: fontFallback,
+    fontSize: 14,
     fontWeight: FontWeight.w600,
     color: AppColors.textPrimary,
     height: 1.2,
@@ -103,7 +120,8 @@ abstract class AppTextStyles {
 
   static const TextStyle labelMedium = TextStyle(
     fontFamily: 'DM_Sans',
-    fontSize: 13,
+    fontFamilyFallback: fontFallback,
+    fontSize: 12,
     fontWeight: FontWeight.w500,
     color: AppColors.textPrimary,
     height: 1.2,
@@ -111,7 +129,8 @@ abstract class AppTextStyles {
 
   static const TextStyle labelSmall = TextStyle(
     fontFamily: 'DM_Sans',
-    fontSize: 11,
+    fontFamilyFallback: fontFallback,
+    fontSize: 10,
     fontWeight: FontWeight.w500,
     color: AppColors.textSecondary,
     height: 1.2,
@@ -121,6 +140,7 @@ abstract class AppTextStyles {
   // ── Caption ──────────────────────────────────────────────────────────────
   static const TextStyle caption = TextStyle(
     fontFamily: 'DM_Sans',
+    fontFamilyFallback: fontFallback,
     fontSize: 11,
     fontWeight: FontWeight.w400,
     color: AppColors.textDisabled,

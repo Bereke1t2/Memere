@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,11 +7,113 @@ import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_surface.dart';
-import '../../../../shared/utils/formatters.dart';
 import '../../domain/entities/course_entity.dart';
+
+String courseHeroTag(String courseId) => 'course-thumbnail-$courseId';
 
 class CourseCard extends StatelessWidget {
   const CourseCard({
+    super.key,
+    required this.course,
+  });
+
+  final CourseEntity course;
+
+  @override
+  Widget build(BuildContext context) {
+    return CourseRowCard(course: course);
+  }
+}
+
+class CourseSpotlightCard extends StatelessWidget {
+  const CourseSpotlightCard({
+    super.key,
+    required this.course,
+  });
+
+  final CourseEntity course;
+
+  @override
+  Widget build(BuildContext context) {
+    final subjectColor = _subjectColor(course.subject);
+
+    return SizedBox(
+      width: 220,
+      child: AppSurface(
+        onTap: () => context.push(AppRoutes.courseDetailPath(course.id)),
+        padding: const EdgeInsets.all(AppSizes.md),
+        color: AppColors.bgSecondary,
+        radius: AppSizes.radiusXl,
+        borderColor: subjectColor.withAlpha(72),
+        shadows: AppShadows.md,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                AppIconTile(
+                  icon: Icons.school_outlined,
+                  size: 38,
+                  iconSize: AppSizes.iconSm,
+                  color: subjectColor,
+                ),
+                const Spacer(),
+                AppBadge(
+                  label: _courseBadge(course),
+                  color:
+                      course.isFree ? AppColors.success : AppColors.textPrimary,
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSizes.md),
+            Text(
+              course.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.titleMedium,
+            ),
+            const SizedBox(height: AppSizes.xs),
+            Text(
+              course.shortDescription.isNotEmpty
+                  ? course.shortDescription
+                  : 'Focused lessons, examples, and exam practice.',
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.bodySmall,
+            ),
+            const Spacer(),
+            AppBadge(
+              label: _shortSubject(course.subject),
+              color: subjectColor,
+              icon: Icons.auto_stories_outlined,
+            ),
+            const SizedBox(height: AppSizes.md),
+            Row(
+              children: [
+                Expanded(
+                  child: _MetaItem(
+                    icon: Icons.schedule_rounded,
+                    label: course.durationLabel,
+                  ),
+                ),
+                _MetaItem(
+                  icon: Icons.star_rounded,
+                  label: course.ratingAvg > 0
+                      ? course.ratingAvg.toStringAsFixed(1)
+                      : 'New',
+                  color: AppColors.textPrimary,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class CourseRowCard extends StatelessWidget {
+  const CourseRowCard({
     super.key,
     required this.course,
   });
@@ -25,155 +126,99 @@ class CourseCard extends StatelessWidget {
 
     return AppSurface(
       onTap: () => context.push(AppRoutes.courseDetailPath(course.id)),
-      padding: EdgeInsets.zero,
-      gradient: AppColors.cardGradient,
-      radius: AppSizes.radiusLg,
-      shadows: AppShadows.md,
+      padding: const EdgeInsets.all(AppSizes.md),
+      color: AppColors.bgSecondary,
+      radius: AppSizes.radiusXl,
+      borderColor: subjectColor.withAlpha(72),
+      shadows: AppShadows.sm,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Stack(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(
-                height: 128,
-                width: double.infinity,
-                child: course.thumbnailUrl == null
-                    ? _CourseFallbackVisual(
-                        subject: course.subject,
-                        color: subjectColor,
-                      )
-                    : CachedNetworkImage(
-                        imageUrl: course.thumbnailUrl!,
-                        fit: BoxFit.cover,
-                        placeholder: (_, __) => const ColoredBox(
-                          color: AppColors.bgTertiary,
+              AppIconTile(
+                icon: Icons.school_outlined,
+                size: 40,
+                iconSize: AppSizes.iconSm,
+                color: subjectColor,
+              ),
+              const SizedBox(width: AppSizes.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            course.title,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.titleMedium,
+                          ),
                         ),
-                        errorWidget: (_, __, ___) => _CourseFallbackVisual(
-                          subject: course.subject,
+                        const SizedBox(width: AppSizes.sm),
+                        AppBadge(
+                          label: course.levelLabel,
                           color: subjectColor,
                         ),
-                      ),
-              ),
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        AppColors.bgPrimary.withAlpha(120),
                       ],
                     ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: AppSizes.sm,
-                right: AppSizes.sm,
-                child: AppBadge(
-                  label: course.priceLabel,
-                  color: course.isFree
-                      ? AppColors.success
-                      : AppColors.accentSecondary,
+                    const SizedBox(height: AppSizes.xs),
+                    Text(
+                      course.shortDescription.isNotEmpty
+                          ? course.shortDescription
+                          : 'Focused lessons, examples, and exam practice.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTextStyles.bodySmall,
+                    ),
+                    const SizedBox(height: AppSizes.sm),
+                    Wrap(
+                      spacing: AppSizes.sm,
+                      runSpacing: AppSizes.xs,
+                      children: [
+                        AppBadge(
+                          label: _shortSubject(course.subject),
+                          color: subjectColor,
+                          icon: Icons.auto_stories_outlined,
+                        ),
+                        AppBadge(
+                          label: course.priceLabel,
+                          color: course.isFree
+                              ? AppColors.success
+                              : AppColors.textPrimary,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          Padding(
-            padding: const EdgeInsets.all(AppSizes.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppBadge(
-                  label: course.subject,
-                  color: subjectColor,
-                  icon: Icons.auto_stories_outlined,
+          const SizedBox(height: AppSizes.md),
+          Row(
+            children: [
+              _MetaItem(
+                icon: Icons.menu_book_outlined,
+                label: '${course.totalLessons} lessons',
+              ),
+              const SizedBox(width: AppSizes.md),
+              Expanded(
+                child: _MetaItem(
+                  icon: Icons.schedule_rounded,
+                  label: course.durationLabel,
                 ),
-                const SizedBox(height: AppSizes.sm),
-                Text(
-                  course.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.titleMedium,
-                ),
-                const SizedBox(height: AppSizes.xs),
-                Text(
-                  course.shortDescription.isNotEmpty
-                      ? course.shortDescription
-                      : course.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTextStyles.bodySmall,
-                ),
-                const SizedBox(height: AppSizes.md),
-                const Divider(color: AppColors.divider),
-                const SizedBox(height: AppSizes.sm),
-                Wrap(
-                  spacing: AppSizes.md,
-                  runSpacing: AppSizes.xs,
-                  children: [
-                    _MetaItem(
-                      icon: Icons.menu_book_outlined,
-                      label: course.lessonCountLabel,
-                    ),
-                    _MetaItem(
-                      icon: Icons.schedule_rounded,
-                      label: course.durationLabel,
-                    ),
-                    _MetaItem(
-                      icon: Icons.star_rounded,
-                      label: course.ratingAvg > 0
-                          ? course.ratingAvg.toStringAsFixed(1)
-                          : 'New',
-                    ),
-                    _MetaItem(
-                      icon: Icons.group_outlined,
-                      label: formatCompactCount(course.enrollmentCount),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CourseFallbackVisual extends StatelessWidget {
-  const _CourseFallbackVisual({
-    required this.subject,
-    required this.color,
-  });
-
-  final String subject;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: color.withAlpha(28),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            color.withAlpha(44),
-            AppColors.bgTertiary,
-          ],
-        ),
-      ),
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.school_rounded, color: color, size: AppSizes.iconLg),
-          const SizedBox(height: AppSizes.sm),
-          Text(
-            subject,
-            style: AppTextStyles.labelLarge.copyWith(color: color),
+              ),
+              _MetaItem(
+                icon: Icons.star_rounded,
+                label: course.ratingAvg > 0
+                    ? course.ratingAvg.toStringAsFixed(1)
+                    : 'New',
+                color: AppColors.textPrimary,
+              ),
+            ],
           ),
         ],
       ),
@@ -185,22 +230,45 @@ class _MetaItem extends StatelessWidget {
   const _MetaItem({
     required this.icon,
     required this.label,
+    this.color = AppColors.textSecondary,
   });
 
   final IconData icon;
   final String label;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: AppSizes.iconXs, color: AppColors.textSecondary),
+        Icon(icon, size: AppSizes.iconXs, color: color),
         const SizedBox(width: AppSizes.xs),
-        Text(label, style: AppTextStyles.caption),
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
+          ),
+        ),
       ],
     );
   }
+}
+
+String _courseBadge(CourseEntity course) {
+  if (course.isFree) return 'Free';
+  if (course.ratingAvg >= 4.5 || course.enrollmentCount >= 1000) {
+    return 'Popular';
+  }
+  return 'New';
+}
+
+String _shortSubject(String subject) {
+  final normalized = subject.trim();
+  if (normalized.toLowerCase() == 'mathematics') return 'Math';
+  return normalized;
 }
 
 Color _subjectColor(String subject) {
@@ -216,6 +284,8 @@ Color _subjectColor(String subject) {
       return AppColors.subjectBio;
     case 'english':
       return AppColors.subjectEng;
+    case 'civics':
+      return AppColors.subjectCivics;
     case 'history':
       return AppColors.subjectHist;
     case 'geography':
