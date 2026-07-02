@@ -1,48 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_motion.dart';
-import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_surface.dart';
+import '../../../../shared/widgets/memere_mascot.dart';
 import '../providers/auth_state_provider.dart';
 
 class _OnboardingPage {
-  const _OnboardingPage(
-      {required this.title,
-      required this.body,
-      required this.icon,
-      required this.color});
-  final String title, body;
-  final IconData icon;
-  final Color color;
+  const _OnboardingPage({
+    required this.title,
+    required this.body,
+  });
+
+  final String title;
+  final String body;
 }
 
 final _pages = [
   const _OnboardingPage(
-    title: 'Master Every Subject',
+    title: 'Meet Memere',
     body:
-        'Video lessons from expert teachers covering all Grade 12 subjects for the national exam.',
-    icon: Icons.play_circle_fill_rounded,
-    color: AppColors.accentPrimary,
+        'Selam. Learn with a wise teacher figure built for Grade 12 Ethiopian exam prep.',
   ),
   const _OnboardingPage(
-    title: 'Practice Like It\'s Real',
+    title: 'Study Every Subject',
     body:
-        'Timed mock exams that simulate the exact national exam format with detailed analytics.',
-    icon: Icons.timer_rounded,
-    color: AppColors.accentSecondary,
+        'Math, Physics, Chemistry, Biology, English, Civics, and more in one focused plan.',
   ),
   const _OnboardingPage(
-    title: 'Study Offline, Anywhere',
+    title: 'Practice With Confidence',
     body:
-        'Download lessons and study without internet — critical for students across Ethiopia.',
-    icon: Icons.download_done_rounded,
-    color: AppColors.warning,
+        'Move from lessons to quizzes and mock exams with progress that keeps you on track.',
   ),
 ];
 
@@ -75,16 +69,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         duration: AppMotion.slow,
         curve: AppMotion.standard,
       );
-    } else {
-      _finish();
+      return;
     }
+    _finish();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      body: AppPageBackground(
+      body: DecoratedBox(
+        decoration: const BoxDecoration(gradient: AppColors.backgroundGradient),
         child: SafeArea(
           child: Column(
             children: [
@@ -99,12 +94,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   children: [
                     const AppIconTile(
                       icon: Icons.school_rounded,
-                      gradient: AppColors.primaryGradient,
                       size: 44,
                       iconSize: AppSizes.iconSm,
+                      color: AppColors.accentPrimary,
                     ),
                     const SizedBox(width: AppSizes.sm),
-                    const Text('Memere', style: AppTextStyles.titleLarge),
+                    Text(
+                      'Memere',
+                      style: AppTextStyles.titleLarge.copyWith(
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
                     const Spacer(),
                     TextButton(
                       onPressed: _finish,
@@ -123,39 +123,32 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                   controller: _pageController,
                   itemCount: _pages.length,
                   onPageChanged: (i) => setState(() => _currentPage = i),
-                  itemBuilder: (_, i) => _OnboardingPageWidget(page: _pages[i]),
+                  itemBuilder: (_, i) => _OnboardingPageWidget(
+                    controller: _pageController,
+                    index: i,
+                    page: _pages[i],
+                  ),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSizes.screenPaddingH),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSizes.screenPaddingH,
+                  0,
+                  AppSizes.screenPaddingH,
+                  AppSizes.lg,
+                ),
                 child: Column(
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: List.generate(
-                        _pages.length,
-                        (i) => AnimatedContainer(
-                          duration: const Duration(milliseconds: 250),
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          width: _currentPage == i ? 24 : 8,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: _currentPage == i
-                                ? AppColors.accentPrimary
-                                : AppColors.border,
-                            borderRadius: BorderRadius.circular(
-                              AppSizes.radiusFull,
-                            ),
-                          ),
-                        ),
-                      ),
+                    _PageDots(
+                      pageCount: _pages.length,
+                      currentPage: _currentPage,
                     ),
                     const SizedBox(height: AppSizes.xl),
                     AppButton(
                       label: _currentPage == _pages.length - 1
-                          ? 'Get Started'
+                          ? 'Start Learning'
                           : 'Next',
+                      variant: AppButtonVariant.secondary,
                       onPressed: _next,
                       suffixIcon: Icons.arrow_forward_rounded,
                     ),
@@ -163,19 +156,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text(
+                        Text(
                           'Already have an account? ',
-                          style: AppTextStyles.bodySmall,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                         GestureDetector(
                           onTap: _finish,
-                          child: Text('Sign In',
-                              style: AppTextStyles.labelMedium
-                                  .copyWith(color: AppColors.accentPrimary)),
+                          child: Text(
+                            'Sign In',
+                            style: AppTextStyles.labelMedium.copyWith(
+                              color: AppColors.accentPrimary,
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: AppSizes.lg),
                   ],
                 ),
               ),
@@ -188,75 +185,88 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 }
 
 class _OnboardingPageWidget extends StatelessWidget {
-  const _OnboardingPageWidget({required this.page});
+  const _OnboardingPageWidget({
+    required this.controller,
+    required this.index,
+    required this.page,
+  });
+
+  final PageController controller;
+  final int index;
   final _OnboardingPage page;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSizes.screenPaddingH),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: 1),
-            duration: AppMotion.slow,
-            curve: AppMotion.emphasized,
-            builder: (context, value, child) {
-              return Transform.scale(
-                scale: 0.86 + (value * 0.14),
-                child: Opacity(opacity: value.clamp(0, 1), child: child),
-              );
-            },
-            child: Container(
-              width: 188,
-              height: 188,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    page.color.withAlpha(66),
-                    page.color.withAlpha(18),
-                    Colors.transparent,
-                  ],
-                ),
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, child) {
+        final current = controller.hasClients && controller.page != null
+            ? controller.page!
+            : 0.0;
+        final delta = index - current;
+        return Transform.translate(
+          offset: Offset(delta * 22, 0),
+          child: child,
+        );
+      },
+      child: Padding(
+        padding:
+            const EdgeInsets.symmetric(horizontal: AppSizes.screenPaddingH),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const MemereMascot(size: Size(296, 260)),
+            const SizedBox(height: AppSizes.xl),
+            Text(
+              page.title,
+              style: AppTextStyles.displayMedium.copyWith(
+                color: AppColors.textPrimary,
               ),
-              child: Center(
-                child: Container(
-                  width: 124,
-                  height: 124,
-                  decoration: BoxDecoration(
-                    color: AppColors.bgSecondary,
-                    borderRadius: BorderRadius.circular(AppSizes.radiusXl),
-                    border: Border.all(color: page.color.withAlpha(88)),
-                    boxShadow: [
-                      ...AppShadows.md,
-                      BoxShadow(
-                        color: page.color.withAlpha(46),
-                        blurRadius: 28,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
-                  ),
-                  child: Icon(page.icon, size: 56, color: page.color),
-                ),
-              ),
+              textAlign: TextAlign.center,
             ),
+            const SizedBox(height: AppSizes.md),
+            Text(
+              page.body,
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PageDots extends StatelessWidget {
+  const _PageDots({
+    required this.pageCount,
+    required this.currentPage,
+  });
+
+  final int pageCount;
+  final int currentPage;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(
+        pageCount,
+        (i) => AnimatedContainer(
+          duration: AppMotion.base,
+          curve: AppMotion.standard,
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          width: currentPage == i ? 30 : 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: currentPage == i
+                ? AppColors.accentPrimary
+                : AppColors.borderStrong,
+            borderRadius: BorderRadius.circular(AppSizes.radiusFull),
           ),
-          const SizedBox(height: AppSizes.xl),
-          Text(
-            page.title,
-            style: AppTextStyles.displayMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppSizes.md),
-          Text(
-            page.body,
-            style: AppTextStyles.bodyLarge
-                .copyWith(color: AppColors.textSecondary),
-            textAlign: TextAlign.center,
-          ),
-        ],
+        ),
       ),
     );
   }
