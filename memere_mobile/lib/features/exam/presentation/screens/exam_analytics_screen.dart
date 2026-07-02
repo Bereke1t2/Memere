@@ -52,8 +52,7 @@ class ExamAnalyticsScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Overall score',
-                        style: AppTextStyles.bodySmall),
+                    const Text('Overall score', style: AppTextStyles.bodySmall),
                     const SizedBox(height: AppSizes.xs),
                     Text(
                       '${analytics.percentage.toStringAsFixed(0)}%',
@@ -111,10 +110,15 @@ class ExamAnalyticsScreen extends ConsumerWidget {
                 ),
               ],
               const SizedBox(height: AppSizes.lg),
-              AppButton(
-                label: 'Back to result',
-                onPressed: () => context.pop(),
-                variant: AppButtonVariant.secondary,
+              Align(
+                alignment: Alignment.centerRight,
+                child: AppButton(
+                  label: 'Back to result',
+                  onPressed: () => context.pop(),
+                  variant: AppButtonVariant.secondary,
+                  width: 148,
+                  height: AppSizes.buttonHeightSm,
+                ),
               ),
               const SizedBox(height: AppSizes.lg),
             ],
@@ -158,6 +162,8 @@ class _AnalyticsErrorState extends StatelessWidget {
               label: 'Retry',
               onPressed: onRetry,
               variant: AppButtonVariant.secondary,
+              width: 120,
+              height: AppSizes.buttonHeightSm,
             ),
           ],
         ),
