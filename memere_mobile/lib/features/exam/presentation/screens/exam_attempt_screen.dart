@@ -182,18 +182,19 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
               const SizedBox(height: AppSizes.lg),
               Row(
                 children: [
-                  Expanded(
-                    child: AppButton(
-                      label: 'Cancel',
-                      onPressed: () => Navigator.of(sheetContext).pop(false),
-                      variant: AppButtonVariant.secondary,
-                    ),
+                  AppButton(
+                    label: 'Cancel',
+                    onPressed: () => Navigator.of(sheetContext).pop(false),
+                    variant: AppButtonVariant.secondary,
+                    width: 112,
+                    height: AppSizes.buttonHeightSm,
                   ),
                   const SizedBox(width: AppSizes.md),
                   Expanded(
                     child: AppButton(
                       label: 'Submit',
                       onPressed: () => Navigator.of(sheetContext).pop(true),
+                      height: AppSizes.buttonHeightSm,
                     ),
                   ),
                 ],
@@ -303,13 +304,13 @@ class _AttemptBody extends ConsumerWidget {
         const SizedBox(height: AppSizes.lg),
         Row(
           children: [
-            Expanded(
-              child: AppButton(
-                label: 'Previous',
-                onPressed:
-                    state.currentIndex == 0 ? null : notifier.previousQuestion,
-                variant: AppButtonVariant.secondary,
-              ),
+            AppButton(
+              label: 'Previous',
+              onPressed:
+                  state.currentIndex == 0 ? null : notifier.previousQuestion,
+              variant: AppButtonVariant.secondary,
+              width: 112,
+              height: AppSizes.buttonHeightSm,
             ),
             const SizedBox(width: AppSizes.md),
             Expanded(
@@ -318,22 +319,31 @@ class _AttemptBody extends ConsumerWidget {
                       label: 'Submit',
                       isLoading: state.isSubmitting,
                       onPressed: () => onSubmit(),
+                      height: AppSizes.buttonHeightSm,
                     )
                   : AppButton(
                       label: 'Next',
                       onPressed: notifier.nextQuestion,
                       suffixIcon: Icons.arrow_forward_rounded,
+                      height: AppSizes.buttonHeightSm,
                     ),
             ),
           ],
         ),
-        const SizedBox(height: AppSizes.md),
-        AppButton(
-          label: 'Submit exam',
-          isLoading: state.isSubmitting,
-          onPressed: () => onSubmit(),
-          variant: AppButtonVariant.outline,
-        ),
+        if (state.currentIndex != state.questionCount - 1) ...[
+          const SizedBox(height: AppSizes.md),
+          Align(
+            alignment: Alignment.centerRight,
+            child: AppButton(
+              label: 'Submit exam',
+              isLoading: state.isSubmitting,
+              onPressed: () => onSubmit(),
+              variant: AppButtonVariant.outline,
+              width: 150,
+              height: AppSizes.buttonHeightSm,
+            ),
+          ),
+        ],
         if (seconds == 0) ...[
           const SizedBox(height: AppSizes.md),
           Text(
@@ -381,6 +391,8 @@ class _AttemptErrorState extends StatelessWidget {
                 label: 'Retry',
                 onPressed: onRetry,
                 variant: AppButtonVariant.secondary,
+                width: 120,
+                height: AppSizes.buttonHeightSm,
               ),
             ],
           ],
