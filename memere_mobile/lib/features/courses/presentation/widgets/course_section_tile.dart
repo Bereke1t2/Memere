@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_motion.dart';
 import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
@@ -23,11 +24,13 @@ class CourseSectionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AnimatedContainer(
+      duration: AppMotion.base,
+      curve: AppMotion.standard,
       decoration: BoxDecoration(
-        color: AppColors.bgSecondary,
-        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-        border: Border.all(color: AppColors.hairline),
+        gradient: AppColors.cardGradient,
+        borderRadius: BorderRadius.circular(AppSizes.radiusXl),
+        border: Border.all(color: AppColors.borderStrong),
         boxShadow: AppShadows.sm,
       ),
       clipBehavior: Clip.antiAlias,
@@ -48,7 +51,7 @@ class CourseSectionTile extends StatelessWidget {
           title: Text(
             'Section $sectionNumber',
             style: AppTextStyles.labelSmall.copyWith(
-              color: AppColors.accentPrimary,
+              color: AppColors.textSecondary,
             ),
           ),
           subtitle: Padding(
@@ -71,7 +74,9 @@ class CourseSectionTile extends StatelessWidget {
           ),
           trailing: Text(
             section.lessonCountLabel,
-            style: AppTextStyles.caption,
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textMuted,
+            ),
           ),
           children: [
             if (section.lessons.isEmpty)
