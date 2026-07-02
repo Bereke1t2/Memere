@@ -104,9 +104,9 @@ abstract class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.accentPrimary,
           foregroundColor: AppColors.textInverse,
-          minimumSize: const Size(double.infinity, AppSizes.buttonHeight),
+          minimumSize: const Size(0, AppSizes.buttonHeight),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+            borderRadius: BorderRadius.circular(AppSizes.radiusFull),
           ),
           elevation: 0,
           shadowColor: Colors.transparent,
@@ -119,10 +119,10 @@ abstract class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.accentPrimary,
-          minimumSize: const Size(double.infinity, AppSizes.buttonHeight),
+          minimumSize: const Size(0, AppSizes.buttonHeight),
           side: const BorderSide(color: AppColors.borderFocused),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+            borderRadius: BorderRadius.circular(AppSizes.radiusFull),
           ),
           textStyle: AppTextStyles.labelLarge,
           surfaceTintColor: Colors.transparent,
