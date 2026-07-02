@@ -78,11 +78,16 @@ class ExamResultScreen extends ConsumerWidget {
                 const SizedBox(height: AppSizes.md),
                 ExamSubjectBreakdown(scores: breakdown),
                 const SizedBox(height: AppSizes.lg),
-                AppButton(
-                  label: 'Review analytics',
-                  onPressed: () =>
-                      context.push(AppRoutes.examAnalyticsPath(attemptId)),
-                  suffixIcon: Icons.insights_outlined,
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: AppButton(
+                    label: 'Review analytics',
+                    onPressed: () =>
+                        context.push(AppRoutes.examAnalyticsPath(attemptId)),
+                    suffixIcon: Icons.insights_outlined,
+                    width: 184,
+                    height: AppSizes.buttonHeightSm,
+                  ),
                 ),
                 const SizedBox(height: AppSizes.lg),
                 if (result.feedback.isNotEmpty) ...[
@@ -96,10 +101,15 @@ class ExamResultScreen extends ConsumerWidget {
                       ),
                 ],
                 const SizedBox(height: AppSizes.sm),
-                AppButton(
-                  label: 'Back to mock exams',
-                  onPressed: () => context.go(AppRoutes.mockExams),
-                  variant: AppButtonVariant.secondary,
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: AppButton(
+                    label: 'Back to exams',
+                    onPressed: () => context.go(AppRoutes.mockExams),
+                    variant: AppButtonVariant.secondary,
+                    width: 148,
+                    height: AppSizes.buttonHeightSm,
+                  ),
                 ),
                 const SizedBox(height: AppSizes.lg),
               ],
@@ -166,6 +176,8 @@ class _ResultErrorState extends StatelessWidget {
               label: 'Retry',
               onPressed: onRetry,
               variant: AppButtonVariant.secondary,
+              width: 120,
+              height: AppSizes.buttonHeightSm,
             ),
           ],
         ),
