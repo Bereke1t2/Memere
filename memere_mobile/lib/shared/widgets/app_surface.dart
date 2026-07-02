@@ -86,7 +86,7 @@ class AppSurface extends StatelessWidget {
     this.margin,
     this.radius = AppSizes.radiusLg,
     this.color = AppColors.bgSecondary,
-    this.gradient,
+    this.gradient = AppColors.cardGradient,
     this.borderColor = AppColors.hairline,
     this.shadows = AppShadows.sm,
     this.clipBehavior = Clip.antiAlias,
@@ -151,18 +151,18 @@ class AppIconTile extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: gradient == null ? color.withAlpha(28) : null,
+        color: gradient == null ? color.withAlpha(24) : null,
         gradient: gradient,
         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
         border: Border.all(
-          color: gradient == null ? color.withAlpha(70) : AppColors.hairline,
+          color: gradient == null ? color.withAlpha(62) : AppColors.hairline,
         ),
         boxShadow: gradient == null ? null : AppShadows.accentGlow,
       ),
       child: Icon(
         icon,
         size: iconSize,
-        color: gradient == null ? color : Colors.white,
+        color: gradient == null ? color : AppColors.textPrimary,
       ),
     );
   }
@@ -188,9 +188,9 @@ class AppBadge extends StatelessWidget {
         vertical: AppSizes.xs,
       ),
       decoration: BoxDecoration(
-        color: color.withAlpha(30),
+        color: color.withAlpha(24),
         borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-        border: Border.all(color: color.withAlpha(96)),
+        border: Border.all(color: color.withAlpha(72)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
