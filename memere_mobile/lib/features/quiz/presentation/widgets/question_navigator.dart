@@ -54,7 +54,7 @@ class QuestionNavigator extends StatelessWidget {
                 '${index + 1}',
                 style: AppTextStyles.labelMedium.copyWith(
                   color: current || answered
-                      ? Colors.white
+                      ? AppColors.textInverse
                       : AppColors.textSecondary,
                 ),
               ),
