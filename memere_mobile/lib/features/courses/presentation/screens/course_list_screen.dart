@@ -6,9 +6,9 @@ import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
-import '../../../../shared/widgets/app_text_field.dart';
 import '../../../../shared/widgets/app_surface.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
+import '../../domain/entities/course_entity.dart';
 import '../providers/course_list_provider.dart';
 import '../widgets/course_card.dart';
 import '../widgets/course_empty_state.dart';
@@ -68,6 +68,7 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen> {
       backgroundColor: AppColors.bgPrimary,
       body: AppPageBackground(
         child: SafeArea(
+          bottom: false,
           child: coursesAsync.when(
             loading: () {
               final previous = coursesAsync.valueOrNull;
@@ -80,15 +81,15 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen> {
               }
               return Column(
                 children: [
-                  const _CourseListHeader(),
-                  _SearchAndFilters(searchController: _searchController),
+                  _DashboardHeader(searchController: _searchController),
+                  const SizedBox(height: AppSizes.lg),
                   const Expanded(child: CourseListSkeleton()),
                 ],
               );
             },
             error: (error, _) => Column(
               children: [
-                const _CourseListHeader(),
+                _DashboardHeader(searchController: _searchController),
                 Expanded(
                   child: CourseEmptyState(
                     icon: Icons.wifi_off_rounded,
@@ -136,13 +137,10 @@ class _CourseListContent extends ConsumerWidget {
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _CourseListHeader(),
-                _SearchAndFilters(searchController: searchController),
-              ],
-            ),
+            child: _DashboardHeader(searchController: searchController),
+          ),
+          SliverToBoxAdapter(
+            child: _DashboardFilters(state: state),
           ),
           if (state.filteredCourses.isEmpty)
             SliverFillRemaining(
@@ -157,11 +155,28 @@ class _CourseListContent extends ConsumerWidget {
                     : null,
               ),
             )
-          else
+          else ...[
+            SliverToBoxAdapter(
+              child: _TopicGrid(courses: state.filteredCourses),
+            ),
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppSizes.screenPaddingH,
+                  AppSizes.xl,
+                  AppSizes.screenPaddingH,
+                  AppSizes.md,
+                ),
+                child: AppSectionHeader(
+                  title: 'All Courses',
+                  subtitle: 'Structured exam prep for Grade 12',
+                ),
+              ),
+            ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSizes.screenPaddingH,
-                AppSizes.md,
+                0,
                 AppSizes.screenPaddingH,
                 AppSizes.lg,
               ),
@@ -170,13 +185,15 @@ class _CourseListContent extends ConsumerWidget {
                 separatorBuilder: (_, __) =>
                     const SizedBox(height: AppSizes.md),
                 itemBuilder: (context, index) {
+                  final course = state.filteredCourses[index];
                   return AppStaggeredReveal(
                     index: index,
-                    child: CourseCard(course: state.filteredCourses[index]),
+                    child: CourseRowCard(course: course),
                   );
                 },
               ),
             ),
+          ],
           SliverToBoxAdapter(
             child: _LoadMoreFooter(state: state),
           ),
@@ -186,59 +203,126 @@ class _CourseListContent extends ConsumerWidget {
   }
 }
 
-class _CourseListHeader extends ConsumerWidget {
-  const _CourseListHeader();
+class _DashboardHeader extends ConsumerWidget {
+  const _DashboardHeader({required this.searchController});
+
+  final TextEditingController searchController;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authStateProvider).valueOrNull?.user;
     final firstName = user?.firstName.trim();
+    final greeting = firstName == null || firstName.isEmpty
+        ? 'Selam, Student!'
+        : 'Selam, $firstName!';
+    final initial = firstName == null || firstName.isEmpty
+        ? 'M'
+        : firstName.substring(0, 1).toUpperCase();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSizes.screenPaddingH,
         AppSizes.md,
         AppSizes.screenPaddingH,
-        AppSizes.lg,
+        0,
       ),
-      child: AppSurface(
-        padding: const EdgeInsets.all(AppSizes.md),
-        gradient: AppColors.cardGradient,
-        shadows: AppShadows.md,
+      child: Column(
+        children: [
+          AppSurface(
+            padding: const EdgeInsets.all(AppSizes.md),
+            radius: AppSizes.radiusLg,
+            borderColor: AppColors.borderStrong,
+            shadows: AppShadows.md,
+            child: Row(
+              children: [
+                _Avatar(initial: initial),
+                const SizedBox(width: AppSizes.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        greeting,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.headlineMedium,
+                      ),
+                      const SizedBox(height: AppSizes.xs),
+                      const Text(
+                        'Grade 12 exam prep',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSizes.sm),
+                const _HeaderIconButton(icon: Icons.notifications_none),
+                const SizedBox(width: AppSizes.xs),
+                const _HeaderIconButton(icon: Icons.bookmark_border),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSizes.md),
+          _FloatingSearchBar(searchController: searchController),
+        ],
+      ),
+    );
+  }
+}
+
+class _FloatingSearchBar extends ConsumerWidget {
+  const _FloatingSearchBar({required this.searchController});
+
+  final TextEditingController searchController;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return AppSurface(
+      padding: EdgeInsets.zero,
+      radius: AppSizes.radiusMd,
+      color: AppColors.bgSecondary,
+      borderColor: AppColors.borderStrong,
+      shadows: AppShadows.sm,
+      child: SizedBox(
+        height: AppSizes.inputHeight,
         child: Row(
           children: [
-            const AppIconTile(
-              icon: Icons.school_rounded,
-              gradient: AppColors.primaryGradient,
-            ),
             const SizedBox(width: AppSizes.md),
+            const Icon(
+              Icons.search_rounded,
+              size: AppSizes.iconMd,
+              color: AppColors.textPrimary,
+            ),
+            const SizedBox(width: AppSizes.sm),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    firstName == null || firstName.isEmpty
-                        ? 'Explore courses'
-                        : 'Hi, $firstName',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.headlineMedium,
+              child: TextField(
+                controller: searchController,
+                textInputAction: TextInputAction.search,
+                onChanged: ref.read(courseListProvider.notifier).setSearchQuery,
+                style: AppTextStyles.bodyMedium,
+                decoration: InputDecoration(
+                  hintText: 'Search lessons, subjects, exams',
+                  hintStyle: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textMuted,
                   ),
-                  const SizedBox(height: AppSizes.xs),
-                  const Text(
-                    'Build your Grade 12 exam plan',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodySmall,
-                  ),
-                ],
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  isCollapsed: true,
+                ),
               ),
             ),
-            const AppBadge(
-              label: 'Grade 12',
-              color: AppColors.warning,
-              icon: Icons.workspace_premium_outlined,
+            IconButton(
+              tooltip: 'Filter',
+              onPressed: () {},
+              icon: const Icon(
+                Icons.tune_rounded,
+                color: AppColors.accentPrimary,
+              ),
             ),
+            const SizedBox(width: AppSizes.xs),
           ],
         ),
       ),
@@ -246,35 +330,22 @@ class _CourseListHeader extends ConsumerWidget {
   }
 }
 
-class _SearchAndFilters extends ConsumerWidget {
-  const _SearchAndFilters({required this.searchController});
+class _DashboardFilters extends ConsumerWidget {
+  const _DashboardFilters({required this.state});
 
-  final TextEditingController searchController;
+  final CourseListState state;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(courseListProvider).valueOrNull;
-    final selectedGrade = state?.selectedGrade ?? 12;
+    final selectedGrade = state.selectedGrade ?? 12;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSizes.screenPaddingH,
-          ),
-          child: AppTextField(
-            controller: searchController,
-            hintText: 'Search courses',
-            prefixIcon: Icons.search_rounded,
-            textInputAction: TextInputAction.search,
-            onChanged: ref.read(courseListProvider.notifier).setSearchQuery,
-          ),
-        ),
         const SizedBox(height: AppSizes.md),
         SubjectFilterChips(
           subjects: phase2Subjects,
-          selectedSubject: state?.selectedSubject,
+          selectedSubject: state.selectedSubject,
           onSelected: (subject) {
             ref.read(courseListProvider.notifier).setSubject(subject);
           },
@@ -293,22 +364,17 @@ class _SearchAndFilters extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: AppSizes.md),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: SegmentedButton<int>(
-                    segments: const [
-                      ButtonSegment(value: 11, label: Text('11')),
-                      ButtonSegment(value: 12, label: Text('12')),
-                    ],
-                    selected: {selectedGrade},
-                    onSelectionChanged: (selection) {
-                      ref
-                          .read(courseListProvider.notifier)
-                          .setGrade(selection.first);
-                    },
-                  ),
-                ),
+              SegmentedButton<int>(
+                segments: const [
+                  ButtonSegment(value: 11, label: Text('11')),
+                  ButtonSegment(value: 12, label: Text('12')),
+                ],
+                selected: {selectedGrade},
+                onSelectionChanged: (selection) {
+                  ref
+                      .read(courseListProvider.notifier)
+                      .setGrade(selection.first);
+                },
               ),
             ],
           ),
@@ -316,6 +382,200 @@ class _SearchAndFilters extends ConsumerWidget {
       ],
     );
   }
+}
+
+class _TopicGrid extends StatelessWidget {
+  const _TopicGrid({required this.courses});
+
+  final List<CourseEntity> courses;
+
+  @override
+  Widget build(BuildContext context) {
+    if (courses.isEmpty) return const SizedBox.shrink();
+    final subjects = <String>[];
+    for (final course in courses) {
+      if (!subjects.contains(course.subject)) subjects.add(course.subject);
+      if (subjects.length == 6) break;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppSizes.screenPaddingH,
+            AppSizes.lg,
+            AppSizes.screenPaddingH,
+            AppSizes.md,
+          ),
+          child: AppSectionHeader(
+            title: 'Browse Subjects',
+            subtitle: 'Pick a focused lane for today',
+          ),
+        ),
+        Padding(
+          padding:
+              const EdgeInsets.symmetric(horizontal: AppSizes.screenPaddingH),
+          child: GridView.builder(
+            itemCount: subjects.length,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              mainAxisSpacing: AppSizes.sm,
+              crossAxisSpacing: AppSizes.sm,
+              childAspectRatio: 2.8,
+            ),
+            itemBuilder: (context, index) {
+              final subject = subjects[index];
+              return AppSurface(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSizes.md,
+                  vertical: AppSizes.sm,
+                ),
+                radius: AppSizes.radiusMd,
+                borderColor: AppColors.borderStrong,
+                shadows: AppShadows.sm,
+                child: Row(
+                  children: [
+                    AppIconTile(
+                      icon: _subjectIcon(subject),
+                      size: 34,
+                      iconSize: AppSizes.iconSm,
+                      color: _subjectColor(subject),
+                    ),
+                    const SizedBox(width: AppSizes.sm),
+                    Expanded(
+                      child: Text(
+                        _shortSubject(subject),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTextStyles.labelMedium.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      size: AppSizes.iconSm,
+                      color: AppColors.textMuted,
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.initial});
+
+  final String initial;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: AppSizes.avatarMd,
+      height: AppSizes.avatarMd,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.bgTertiary,
+        shape: BoxShape.circle,
+        border: Border.all(color: AppColors.borderStrong),
+        boxShadow: AppShadows.md,
+      ),
+      child: Text(
+        initial,
+        style: AppTextStyles.titleMedium.copyWith(
+          color: AppColors.accentPrimary,
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppPressable(
+      onTap: () {},
+      borderRadius: AppSizes.radiusFull,
+      child: Container(
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.bgTertiary,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.border),
+        ),
+        child:
+            Icon(icon, color: AppColors.textSecondary, size: AppSizes.iconSm),
+      ),
+    );
+  }
+}
+
+IconData _subjectIcon(String subject) {
+  switch (subject.toLowerCase()) {
+    case 'mathematics':
+    case 'math':
+      return Icons.calculate_outlined;
+    case 'physics':
+      return Icons.science_outlined;
+    case 'chemistry':
+      return Icons.biotech_outlined;
+    case 'biology':
+      return Icons.eco_outlined;
+    case 'english':
+      return Icons.menu_book_outlined;
+    case 'history':
+      return Icons.history_edu_outlined;
+    case 'geography':
+      return Icons.public_outlined;
+    case 'economics':
+      return Icons.trending_up_rounded;
+    default:
+      return Icons.school_outlined;
+  }
+}
+
+Color _subjectColor(String subject) {
+  switch (subject.toLowerCase()) {
+    case 'mathematics':
+    case 'math':
+      return AppColors.subjectMath;
+    case 'physics':
+      return AppColors.subjectPhysics;
+    case 'chemistry':
+      return AppColors.subjectChem;
+    case 'biology':
+      return AppColors.subjectBio;
+    case 'english':
+      return AppColors.subjectEng;
+    case 'history':
+      return AppColors.subjectHist;
+    case 'geography':
+      return AppColors.subjectGeo;
+    case 'economics':
+      return AppColors.subjectEcon;
+    default:
+      return AppColors.subjectNeutral;
+  }
+}
+
+String _shortSubject(String subject) {
+  final normalized = subject.trim();
+  if (normalized.toLowerCase() == 'mathematics') return 'Math';
+  return normalized;
 }
 
 class _LoadMoreFooter extends StatelessWidget {
