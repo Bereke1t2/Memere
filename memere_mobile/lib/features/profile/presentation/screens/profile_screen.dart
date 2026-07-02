@@ -135,13 +135,16 @@ class _ProfileHeader extends StatelessWidget {
             width: AppSizes.avatarLg,
             height: AppSizes.avatarLg,
             alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              gradient: AppColors.primaryGradient,
+            decoration: BoxDecoration(
+              color: AppColors.bgTertiary,
               shape: BoxShape.circle,
+              border: Border.all(color: AppColors.borderStrong),
             ),
             child: Text(
               initials,
-              style: AppTextStyles.headlineSmall.copyWith(color: Colors.white),
+              style: AppTextStyles.headlineSmall.copyWith(
+                color: AppColors.textPrimary,
+              ),
             ),
           ),
           const SizedBox(width: AppSizes.md),
