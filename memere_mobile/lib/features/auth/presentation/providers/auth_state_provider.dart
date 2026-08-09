@@ -79,12 +79,17 @@ class AuthStateNotifier extends AsyncNotifier<AuthState> {
   }
 
   Future<void> login(String email, String password) async {
+    final previous = state.valueOrNull;
     state = const AsyncLoading();
     final useCase = ref.read(loginUseCaseProvider);
     final result = await useCase(LoginParams(email: email, password: password));
     await result.fold(
       (failure) async {
-        state = AsyncError(failure, StackTrace.current);
+        final hasSeenOnboarding = previous?.hasSeenOnboarding ??
+            await ref.read(preferencesServiceProvider).hasSeenOnboarding();
+        state = AsyncError<AuthState>(failure, StackTrace.current).copyWithPrevious(
+          AsyncData(AuthState(hasSeenOnboarding: hasSeenOnboarding)),
+        );
       },
       (data) async {
         await ref.read(preferencesServiceProvider).markOnboardingSeen();
