@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/storage/local_storage.dart';
 import '../providers/auth_state_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -92,15 +93,27 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     await Future<void>.delayed(const Duration(milliseconds: 2000));
     if (!mounted) return;
 
-    final authState = await ref.read(authStateProvider.future);
-    if (!mounted) return;
+    try {
+      final authState = await ref.read(authStateProvider.future);
+      if (!mounted) return;
 
-    if (authState.isAuthenticated) {
-      context.go(AppRoutes.home);
-    } else if (authState.hasSeenOnboarding) {
-      context.go(AppRoutes.login);
-    } else {
-      context.go(AppRoutes.onboarding);
+      if (authState.isAuthenticated) {
+        context.go(AppRoutes.home);
+      } else if (authState.hasSeenOnboarding) {
+        context.go(AppRoutes.login);
+      } else {
+        context.go(AppRoutes.onboarding);
+      }
+    } catch (_) {
+      if (!mounted) return;
+      final prefs = ref.read(preferencesServiceProvider);
+      final hasSeen = await prefs.hasSeenOnboarding();
+      if (!mounted) return;
+      if (hasSeen) {
+        context.go(AppRoutes.login);
+      } else {
+        context.go(AppRoutes.onboarding);
+      }
     }
   }
 }
