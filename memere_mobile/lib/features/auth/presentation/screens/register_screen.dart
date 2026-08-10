@@ -10,8 +10,9 @@ import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_surface.dart';
 import '../../../../shared/widgets/app_text_field.dart';
-import '../providers/auth_state_provider.dart';
+import '../../../../shared/widgets/memere_mascot.dart';
 import '../../domain/usecases/register_usecase.dart';
+import '../providers/auth_state_provider.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -65,17 +66,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
       if (next.hasError) {
         final error = next.error;
-        final message = error is Failure
-            ? error.message
-            : 'Registration failed. Please try again.';
+        var message = 'Registration failed. Please try again.';
+        if (error is Failure) {
+          message = error.message;
+        } else if (error.toString().contains('Connection refused')) {
+          message = 'Cannot connect to backend server. Make sure backend is running!';
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(message),
-            backgroundColor: AppColors.error,
+            content: Row(
+              children: [
+                const Icon(Icons.wifi_off_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(child: Text(message)),
+              ],
+            ),
+            backgroundColor: AppColors.bgQuaternary,
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.all(AppSizes.md),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              side: const BorderSide(color: AppColors.borderStrong),
             ),
           ),
         );
@@ -103,30 +115,37 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
-                    children: [
-                      AppIconTile(
-                        icon: Icons.school_rounded,
-                        gradient: AppColors.primaryGradient,
-                        size: 48,
-                        iconSize: AppSizes.iconMd,
-                      ),
-                      SizedBox(width: AppSizes.md),
-                      Text('Memere', style: AppTextStyles.titleLarge),
-                    ],
+                  // Top Mascot Illustration Header
+                  Center(
+                    child: Column(
+                      children: [
+                        const MemereMascot(
+                          size: Size(190, 168),
+                          showBackdrop: false,
+                        ),
+                        const SizedBox(height: AppSizes.xs),
+                        Text(
+                          'Memere',
+                          style: AppTextStyles.titleLarge.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: AppSizes.xl),
-                  const Text('Create account',
-                      style: AppTextStyles.displayMedium),
-                  const SizedBox(height: AppSizes.sm),
-                  Text('Start learning with Memere today',
-                      style: AppTextStyles.bodyLarge
-                          .copyWith(color: AppColors.textSecondary)),
-                  const SizedBox(height: AppSizes.xl),
+                  const SizedBox(height: AppSizes.md),
+                  Text('Create Student Account', style: AppTextStyles.headlineMedium.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Start preparing for Grade 12 National Exams today',
+                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: AppSizes.lg),
                   AppSurface(
                     padding: const EdgeInsets.all(AppSizes.lg),
-                    gradient: AppColors.cardGradient,
+                    color: AppColors.bgSecondary,
                     shadows: AppShadows.md,
+                    radius: AppSizes.radiusXl,
                     child: Column(
                       children: [
                         Row(
@@ -134,7 +153,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             Expanded(
                               child: AppTextField(
                                 controller: _firstCtrl,
-                                hintText: 'First name',
+                                hintText: 'Abebe',
                                 labelText: 'First Name',
                                 textInputAction: TextInputAction.next,
                                 validator: (v) =>
@@ -147,7 +166,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             Expanded(
                               child: AppTextField(
                                 controller: _lastCtrl,
-                                hintText: 'Last name',
+                                hintText: 'Kebede',
                                 labelText: 'Last Name',
                                 textInputAction: TextInputAction.next,
                                 validator: (v) =>
@@ -161,8 +180,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         const SizedBox(height: AppSizes.md),
                         AppTextField(
                           controller: _emailCtrl,
-                          hintText: 'your@email.com',
-                          labelText: 'Email',
+                          hintText: 'student@memere.edu.et',
+                          labelText: 'Email Address',
                           prefixIcon: Icons.email_outlined,
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.next,
@@ -171,7 +190,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             if (v == null || v.trim().isEmpty) {
                               return 'Email is required';
                             }
-                            if (!v.contains('@')) return 'Enter a valid email';
+                            if (!v.contains('@')) return 'Enter a valid email address';
                             return null;
                           },
                         ),
@@ -204,7 +223,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         ),
                         const SizedBox(height: AppSizes.xl),
                         AppButton(
-                          label: 'Create Account',
+                          label: 'Create Free Account',
                           onPressed: authAsync.isLoading ? null : _submit,
                           isLoading: authAsync.isLoading,
                           suffixIcon: Icons.arrow_forward_rounded,
@@ -228,6 +247,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           'Sign In',
                           style: AppTextStyles.labelMedium.copyWith(
                             color: AppColors.accentPrimary,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),

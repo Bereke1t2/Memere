@@ -2,18 +2,26 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/app_constants.dart';
 import '../constants/env.dart';
+import '../storage/secure_storage_service.dart';
 import 'interceptors/auth_interceptor.dart';
 import 'interceptors/logging_interceptor.dart';
 
+import '../utils/media_url_helper.dart';
+
 final dioClientProvider = Provider<DioClient>((ref) {
-  return DioClient();
+  final secureStorage = ref.watch(secureStorageServiceProvider);
+  return DioClient(secureStorage);
 });
 
+String _resolveBaseUrl(String url) {
+  return fixMediaUrl(url);
+}
+
 class DioClient {
-  DioClient() {
+  DioClient(SecureStorageService secureStorage) {
     _dio = Dio(
       BaseOptions(
-        baseUrl: Env.baseUrl,
+        baseUrl: _resolveBaseUrl(Env.baseUrl),
         connectTimeout: AppConstants.connectionTimeout,
         receiveTimeout: AppConstants.receiveTimeout,
         headers: {
@@ -23,7 +31,7 @@ class DioClient {
       ),
     );
     _dio.interceptors.addAll([
-      AuthInterceptor(_dio),
+      AuthInterceptor(_dio, secureStorage),
       LoggingInterceptor(),
     ]);
   }

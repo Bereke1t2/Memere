@@ -31,6 +31,6 @@ abstract class AppConstants {
   static const int paymentPollTimeoutSeconds = 120;
 
   // ── Connectivity ─────────────────────────────────────────────────────────
-  static const Duration connectionTimeout = Duration(seconds: 30);
-  static const Duration receiveTimeout = Duration(seconds: 30);
+  static const Duration connectionTimeout = Duration(seconds: 5);
+  static const Duration receiveTimeout = Duration(seconds: 15);
 }

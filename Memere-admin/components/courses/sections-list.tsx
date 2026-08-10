@@ -82,7 +82,10 @@ export function SectionsList({ courseId, sections, lessonsBySectionId, canEdit =
 
   async function onSubmit(values: AddSectionInput) {
     try {
-      await clientAction(`/api/teacher/courses/${courseId}/sections`, values);
+      await clientAction(`/api/teacher/courses/${courseId}/sections`, {
+        ...values,
+        is_published: true,
+      });
       toast.success("Section added.");
       setOpen(false);
       reset();

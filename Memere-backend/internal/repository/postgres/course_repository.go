@@ -195,7 +195,7 @@ func (r *CourseRepo) GetCourseWithSectionsAndLessons(ctx context.Context, course
 	// Bucket lessons by section so each section gets its own ordered slice.
 	lessonsBySection := make(map[uuid.UUID][]*entity.Lesson, len(sectionRows))
 	for _, lr := range lessonRows {
-		l := lessonFromRow(lr)
+		l := lessonFromCourseRow(lr)
 		lessonsBySection[l.SectionID] = append(lessonsBySection[l.SectionID], l)
 	}
 

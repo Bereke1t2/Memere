@@ -242,6 +242,8 @@ func (h *CourseHandler) AddLesson(c *gin.Context) {
 		DurationSeconds: req.DurationSeconds,
 		IsPublished:     req.IsPublished,
 		OrderIndex:      req.OrderIndex,
+		Content:         req.Content,
+		PdfURL:          req.PdfURL,
 	})
 	if err != nil {
 		respondError(c, err)
@@ -249,6 +251,50 @@ func (h *CourseHandler) AddLesson(c *gin.Context) {
 	}
 	resp := dto.NewLessonResponse(lesson)
 	respondJSON(c, http.StatusCreated, &resp)
+}
+
+// UpdateLesson handles PUT /lessons/:id → 200.
+func (h *CourseHandler) UpdateLesson(c *gin.Context) {
+	id, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	var req dto.CreateLessonRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, apperror.BadRequest("invalid request body", err))
+		return
+	}
+	updated, err := h.svc.UpdateLesson(c.Request.Context(), actor(c), id, course.LessonInput{
+		Title:           req.Title,
+		Type:            entity.LessonType(req.Type),
+		IsFreePreview:   req.IsFreePreview,
+		DurationSeconds: req.DurationSeconds,
+		IsPublished:     req.IsPublished,
+		OrderIndex:      req.OrderIndex,
+		Content:         req.Content,
+		PdfURL:          req.PdfURL,
+	})
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	resp := dto.NewLessonResponse(updated)
+	respondJSON(c, http.StatusOK, &resp)
+}
+
+// DeleteLesson handles DELETE /lessons/:id → 200.
+func (h *CourseHandler) DeleteLesson(c *gin.Context) {
+	id, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	if err := h.svc.DeleteLesson(c.Request.Context(), actor(c), id); err != nil {
+		respondError(c, err)
+		return
+	}
+	respondJSON(c, http.StatusOK, gin.H{"message": "lesson deleted"})
 }
 
 // ListLessons handles GET /sections/:id/lessons → 200.

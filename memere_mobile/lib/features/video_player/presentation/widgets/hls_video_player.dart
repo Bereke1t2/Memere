@@ -2,8 +2,6 @@ import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
-import '../../../../core/constants/app_colors.dart';
-
 class HlsVideoPlayer extends StatelessWidget {
   const HlsVideoPlayer({
     super.key,
@@ -17,13 +15,17 @@ class HlsVideoPlayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!controller.value.isInitialized) {
-      return const AspectRatio(
-        aspectRatio: 16 / 9,
-        child: ColoredBox(
+      return Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
           color: Colors.black,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const AspectRatio(
+          aspectRatio: 16 / 9,
           child: Center(
             child: CircularProgressIndicator(
-              color: AppColors.accentPrimary,
+              color: Color(0xFFFF5252),
               strokeWidth: 2,
             ),
           ),
@@ -31,11 +33,24 @@ class HlsVideoPlayer extends StatelessWidget {
       );
     }
 
-    return AspectRatio(
-      aspectRatio: controller.value.aspectRatio == 0
-          ? 16 / 9
-          : controller.value.aspectRatio,
-      child: Chewie(controller: chewieController),
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(120),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Chewie(controller: chewieController),
+      ),
     );
   }
 }

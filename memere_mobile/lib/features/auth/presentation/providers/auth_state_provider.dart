@@ -49,21 +49,25 @@ class AuthStateNotifier extends AsyncNotifier<AuthState> {
   Future<AuthState> build() async {
     final repo = ref.watch(authRepositoryProvider);
     final prefs = ref.watch(preferencesServiceProvider);
-    final hasSeenOnboarding = await prefs.hasSeenOnboarding();
-    final isLoggedIn = await repo.isLoggedIn();
+    final hasSeenOnboarding = await prefs.hasSeenOnboarding().catchError((_) => false);
+    final isLoggedIn = await repo.isLoggedIn().catchError((_) => false);
     if (!isLoggedIn) {
       return AuthState(hasSeenOnboarding: hasSeenOnboarding);
     }
 
-    final result = await repo.getCurrentUser();
-    return result.fold(
-      (_) => AuthState(hasSeenOnboarding: hasSeenOnboarding),
-      (user) => AuthState(
-        user: user,
-        isAuthenticated: true,
-        hasSeenOnboarding: hasSeenOnboarding,
-      ),
-    );
+    try {
+      final result = await repo.getCurrentUser().timeout(const Duration(seconds: 3));
+      return result.fold(
+        (_) => AuthState(hasSeenOnboarding: hasSeenOnboarding),
+        (user) => AuthState(
+          user: user,
+          isAuthenticated: true,
+          hasSeenOnboarding: hasSeenOnboarding,
+        ),
+      );
+    } catch (_) {
+      return AuthState(hasSeenOnboarding: hasSeenOnboarding);
+    }
   }
 
   Future<void> markOnboardingSeen() async {

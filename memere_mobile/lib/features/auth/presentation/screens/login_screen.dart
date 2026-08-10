@@ -10,6 +10,7 @@ import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_surface.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../../../shared/widgets/memere_mascot.dart';
 import '../providers/auth_state_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -52,17 +53,32 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
       if (next.hasError) {
         final error = next.error;
-        final message = error is Failure
-            ? error.message
-            : 'Login failed. Please try again.';
+        var message = 'Invalid email or password. Please check your credentials or tap Create Account below.';
+        IconData icon = Icons.lock_reset_rounded;
+
+        if (error is ServerFailure && error.statusCode != 401) {
+          message = error.message;
+          icon = Icons.error_outline_rounded;
+        } else if (error.toString().contains('Connection refused')) {
+          message = 'Cannot connect to backend server. Make sure backend is running!';
+          icon = Icons.wifi_off_rounded;
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(message),
-            backgroundColor: AppColors.error,
+            content: Row(
+              children: [
+                Icon(icon, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(child: Text(message)),
+              ],
+            ),
+            backgroundColor: AppColors.bgQuaternary,
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.all(AppSizes.md),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSizes.radiusSm),
+              borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+              side: const BorderSide(color: AppColors.borderStrong),
             ),
           ),
         );
@@ -83,48 +99,57 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: AppSizes.lg),
-                  const Row(
-                    children: [
-                      AppIconTile(
-                        icon: Icons.school_rounded,
-                        gradient: AppColors.primaryGradient,
-                        size: 56,
-                        iconSize: 28,
-                      ),
-                      SizedBox(width: AppSizes.md),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Memere', style: AppTextStyles.titleLarge),
-                          SizedBox(height: AppSizes.xs),
-                          Text('Grade 12 exam prep',
-                              style: AppTextStyles.bodySmall),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppSizes.xl),
-                  const Text('Welcome back',
-                      style: AppTextStyles.displayMedium),
                   const SizedBox(height: AppSizes.sm),
-                  Text(
-                    'Sign in to continue learning with Memere',
-                    style: AppTextStyles.bodyLarge
-                        .copyWith(color: AppColors.textSecondary),
+
+                  // Mascot Header Illustration
+                  Center(
+                    child: Column(
+                      children: [
+                        const MemereMascot(
+                          size: Size(210, 185),
+                          showBackdrop: false,
+                        ),
+                        const SizedBox(height: AppSizes.sm),
+                        Text(
+                          'Memere',
+                          style: AppTextStyles.displayMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Grade 12 Entrance Exam Preparation',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+
                   const SizedBox(height: AppSizes.lg),
+                  Text('Welcome Back', style: AppTextStyles.headlineMedium.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Sign in to access your course materials and mock exams',
+                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: AppSizes.md),
+
+                  // Interactive Form Card
                   AppSurface(
                     padding: const EdgeInsets.all(AppSizes.lg),
-                    gradient: AppColors.cardGradient,
+                    color: AppColors.bgSecondary,
                     shadows: AppShadows.md,
+                    radius: AppSizes.radiusXl,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         AppTextField(
                           controller: _emailCtrl,
-                          hintText: 'your@email.com',
-                          labelText: 'Email',
+                          hintText: 'student@memere.edu.et',
+                          labelText: 'Email Address',
                           prefixIcon: Icons.email_outlined,
                           keyboardType: TextInputType.emailAddress,
                           textInputAction: TextInputAction.next,
@@ -133,14 +158,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             if (v == null || v.trim().isEmpty) {
                               return 'Email is required';
                             }
-                            if (!v.contains('@')) return 'Enter a valid email';
+                            if (!v.contains('@')) return 'Enter a valid email address';
                             return null;
                           },
                         ),
                         const SizedBox(height: AppSizes.md),
                         AppTextField(
                           controller: _passwordCtrl,
-                          hintText: 'Password',
+                          hintText: 'Enter your password',
                           labelText: 'Password',
                           prefixIcon: Icons.lock_outline_rounded,
                           isPassword: true,
@@ -157,7 +182,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         Align(
                           alignment: Alignment.centerRight,
                           child: TextButton(
-                            onPressed: () {/* Phase 2 */},
+                            onPressed: () {},
                             child: Text(
                               'Forgot password?',
                               style: AppTextStyles.labelMedium.copyWith(
@@ -166,9 +191,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(height: AppSizes.md),
+                        const SizedBox(height: AppSizes.sm),
                         AppButton(
-                          label: 'Sign In',
+                          label: 'Sign In to Learn',
                           onPressed: authAsync.isLoading ? null : _submit,
                           isLoading: authAsync.isLoading,
                           suffixIcon: Icons.arrow_forward_rounded,
@@ -176,92 +201,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       ],
                     ),
                   ),
+
                   const SizedBox(height: AppSizes.xl),
-                  const _LoginTrustRow(),
-                  const SizedBox(height: AppSizes.xl),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text("Don't have an account? ",
-                          style: AppTextStyles.bodyMedium
-                              .copyWith(color: AppColors.textSecondary)),
+                      Text(
+                        "Don't have an account? ",
+                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                      ),
                       GestureDetector(
                         onTap: () => context.go(AppRoutes.register),
-                        child: Text('Create one',
-                            style: AppTextStyles.labelMedium
-                                .copyWith(color: AppColors.accentPrimary)),
+                        child: Text(
+                          'Create Account',
+                          style: AppTextStyles.labelMedium.copyWith(
+                            color: AppColors.accentPrimary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: AppSizes.md),
                 ],
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _LoginTrustRow extends StatelessWidget {
-  const _LoginTrustRow();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      children: [
-        Expanded(
-          child: _TrustPill(
-            icon: Icons.download_done_rounded,
-            label: 'Offline lessons',
-          ),
-        ),
-        SizedBox(width: AppSizes.sm),
-        Expanded(
-          child: _TrustPill(
-            icon: Icons.timer_rounded,
-            label: 'Timed practice',
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _TrustPill extends StatelessWidget {
-  const _TrustPill({
-    required this.icon,
-    required this.label,
-  });
-
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppSurface(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSizes.sm,
-        vertical: AppSizes.sm,
-      ),
-      radius: AppSizes.radiusMd,
-      shadows: AppShadows.sm,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: AppSizes.iconSm, color: AppColors.accentSecondary),
-          const SizedBox(width: AppSizes.xs),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.labelSmall.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

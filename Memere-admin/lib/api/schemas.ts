@@ -44,26 +44,26 @@ export const CourseSchema = z.object({
   id: z.string(),
   teacher_id: z.string(),
   title: z.string(),
-  slug: z.string().optional(),
-  description: z.string(),
+  slug: z.string().optional().nullable(),
+  description: z.string().optional().nullable().default(""),
   short_description: z.string().optional().nullable(),
-  subject: z.string(),
-  grade: z.number(),
+  subject: z.string().optional().default("General"),
+  grade: z.number().optional().default(1),
   thumbnail_url: z.string().optional().nullable(),
-  price: z.number(),
-  currency: z.string(),
-  is_free: z.boolean(),
-  is_published: z.boolean(),
-  language: z.string().optional(),
-  level: z.string().optional(),
+  price: z.number().optional().default(0),
+  currency: z.string().optional().default("ETB"),
+  is_free: z.boolean().optional().default(false),
+  is_published: z.boolean().optional().default(false),
+  language: z.string().optional().nullable(),
+  level: z.string().optional().nullable(),
   total_duration_seconds: z.number().optional(),
   total_lessons: z.number().optional(),
   rating_avg: z.number().optional(),
   enrollment_count: z.number().optional(),
   metadata: z.record(z.string(), z.unknown()).optional().nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
-});
+  created_at: z.string().optional(),
+  updated_at: z.string().optional(),
+}).passthrough();
 
 export type Course = z.infer<typeof CourseSchema>;
 
@@ -73,13 +73,14 @@ export const SectionSchema = z.object({
   id: z.string(),
   course_id: z.string().optional(),
   title: z.string(),
+  description: z.string().optional().nullable(),
   order: z.number().optional(),
   order_index: z.number().optional(),
   is_published: z.boolean().optional(),
   total_lessons: z.number().optional(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
-});
+}).passthrough();
 
 export const SectionListResponseSchema = z.object({
   data: SectionSchema.array(),
@@ -98,9 +99,11 @@ export const LessonSchema = z.object({
   duration_seconds: z.number().optional(),
   is_published: z.boolean().optional(),
   video_id: z.string().optional().nullable(),
+  content: z.string().optional().nullable(),
+  pdf_url: z.string().optional().nullable(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
-});
+}).passthrough();
 export type Lesson = z.infer<typeof LessonSchema>;
 
 export const LessonListResponseSchema = z.object({ data: LessonSchema.array() });
@@ -111,6 +114,8 @@ export const AddLessonInputSchema = z.object({
   is_free_preview: z.boolean(),
   duration_seconds: z.number().min(0).optional(),
   is_published: z.boolean().optional(),
+  content: z.string().optional(),
+  pdf_url: z.string().optional(),
 });
 export type AddLessonInput = z.infer<typeof AddLessonInputSchema>;
 

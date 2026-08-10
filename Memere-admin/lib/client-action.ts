@@ -14,10 +14,11 @@ function handleSessionExpired() {
  */
 export async function clientAction<T = void>(
   url: string,
-  body?: Record<string, unknown>
+  body?: Record<string, unknown>,
+  method: "POST" | "PUT" | "DELETE" | "GET" = "POST"
 ): Promise<T> {
   const res = await fetch(url, {
-    method: "POST",
+    method,
     headers: body !== undefined ? { "Content-Type": "application/json" } : {},
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });

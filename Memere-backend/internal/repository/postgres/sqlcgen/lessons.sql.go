@@ -14,11 +14,11 @@ import (
 const createLesson = `-- name: CreateLesson :one
 INSERT INTO courses.lessons (
     section_id, course_id, title, type, order_index, is_free_preview,
-    duration_seconds, is_published
+    duration_seconds, is_published, content, pdf_url
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 )
-RETURNING id, section_id, course_id, title, type, order_index, is_free_preview, duration_seconds, is_published, created_at, updated_at, deleted_at
+RETURNING id, section_id, course_id, title, type, order_index, is_free_preview, duration_seconds, is_published, content, pdf_url, created_at, updated_at, deleted_at
 `
 
 type CreateLessonParams struct {
@@ -30,6 +30,8 @@ type CreateLessonParams struct {
 	IsFreePreview   bool
 	DurationSeconds int32
 	IsPublished     bool
+	Content         *string
+	PdfUrl          *string
 }
 
 func (q *Queries) CreateLesson(ctx context.Context, arg CreateLessonParams) (CoursesLesson, error) {
@@ -42,6 +44,8 @@ func (q *Queries) CreateLesson(ctx context.Context, arg CreateLessonParams) (Cou
 		arg.IsFreePreview,
 		arg.DurationSeconds,
 		arg.IsPublished,
+		arg.Content,
+		arg.PdfUrl,
 	)
 	var i CoursesLesson
 	err := row.Scan(
@@ -54,6 +58,8 @@ func (q *Queries) CreateLesson(ctx context.Context, arg CreateLessonParams) (Cou
 		&i.IsFreePreview,
 		&i.DurationSeconds,
 		&i.IsPublished,
+		&i.Content,
+		&i.PdfUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -62,13 +68,33 @@ func (q *Queries) CreateLesson(ctx context.Context, arg CreateLessonParams) (Cou
 }
 
 const getLessonByID = `-- name: GetLessonByID :one
-SELECT id, section_id, course_id, title, type, order_index, is_free_preview, duration_seconds, is_published, created_at, updated_at, deleted_at FROM courses.lessons
-WHERE id = $1 AND deleted_at IS NULL
+SELECT l.id, l.section_id, l.course_id, l.title, l.type, l.order_index, l.is_free_preview, l.duration_seconds, l.is_published, l.content, l.pdf_url, l.created_at, l.updated_at, l.deleted_at, v.id AS video_id
+FROM courses.lessons l
+LEFT JOIN courses.videos v ON v.lesson_id = l.id AND v.deleted_at IS NULL
+WHERE l.id = $1 AND l.deleted_at IS NULL
 `
 
-func (q *Queries) GetLessonByID(ctx context.Context, id pgtype.UUID) (CoursesLesson, error) {
+type GetLessonByIDRow struct {
+	ID              pgtype.UUID
+	SectionID       pgtype.UUID
+	CourseID        pgtype.UUID
+	Title           string
+	Type            string
+	OrderIndex      int32
+	IsFreePreview   bool
+	DurationSeconds int32
+	IsPublished     bool
+	Content         *string
+	PdfUrl          *string
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+	DeletedAt       pgtype.Timestamptz
+	VideoID         pgtype.UUID
+}
+
+func (q *Queries) GetLessonByID(ctx context.Context, id pgtype.UUID) (GetLessonByIDRow, error) {
 	row := q.db.QueryRow(ctx, getLessonByID, id)
-	var i CoursesLesson
+	var i GetLessonByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.SectionID,
@@ -79,28 +105,51 @@ func (q *Queries) GetLessonByID(ctx context.Context, id pgtype.UUID) (CoursesLes
 		&i.IsFreePreview,
 		&i.DurationSeconds,
 		&i.IsPublished,
+		&i.Content,
+		&i.PdfUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.VideoID,
 	)
 	return i, err
 }
 
 const listLessonsByCourse = `-- name: ListLessonsByCourse :many
-SELECT id, section_id, course_id, title, type, order_index, is_free_preview, duration_seconds, is_published, created_at, updated_at, deleted_at FROM courses.lessons
-WHERE course_id = $1 AND deleted_at IS NULL
-ORDER BY order_index ASC, created_at ASC
+SELECT l.id, l.section_id, l.course_id, l.title, l.type, l.order_index, l.is_free_preview, l.duration_seconds, l.is_published, l.content, l.pdf_url, l.created_at, l.updated_at, l.deleted_at, v.id AS video_id
+FROM courses.lessons l
+LEFT JOIN courses.videos v ON v.lesson_id = l.id AND v.deleted_at IS NULL
+WHERE l.course_id = $1 AND l.deleted_at IS NULL
+ORDER BY l.order_index ASC, l.created_at ASC
 `
 
-func (q *Queries) ListLessonsByCourse(ctx context.Context, courseID pgtype.UUID) ([]CoursesLesson, error) {
+type ListLessonsByCourseRow struct {
+	ID              pgtype.UUID
+	SectionID       pgtype.UUID
+	CourseID        pgtype.UUID
+	Title           string
+	Type            string
+	OrderIndex      int32
+	IsFreePreview   bool
+	DurationSeconds int32
+	IsPublished     bool
+	Content         *string
+	PdfUrl          *string
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+	DeletedAt       pgtype.Timestamptz
+	VideoID         pgtype.UUID
+}
+
+func (q *Queries) ListLessonsByCourse(ctx context.Context, courseID pgtype.UUID) ([]ListLessonsByCourseRow, error) {
 	rows, err := q.db.Query(ctx, listLessonsByCourse, courseID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []CoursesLesson{}
+	items := []ListLessonsByCourseRow{}
 	for rows.Next() {
-		var i CoursesLesson
+		var i ListLessonsByCourseRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.SectionID,
@@ -111,9 +160,12 @@ func (q *Queries) ListLessonsByCourse(ctx context.Context, courseID pgtype.UUID)
 			&i.IsFreePreview,
 			&i.DurationSeconds,
 			&i.IsPublished,
+			&i.Content,
+			&i.PdfUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.VideoID,
 		); err != nil {
 			return nil, err
 		}
@@ -126,20 +178,40 @@ func (q *Queries) ListLessonsByCourse(ctx context.Context, courseID pgtype.UUID)
 }
 
 const listLessonsBySection = `-- name: ListLessonsBySection :many
-SELECT id, section_id, course_id, title, type, order_index, is_free_preview, duration_seconds, is_published, created_at, updated_at, deleted_at FROM courses.lessons
-WHERE section_id = $1 AND deleted_at IS NULL
-ORDER BY order_index ASC, created_at ASC
+SELECT l.id, l.section_id, l.course_id, l.title, l.type, l.order_index, l.is_free_preview, l.duration_seconds, l.is_published, l.content, l.pdf_url, l.created_at, l.updated_at, l.deleted_at, v.id AS video_id
+FROM courses.lessons l
+LEFT JOIN courses.videos v ON v.lesson_id = l.id AND v.deleted_at IS NULL
+WHERE l.section_id = $1 AND l.deleted_at IS NULL
+ORDER BY l.order_index ASC, l.created_at ASC
 `
 
-func (q *Queries) ListLessonsBySection(ctx context.Context, sectionID pgtype.UUID) ([]CoursesLesson, error) {
+type ListLessonsBySectionRow struct {
+	ID              pgtype.UUID
+	SectionID       pgtype.UUID
+	CourseID        pgtype.UUID
+	Title           string
+	Type            string
+	OrderIndex      int32
+	IsFreePreview   bool
+	DurationSeconds int32
+	IsPublished     bool
+	Content         *string
+	PdfUrl          *string
+	CreatedAt       pgtype.Timestamptz
+	UpdatedAt       pgtype.Timestamptz
+	DeletedAt       pgtype.Timestamptz
+	VideoID         pgtype.UUID
+}
+
+func (q *Queries) ListLessonsBySection(ctx context.Context, sectionID pgtype.UUID) ([]ListLessonsBySectionRow, error) {
 	rows, err := q.db.Query(ctx, listLessonsBySection, sectionID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []CoursesLesson{}
+	items := []ListLessonsBySectionRow{}
 	for rows.Next() {
-		var i CoursesLesson
+		var i ListLessonsBySectionRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.SectionID,
@@ -150,9 +222,12 @@ func (q *Queries) ListLessonsBySection(ctx context.Context, sectionID pgtype.UUI
 			&i.IsFreePreview,
 			&i.DurationSeconds,
 			&i.IsPublished,
+			&i.Content,
+			&i.PdfUrl,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.VideoID,
 		); err != nil {
 			return nil, err
 		}
@@ -208,9 +283,11 @@ SET title = $2,
     order_index = $4,
     is_free_preview = $5,
     duration_seconds = $6,
-    is_published = $7
+    is_published = $7,
+    content = COALESCE($8, content),
+    pdf_url = COALESCE($9, pdf_url)
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, section_id, course_id, title, type, order_index, is_free_preview, duration_seconds, is_published, created_at, updated_at, deleted_at
+RETURNING id, section_id, course_id, title, type, order_index, is_free_preview, duration_seconds, is_published, content, pdf_url, created_at, updated_at, deleted_at
 `
 
 type UpdateLessonParams struct {
@@ -221,6 +298,8 @@ type UpdateLessonParams struct {
 	IsFreePreview   bool
 	DurationSeconds int32
 	IsPublished     bool
+	Content         *string
+	PdfUrl          *string
 }
 
 func (q *Queries) UpdateLesson(ctx context.Context, arg UpdateLessonParams) (CoursesLesson, error) {
@@ -232,6 +311,8 @@ func (q *Queries) UpdateLesson(ctx context.Context, arg UpdateLessonParams) (Cou
 		arg.IsFreePreview,
 		arg.DurationSeconds,
 		arg.IsPublished,
+		arg.Content,
+		arg.PdfUrl,
 	)
 	var i CoursesLesson
 	err := row.Scan(
@@ -244,6 +325,8 @@ func (q *Queries) UpdateLesson(ctx context.Context, arg UpdateLessonParams) (Cou
 		&i.IsFreePreview,
 		&i.DurationSeconds,
 		&i.IsPublished,
+		&i.Content,
+		&i.PdfUrl,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,

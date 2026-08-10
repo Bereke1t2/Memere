@@ -39,11 +39,11 @@ export function TeacherCourseActions({ course }: TeacherCourseActionsProps) {
     handleSubmit,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<CreateCourseInput>({
+  } = useForm({
     resolver: zodResolver(CreateCourseInputSchema),
     defaultValues: {
       title: course.title,
-      description: course.description,
+      description: course.description ?? "",
       subject: course.subject,
       grade: course.grade,
       level: (course.level as CreateCourseInput["level"]) ?? "beginner",
@@ -57,7 +57,7 @@ export function TeacherCourseActions({ course }: TeacherCourseActionsProps) {
     router.refresh();
   }
 
-  async function handleEdit(values: CreateCourseInput) {
+  async function handleEdit(values: any) {
     const res = await fetch(`/api/teacher/courses/${course.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
