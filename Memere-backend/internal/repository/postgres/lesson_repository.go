@@ -37,11 +37,13 @@ func (r *LessonRepo) Create(ctx context.Context, l *entity.Lesson) error {
 		IsFreePreview:   l.IsFreePreview,
 		DurationSeconds: int32(l.DurationSeconds),
 		IsPublished:     l.IsPublished,
+		Content:         l.Content,
+		PdfUrl:          l.PdfURL,
 	})
 	if err != nil {
 		return apperror.Internal(err)
 	}
-	*l = *lessonFromRow(row)
+	*l = *lessonFromCoursesLesson(row)
 	return nil
 }
 
@@ -51,7 +53,7 @@ func (r *LessonRepo) FindByID(ctx context.Context, id uuid.UUID) (*entity.Lesson
 	if err != nil {
 		return nil, mapLessonErr(err)
 	}
-	return lessonFromRow(row), nil
+	return lessonFromGetRow(row), nil
 }
 
 // ListBySection returns a section's live lessons ordered by order_index.
@@ -60,7 +62,11 @@ func (r *LessonRepo) ListBySection(ctx context.Context, sectionID uuid.UUID) ([]
 	if err != nil {
 		return nil, apperror.Internal(err)
 	}
-	return lessonsFromRows(rows), nil
+	lessons := make([]*entity.Lesson, len(rows))
+	for i, row := range rows {
+		lessons[i] = lessonFromSectionRow(row)
+	}
+	return lessons, nil
 }
 
 // ListByCourse returns all of a course's live lessons ordered by order_index.
@@ -69,11 +75,14 @@ func (r *LessonRepo) ListByCourse(ctx context.Context, courseID uuid.UUID) ([]*e
 	if err != nil {
 		return nil, apperror.Internal(err)
 	}
-	return lessonsFromRows(rows), nil
+	lessons := make([]*entity.Lesson, len(rows))
+	for i, row := range rows {
+		lessons[i] = lessonFromCourseRow(row)
+	}
+	return lessons, nil
 }
 
-// Update persists the mutable lesson fields (the query filters deleted_at IS
-// NULL).
+// Update persists the mutable lesson fields (the query filters deleted_at IS NULL).
 func (r *LessonRepo) Update(ctx context.Context, l *entity.Lesson) error {
 	row, err := queriesFor(ctx, r.q).UpdateLesson(ctx, sqlcgen.UpdateLessonParams{
 		ID:              toPgUUID(l.ID),
@@ -83,11 +92,15 @@ func (r *LessonRepo) Update(ctx context.Context, l *entity.Lesson) error {
 		IsFreePreview:   l.IsFreePreview,
 		DurationSeconds: int32(l.DurationSeconds),
 		IsPublished:     l.IsPublished,
+		Content:         l.Content,
+		PdfUrl:          l.PdfURL,
 	})
 	if err != nil {
 		return mapLessonErr(err)
 	}
-	*l = *lessonFromRow(row)
+	updated := lessonFromCoursesLesson(row)
+	updated.VideoID = l.VideoID
+	*l = *updated
 	return nil
 }
 
@@ -99,8 +112,7 @@ func (r *LessonRepo) SoftDelete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// SoftDeleteBySection tombstones every live lesson in a section (cascade from a
-// section soft-delete).
+// SoftDeleteBySection tombstones every live lesson in a section.
 func (r *LessonRepo) SoftDeleteBySection(ctx context.Context, sectionID uuid.UUID) error {
 	if err := queriesFor(ctx, r.q).SoftDeleteLessonsBySection(ctx, toPgUUID(sectionID)); err != nil {
 		return apperror.Internal(err)
@@ -108,8 +120,7 @@ func (r *LessonRepo) SoftDeleteBySection(ctx context.Context, sectionID uuid.UUI
 	return nil
 }
 
-// MaxOrderIndex returns the highest order_index among a section's live lessons,
-// or -1 when none exist.
+// MaxOrderIndex returns the highest order_index among a section's live lessons, or -1.
 func (r *LessonRepo) MaxOrderIndex(ctx context.Context, sectionID uuid.UUID) (int, error) {
 	max, err := queriesFor(ctx, r.q).MaxLessonOrderIndex(ctx, toPgUUID(sectionID))
 	if err != nil {
@@ -118,7 +129,6 @@ func (r *LessonRepo) MaxOrderIndex(ctx context.Context, sectionID uuid.UUID) (in
 	return int(max), nil
 }
 
-// mapLessonErr translates a query error: no rows → NotFound, else → Internal.
 func mapLessonErr(err error) error {
 	if errors.Is(err, pgx.ErrNoRows) {
 		return apperror.NotFound("lesson not found", err)
@@ -126,17 +136,7 @@ func mapLessonErr(err error) error {
 	return apperror.Internal(err)
 }
 
-// lessonsFromRows maps a slice of sqlc rows to domain entities.
-func lessonsFromRows(rows []sqlcgen.CoursesLesson) []*entity.Lesson {
-	lessons := make([]*entity.Lesson, len(rows))
-	for i, row := range rows {
-		lessons[i] = lessonFromRow(row)
-	}
-	return lessons
-}
-
-// lessonFromRow maps a sqlc CoursesLesson to the domain entity.
-func lessonFromRow(row sqlcgen.CoursesLesson) *entity.Lesson {
+func lessonFromCoursesLesson(row sqlcgen.CoursesLesson) *entity.Lesson {
 	return &entity.Lesson{
 		ID:              fromPgUUID(row.ID),
 		SectionID:       fromPgUUID(row.SectionID),
@@ -147,6 +147,83 @@ func lessonFromRow(row sqlcgen.CoursesLesson) *entity.Lesson {
 		IsFreePreview:   row.IsFreePreview,
 		DurationSeconds: int(row.DurationSeconds),
 		IsPublished:     row.IsPublished,
+		Content:         row.Content,
+		PdfURL:          row.PdfUrl,
+		CreatedAt:       fromPgTimestamptzValue(row.CreatedAt),
+		UpdatedAt:       fromPgTimestamptzValue(row.UpdatedAt),
+		DeletedAt:       fromPgTimestamptz(row.DeletedAt),
+	}
+}
+
+func lessonFromGetRow(row sqlcgen.GetLessonByIDRow) *entity.Lesson {
+	var videoID *uuid.UUID
+	if row.VideoID.Valid {
+		id := fromPgUUID(row.VideoID)
+		videoID = &id
+	}
+	return &entity.Lesson{
+		ID:              fromPgUUID(row.ID),
+		SectionID:       fromPgUUID(row.SectionID),
+		CourseID:        fromPgUUID(row.CourseID),
+		Title:           row.Title,
+		Type:            entity.LessonType(row.Type),
+		OrderIndex:      int(row.OrderIndex),
+		IsFreePreview:   row.IsFreePreview,
+		DurationSeconds: int(row.DurationSeconds),
+		IsPublished:     row.IsPublished,
+		VideoID:         videoID,
+		Content:         row.Content,
+		PdfURL:          row.PdfUrl,
+		CreatedAt:       fromPgTimestamptzValue(row.CreatedAt),
+		UpdatedAt:       fromPgTimestamptzValue(row.UpdatedAt),
+		DeletedAt:       fromPgTimestamptz(row.DeletedAt),
+	}
+}
+
+func lessonFromSectionRow(row sqlcgen.ListLessonsBySectionRow) *entity.Lesson {
+	var videoID *uuid.UUID
+	if row.VideoID.Valid {
+		id := fromPgUUID(row.VideoID)
+		videoID = &id
+	}
+	return &entity.Lesson{
+		ID:              fromPgUUID(row.ID),
+		SectionID:       fromPgUUID(row.SectionID),
+		CourseID:        fromPgUUID(row.CourseID),
+		Title:           row.Title,
+		Type:            entity.LessonType(row.Type),
+		OrderIndex:      int(row.OrderIndex),
+		IsFreePreview:   row.IsFreePreview,
+		DurationSeconds: int(row.DurationSeconds),
+		IsPublished:     row.IsPublished,
+		VideoID:         videoID,
+		Content:         row.Content,
+		PdfURL:          row.PdfUrl,
+		CreatedAt:       fromPgTimestamptzValue(row.CreatedAt),
+		UpdatedAt:       fromPgTimestamptzValue(row.UpdatedAt),
+		DeletedAt:       fromPgTimestamptz(row.DeletedAt),
+	}
+}
+
+func lessonFromCourseRow(row sqlcgen.ListLessonsByCourseRow) *entity.Lesson {
+	var videoID *uuid.UUID
+	if row.VideoID.Valid {
+		id := fromPgUUID(row.VideoID)
+		videoID = &id
+	}
+	return &entity.Lesson{
+		ID:              fromPgUUID(row.ID),
+		SectionID:       fromPgUUID(row.SectionID),
+		CourseID:        fromPgUUID(row.CourseID),
+		Title:           row.Title,
+		Type:            entity.LessonType(row.Type),
+		OrderIndex:      int(row.OrderIndex),
+		IsFreePreview:   row.IsFreePreview,
+		DurationSeconds: int(row.DurationSeconds),
+		IsPublished:     row.IsPublished,
+		VideoID:         videoID,
+		Content:         row.Content,
+		PdfURL:          row.PdfUrl,
 		CreatedAt:       fromPgTimestamptzValue(row.CreatedAt),
 		UpdatedAt:       fromPgTimestamptzValue(row.UpdatedAt),
 		DeletedAt:       fromPgTimestamptz(row.DeletedAt),
