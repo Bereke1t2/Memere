@@ -1,25 +1,31 @@
 -- name: CreateLesson :one
 INSERT INTO courses.lessons (
     section_id, course_id, title, type, order_index, is_free_preview,
-    duration_seconds, is_published
+    duration_seconds, is_published, content, pdf_url
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 )
 RETURNING *;
 
 -- name: GetLessonByID :one
-SELECT * FROM courses.lessons
-WHERE id = $1 AND deleted_at IS NULL;
+SELECT l.id, l.section_id, l.course_id, l.title, l.type, l.order_index, l.is_free_preview, l.duration_seconds, l.is_published, l.content, l.pdf_url, l.created_at, l.updated_at, l.deleted_at, v.id AS video_id
+FROM courses.lessons l
+LEFT JOIN courses.videos v ON v.lesson_id = l.id AND v.deleted_at IS NULL
+WHERE l.id = $1 AND l.deleted_at IS NULL;
 
 -- name: ListLessonsBySection :many
-SELECT * FROM courses.lessons
-WHERE section_id = $1 AND deleted_at IS NULL
-ORDER BY order_index ASC, created_at ASC;
+SELECT l.id, l.section_id, l.course_id, l.title, l.type, l.order_index, l.is_free_preview, l.duration_seconds, l.is_published, l.content, l.pdf_url, l.created_at, l.updated_at, l.deleted_at, v.id AS video_id
+FROM courses.lessons l
+LEFT JOIN courses.videos v ON v.lesson_id = l.id AND v.deleted_at IS NULL
+WHERE l.section_id = $1 AND l.deleted_at IS NULL
+ORDER BY l.order_index ASC, l.created_at ASC;
 
 -- name: ListLessonsByCourse :many
-SELECT * FROM courses.lessons
-WHERE course_id = $1 AND deleted_at IS NULL
-ORDER BY order_index ASC, created_at ASC;
+SELECT l.id, l.section_id, l.course_id, l.title, l.type, l.order_index, l.is_free_preview, l.duration_seconds, l.is_published, l.content, l.pdf_url, l.created_at, l.updated_at, l.deleted_at, v.id AS video_id
+FROM courses.lessons l
+LEFT JOIN courses.videos v ON v.lesson_id = l.id AND v.deleted_at IS NULL
+WHERE l.course_id = $1 AND l.deleted_at IS NULL
+ORDER BY l.order_index ASC, l.created_at ASC;
 
 -- name: UpdateLesson :one
 UPDATE courses.lessons
@@ -28,7 +34,9 @@ SET title = $2,
     order_index = $4,
     is_free_preview = $5,
     duration_seconds = $6,
-    is_published = $7
+    is_published = $7,
+    content = COALESCE($8, content),
+    pdf_url = COALESCE($9, pdf_url)
 WHERE id = $1 AND deleted_at IS NULL
 RETURNING *;
 
