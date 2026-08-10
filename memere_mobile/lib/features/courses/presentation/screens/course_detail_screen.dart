@@ -393,7 +393,7 @@ class _CurriculumTab extends StatelessWidget {
                 child: CourseSectionTile(
                   section: entry.value,
                   sectionNumber: entry.key + 1,
-                  initiallyExpanded: entry.key == 0,
+                  initiallyExpanded: true,
                   canOpenLessons: canOpenLessons,
                 ),
               ),

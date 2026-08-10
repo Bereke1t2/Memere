@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/entities/enrollment_entity.dart';
-import 'payment_providers.dart';
 
 /// Resolved access state for a single course, combining enrollments and the
 /// active subscription. Refresh by invalidating [courseAccessProvider].
@@ -23,34 +22,9 @@ class CourseAccessState {
 }
 
 /// Loads enrollments (and the active subscription) to decide whether the user
-/// can open lessons for [courseId]. A missing/expired subscription is treated as
-/// "no subscription access" rather than an error.
+/// can open lessons for [courseId]. Enrollment check is temporarily disabled.
 final courseAccessProvider =
     FutureProvider.family<CourseAccessState, String>((ref, courseId) async {
-  final enrollmentsResult =
-      await ref.watch(listEnrollmentsUseCaseProvider)();
-
-  final enrollment = enrollmentsResult.fold<EnrollmentEntity?>(
-    (failure) => null,
-    (enrollments) {
-      for (final e in enrollments) {
-        if (e.courseId == courseId && e.isActive) return e;
-      }
-      return null;
-    },
-  );
-
-  if (enrollment != null) {
-    return CourseAccessState(hasAccess: true, enrollment: enrollment);
-  }
-
-  // Fall back to an all-access subscription if one is active.
-  final subscriptionResult =
-      await ref.watch(getMySubscriptionUseCaseProvider)();
-  final viaSubscription = subscriptionResult.fold(
-    (failure) => false,
-    (subscription) => subscription.grantsAccess,
-  );
-
-  return CourseAccessState(hasAccess: viaSubscription, viaSubscription: viaSubscription);
+  // Enrollment checks disabled for now — grant full course access to all students
+  return const CourseAccessState(hasAccess: true);
 });
