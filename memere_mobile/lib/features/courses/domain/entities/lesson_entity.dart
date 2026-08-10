@@ -13,6 +13,8 @@ class LessonEntity {
     required this.updatedAt,
     this.videoId,
     this.quizId,
+    this.content,
+    this.pdfUrl,
   });
 
   final String id;
@@ -28,9 +30,13 @@ class LessonEntity {
   final DateTime? updatedAt;
   final String? videoId;
   final String? quizId;
+  final String? content;
+  final String? pdfUrl;
 
   bool get hasVideo => videoId != null && videoId!.trim().isNotEmpty;
   bool get hasQuiz => quizId != null && quizId!.trim().isNotEmpty;
+  bool get hasContent => content != null && content!.trim().isNotEmpty;
+  bool get hasPdf => pdfUrl != null && pdfUrl!.trim().isNotEmpty;
 
   String get durationLabel {
     if (durationSeconds <= 0) return '0m';
