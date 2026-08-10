@@ -7,6 +7,7 @@ import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/providers/auth_state_provider.dart';
 import '../../features/courses/presentation/screens/course_detail_screen.dart';
 import '../../features/courses/presentation/screens/course_list_screen.dart';
+import '../../features/courses/presentation/screens/pdf_reader_screen.dart';
 import '../../features/exam/presentation/screens/exam_analytics_screen.dart';
 import '../../features/learning/presentation/screens/my_learning_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
@@ -46,8 +47,23 @@ abstract class AppRoutes {
   static const paymentResult = '/payments/:paymentId/result';
   static const purchaseHistory = '/payments';
   static const subscriptionPlans = '/subscription-plans';
+  static const pdfReader = '/pdf-reader';
 
   static String courseDetailPath(String courseId) => '/courses/$courseId';
+  static String pdfReaderPath({
+    required String title,
+    required String pdfUrl,
+    String? content,
+  }) {
+    return Uri(
+      path: '/pdf-reader',
+      queryParameters: {
+        'title': title,
+        'pdfUrl': pdfUrl,
+        if (content != null && content.isNotEmpty) 'content': content,
+      },
+    ).toString();
+  }
   static String quizDetailPath(String quizId) => '/quizzes/$quizId';
   static String quizResultPath(String attemptId) =>
       '/quiz-attempts/$attemptId/result';
@@ -133,8 +149,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final onRegister = location == AppRoutes.register;
       final onAuthPage = onLogin || onRegister || onOnboarding || onSplash;
 
-      if (authState.isLoading) {
-        return onSplash ? null : AppRoutes.splash;
+      if (authState.isLoading && onSplash) {
+        return null;
       }
 
       if (!isLoggedIn) {
@@ -144,7 +160,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         }
       }
 
-      if (isLoggedIn && onAuthPage && !onSplash) {
+      if (isLoggedIn && onAuthPage) {
         return AppRoutes.home;
       }
 
@@ -221,6 +237,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             lessonId: query['lessonId'] ?? '',
             courseId: query['courseId'] ?? '',
             title: query['title'],
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.pdfReader,
+        builder: (_, state) {
+          final query = state.uri.queryParameters;
+          return PdfReaderScreen(
+            title: query['title'] ?? 'Lesson Document',
+            pdfUrl: query['pdfUrl'] ?? '',
+            content: query['content'],
           );
         },
       ),

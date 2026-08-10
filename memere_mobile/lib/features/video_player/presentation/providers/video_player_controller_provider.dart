@@ -1,11 +1,13 @@
 import 'dart:async';
 
 import 'package:chewie/chewie.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/media_url_helper.dart';
 import '../../domain/entities/video_status_entity.dart';
 import '../../domain/entities/video_stream_entity.dart';
 import '../../domain/usecases/save_video_progress_usecase.dart';
@@ -132,25 +134,48 @@ class VideoPlayerControllerNotifier
     final stream =
         streamResult.fold((failure) => throw failure, (value) => value);
 
-    _videoController =
-        VideoPlayerController.networkUrl(Uri.parse(stream.masterUrl));
-    await _videoController!.initialize();
-    _videoController!.addListener(_handlePlaybackTick);
+    try {
+      final resolvedUrl = fixMediaUrl(stream.masterUrl);
+      _videoController =
+          VideoPlayerController.networkUrl(Uri.parse(resolvedUrl));
+      await _videoController!.initialize();
+      _videoController!.addListener(_handlePlaybackTick);
 
-    _chewieController = ChewieController(
-      videoPlayerController: _videoController!,
-      autoPlay: true,
-      allowFullScreen: true,
-      allowMuting: true,
-      showControlsOnInitialize: false,
-    );
+      _chewieController = ChewieController(
+        videoPlayerController: _videoController!,
+        autoPlay: true,
+        allowFullScreen: true,
+        allowMuting: true,
+        aspectRatio: 16 / 9,
+        showControlsOnInitialize: true,
+        cupertinoProgressColors: ChewieProgressColors(
+          playedColor: const Color(0xFFFF5252),
+          handleColor: const Color(0xFFFF5252),
+          bufferedColor: Colors.white24,
+          backgroundColor: Colors.white10,
+        ),
+        materialProgressColors: ChewieProgressColors(
+          playedColor: const Color(0xFFFF5252),
+          handleColor: const Color(0xFFFF5252),
+          bufferedColor: Colors.white24,
+          backgroundColor: Colors.white10,
+        ),
+      );
 
-    return VideoPlaybackState(
-      status: status,
-      stream: stream,
-      videoController: _videoController,
-      chewieController: _chewieController,
-    );
+      return VideoPlaybackState(
+        status: status,
+        stream: stream,
+        videoController: _videoController,
+        chewieController: _chewieController,
+      );
+    } catch (_) {
+      return VideoPlaybackState(
+        status: status,
+        stream: stream,
+        errorMessage:
+            'Video material is being updated by your instructor. Please try again shortly.',
+      );
+    }
   }
 
   Future<void> retry() async {
