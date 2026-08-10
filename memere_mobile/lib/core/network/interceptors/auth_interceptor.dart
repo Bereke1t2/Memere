@@ -1,20 +1,24 @@
 import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import '../../constants/app_constants.dart';
 import '../../constants/env.dart';
+import '../../storage/secure_storage_service.dart';
+import '../../utils/media_url_helper.dart';
+
+String _resolveUrl(String url) {
+  return fixMediaUrl(url);
+}
 
 class AuthInterceptor extends Interceptor {
-  AuthInterceptor(this._dio);
+  AuthInterceptor(this._dio, this._secureStorage);
 
   final Dio _dio;
+  final SecureStorageService _secureStorage;
   bool _isRefreshing = false;
 
   @override
   void onRequest(
       RequestOptions options, RequestInterceptorHandler handler) async {
-    const storage = FlutterSecureStorage();
-    final token = await storage.read(key: AppConstants.accessTokenKey);
-    if (token != null) {
+    final token = await _secureStorage.getAccessToken();
+    if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
     handler.next(options);
@@ -48,12 +52,12 @@ class AuthInterceptor extends Interceptor {
   }
 
   Future<String?> _refreshToken() async {
-    const storage = FlutterSecureStorage();
-    final refreshToken = await storage.read(key: AppConstants.refreshTokenKey);
-    if (refreshToken == null) return null;
+    final refreshToken = await _secureStorage.getRefreshToken();
+    if (refreshToken == null || refreshToken.isEmpty) return null;
 
+    final refreshUrl = _resolveUrl('${Env.baseUrl}/auth/refresh');
     final response = await Dio().post<Map<String, dynamic>>(
-      '${Env.baseUrl}/auth/refresh',
+      refreshUrl,
       data: {'refresh_token': refreshToken},
     );
     final data = response.data;
@@ -62,20 +66,14 @@ class AuthInterceptor extends Interceptor {
     }
     final newAccessToken = data['access_token'] as String;
     final newRefreshToken = data['refresh_token'] as String?;
-    await Future.wait([
-      storage.write(key: AppConstants.accessTokenKey, value: newAccessToken),
-      if (newRefreshToken != null)
-        storage.write(
-          key: AppConstants.refreshTokenKey,
-          value: newRefreshToken,
-        ),
-    ]);
+    await _secureStorage.saveTokens(
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken ?? refreshToken,
+    );
     return newAccessToken;
   }
 
   Future<void> _clearTokensAndRedirect() async {
-    const storage = FlutterSecureStorage();
-    await storage.deleteAll();
-    // Router redirect will handle navigation via authStateProvider
+    await _secureStorage.clearTokens();
   }
 }
