@@ -38,6 +38,9 @@ type Lesson struct {
 	IsFreePreview   bool
 	DurationSeconds int
 	IsPublished     bool
+	VideoID         *uuid.UUID
+	Content         *string
+	PdfURL          *string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 	DeletedAt       *time.Time
