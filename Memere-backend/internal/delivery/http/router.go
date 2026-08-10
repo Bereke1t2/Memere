@@ -121,6 +121,13 @@ func NewRouter(deps Deps) *gin.Engine {
 		sections.POST("/:id/lessons", requireAuth, teacherOrAdmin, deps.Courses.AddLesson)
 	}
 
+	// Lesson update/delete routes.
+	lessons := v1.Group("/lessons")
+	{
+		lessons.PUT("/:id", requireAuth, teacherOrAdmin, deps.Courses.UpdateLesson)
+		lessons.DELETE("/:id", requireAuth, teacherOrAdmin, deps.Courses.DeleteLesson)
+	}
+
 	// Quiz/exam authoring nested under a course (teacher/admin).
 	courses.GET("/:id/quizzes", requireAuth, teacherOrAdmin, deps.Quizzes.ListByCourse)
 	courses.POST("/:id/quizzes", requireAuth, teacherOrAdmin, deps.Quizzes.CreateQuiz)
