@@ -17,6 +17,8 @@ type LessonInput struct {
 	IsFreePreview   bool
 	DurationSeconds int
 	IsPublished     bool
+	Content         *string
+	PdfURL          *string
 	// OrderIndex is optional on create; when nil the lesson is appended after the
 	// section's current last lesson.
 	OrderIndex *int
@@ -54,6 +56,8 @@ func (s *Service) AddLesson(ctx context.Context, actor *Actor, sectionID uuid.UU
 		IsFreePreview:   in.IsFreePreview,
 		DurationSeconds: in.DurationSeconds,
 		IsPublished:     in.IsPublished,
+		Content:         in.Content,
+		PdfURL:          in.PdfURL,
 	}
 	err = s.tx.WithinTx(ctx, func(ctx context.Context) error {
 		if err := s.lessons.Create(ctx, l); err != nil {
@@ -108,6 +112,12 @@ func (s *Service) UpdateLesson(ctx context.Context, actor *Actor, lessonID uuid.
 	if err != nil {
 		return nil, err
 	}
+	if in.Title == "" {
+		in.Title = l.Title
+	}
+	if in.Type == "" {
+		in.Type = l.Type
+	}
 	if err := validateLessonInput(in); err != nil {
 		return nil, err
 	}
@@ -118,6 +128,12 @@ func (s *Service) UpdateLesson(ctx context.Context, actor *Actor, lessonID uuid.
 	l.IsFreePreview = in.IsFreePreview
 	l.DurationSeconds = in.DurationSeconds
 	l.IsPublished = in.IsPublished
+	if in.Content != nil {
+		l.Content = in.Content
+	}
+	if in.PdfURL != nil {
+		l.PdfURL = in.PdfURL
+	}
 	if in.OrderIndex != nil {
 		l.OrderIndex = *in.OrderIndex
 	}
