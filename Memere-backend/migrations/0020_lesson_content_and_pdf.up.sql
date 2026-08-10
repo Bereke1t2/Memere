@@ -1,0 +1,2 @@
+ALTER TABLE courses.lessons ADD COLUMN IF NOT EXISTS content TEXT;
+ALTER TABLE courses.lessons ADD COLUMN IF NOT EXISTS pdf_url VARCHAR(500);
