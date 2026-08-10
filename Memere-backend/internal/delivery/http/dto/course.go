@@ -49,12 +49,14 @@ type CreateSectionRequest struct {
 
 // CreateLessonRequest is the body of POST /sections/:id/lessons.
 type CreateLessonRequest struct {
-	Title           string `json:"title"`
-	Type            string `json:"type"`
-	IsFreePreview   bool   `json:"is_free_preview"`
-	DurationSeconds int    `json:"duration_seconds"`
-	IsPublished     bool   `json:"is_published"`
-	OrderIndex      *int   `json:"order_index"`
+	Title           string  `json:"title"`
+	Type            string  `json:"type"`
+	IsFreePreview   bool    `json:"is_free_preview"`
+	DurationSeconds int     `json:"duration_seconds"`
+	IsPublished     bool    `json:"is_published"`
+	OrderIndex      *int    `json:"order_index"`
+	Content         *string `json:"content,omitempty"`
+	PdfURL          *string `json:"pdf_url,omitempty"`
 }
 
 // CourseResponse is the flat projection of a course (list views).
@@ -106,6 +108,9 @@ type LessonResponse struct {
 	IsFreePreview   bool      `json:"is_free_preview"`
 	DurationSeconds int       `json:"duration_seconds"`
 	IsPublished     bool      `json:"is_published"`
+	VideoID         *string   `json:"video_id,omitempty"`
+	Content         *string   `json:"content,omitempty"`
+	PdfURL          *string   `json:"pdf_url,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
@@ -166,6 +171,11 @@ func NewSectionResponse(s *entity.CourseSection) SectionResponse {
 
 // NewLessonResponse maps a domain lesson to its projection.
 func NewLessonResponse(l *entity.Lesson) LessonResponse {
+	var videoID *string
+	if l.VideoID != nil {
+		str := l.VideoID.String()
+		videoID = &str
+	}
 	return LessonResponse{
 		ID:              l.ID.String(),
 		SectionID:       l.SectionID.String(),
@@ -176,6 +186,9 @@ func NewLessonResponse(l *entity.Lesson) LessonResponse {
 		IsFreePreview:   l.IsFreePreview,
 		DurationSeconds: l.DurationSeconds,
 		IsPublished:     l.IsPublished,
+		VideoID:         videoID,
+		Content:         l.Content,
+		PdfURL:          l.PdfURL,
 		CreatedAt:       l.CreatedAt,
 		UpdatedAt:       l.UpdatedAt,
 	}
