@@ -145,6 +145,12 @@ func (s *Service) RequestUpload(ctx context.Context, actor *Actor, in RequestUpl
 		return nil, err // Forbidden
 	}
 
+	// If an existing video record exists for this lesson (e.g. from an aborted upload or replacement),
+	// soft-delete it so a new upload can be requested cleanly without unique constraint conflicts.
+	if existing, err := s.videos.GetByLessonID(ctx, in.LessonID); err == nil && existing != nil {
+		_ = s.videos.SoftDelete(ctx, existing.ID)
+	}
+
 	videoID := uuid.New()
 	ext := strings.ToLower(path.Ext(in.FileName))
 	key := fmt.Sprintf("originals/%s/%s/%s/source%s", lesson.CourseID, in.LessonID, videoID, ext)
