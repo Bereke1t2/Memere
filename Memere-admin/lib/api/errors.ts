@@ -22,10 +22,14 @@ const CODE_MESSAGES: Record<string, string> = {
   IDEMPOTENCY_KEY_REQUIRED: "A unique request key is required.",
   VALIDATION_ERROR: "One or more fields are invalid.",
   CONFLICT: "This action conflicts with an existing resource.",
+  VIDEO_EXISTS: "A video already exists for this lesson. Delete the existing video or create a new lesson.",
   INVALID_ID: "The provided ID is invalid.",
   INTERNAL_SERVER_ERROR: "An unexpected error occurred. Please try again.",
 };
 
 export function friendlyMessage(err: ApiError): string {
+  if (err.code === "VIDEO_EXISTS" || (err.code === "CONFLICT" && (err.message?.toLowerCase().includes("video") || err.message?.toLowerCase().includes("conflict")))) {
+    return "A video already exists for this lesson. Please delete the existing video or create a new lesson.";
+  }
   return CODE_MESSAGES[err.code] ?? err.message;
 }
