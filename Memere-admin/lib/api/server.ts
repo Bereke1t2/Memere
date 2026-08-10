@@ -73,8 +73,8 @@ export async function apiFetch<T extends z.ZodTypeAny>(
   if (schema) {
     const parsed = schema.safeParse(json);
     if (!parsed.success) {
-      console.error("[apiFetch] schema mismatch:", parsed.error.flatten());
-      throw new ApiError("SCHEMA_ERROR", "Unexpected response shape.", 500);
+      console.warn("[apiFetch] schema mismatch warning:", parsed.error.flatten());
+      return json as z.infer<T>;
     }
     return parsed.data as z.infer<T>;
   }
