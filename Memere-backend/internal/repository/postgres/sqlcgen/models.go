@@ -134,6 +134,8 @@ type CoursesLesson struct {
 	IsFreePreview   bool
 	DurationSeconds int32
 	IsPublished     bool
+	Content         *string
+	PdfUrl          *string
 	CreatedAt       pgtype.Timestamptz
 	UpdatedAt       pgtype.Timestamptz
 	DeletedAt       pgtype.Timestamptz
