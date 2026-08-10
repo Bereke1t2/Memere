@@ -195,20 +195,9 @@ func (s *Service) applyVisibility(actor *Actor, content *repository.CourseWithCo
 	if owner {
 		return content, nil
 	}
-	// Non-owner on a published course: drop unpublished sections and any
-	// unpublished lessons within the surviving sections.
+	// Non-owner on a published course: include all sections and their lessons
 	visible := make([]repository.SectionWithLessons, 0, len(content.Sections))
 	for _, sec := range content.Sections {
-		if !sec.Section.IsPublished {
-			continue
-		}
-		lessons := make([]*entity.Lesson, 0, len(sec.Lessons))
-		for _, l := range sec.Lessons {
-			if l.IsPublished {
-				lessons = append(lessons, l)
-			}
-		}
-		sec.Lessons = lessons
 		visible = append(visible, sec)
 	}
 	content.Sections = visible
