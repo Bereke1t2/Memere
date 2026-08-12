@@ -662,59 +662,107 @@ class _PriceBand extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = hasAccess
-        ? AppColors.success
-        : (isFree ? AppColors.success : AppColors.accentSecondary);
-
-    final IconData icon;
-    final String title;
-    final String body;
-    if (hasAccess) {
-      icon = Icons.verified_rounded;
-      title = 'You have access';
-      body = 'Open any lesson below to continue learning.';
-    } else if (isFree) {
-      icon = Icons.lock_open_rounded;
-      title = label;
-      body = 'Enroll for free to unlock every lesson.';
-    } else {
-      icon = Icons.payments_outlined;
-      title = label;
-      body = 'One-time payment for full lifetime access.';
-    }
-
-    return AppSurface(
-      padding: const EdgeInsets.all(AppSizes.md),
-      radius: AppSizes.radiusXl,
-      color: AppColors.bgSecondary,
-      borderColor: AppColors.border,
-      shadows: AppShadows.sm,
-      child: Row(
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.bgSecondary,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: hasAccess ? const Color(0xFF4ADE80) : const Color(0x44FF5252),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppIconTile(
-            icon: icon,
-            color: color,
-            size: 44,
-            iconSize: AppSizes.iconSm,
-          ),
-          const SizedBox(width: AppSizes.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: AppTextStyles.titleMedium),
-                const SizedBox(height: AppSizes.xs),
-                Text(
-                  body,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: hasAccess
+                      ? const Color(0x224ADE80)
+                      : (isFree ? const Color(0x224ADE80) : const Color(0x22FF5252)),
+                  shape: BoxShape.circle,
                 ),
-              ],
-            ),
+                child: Icon(
+                  hasAccess
+                      ? Icons.verified_rounded
+                      : (isFree ? Icons.lock_open_rounded : Icons.workspace_premium_rounded),
+                  color: hasAccess
+                      ? const Color(0xFF4ADE80)
+                      : (isFree ? const Color(0xFF4ADE80) : const Color(0xFFFF5252)),
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      hasAccess
+                          ? 'Full Course Access Unlocked'
+                          : (isFree ? '100% Free Course' : 'Lifetime Access • $label'),
+                      style: AppTextStyles.titleMedium.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hasAccess
+                          ? 'You are enrolled. Open any lesson below to learn.'
+                          : 'One-time payment • No monthly subscription',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: AppColors.border),
+          const SizedBox(height: 10),
+          const Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            children: [
+              _FeatureCheck(label: 'Full HD Video Lessons'),
+              _FeatureCheck(label: 'Downloadable PDF Notes'),
+              _FeatureCheck(label: 'Interactive Quizzes'),
+              _FeatureCheck(label: 'Certificate Included'),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _FeatureCheck extends StatelessWidget {
+  const _FeatureCheck({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.check_circle_rounded, size: 14, color: Color(0xFF4ADE80)),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: AppTextStyles.caption.copyWith(
+            color: AppColors.textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
