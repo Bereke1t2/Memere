@@ -150,7 +150,7 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen>
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: AppSizes.screenPaddingH),
                     decoration: const BoxDecoration(
-                      color: AppColors.bgPrimary,
+                      color: Color(0xFF0B0F17),
                       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                     ),
                     child: Column(
@@ -168,26 +168,27 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen>
                                     lessonTitle,
                                     style: AppTextStyles.titleMedium.copyWith(
                                       fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
+                                      color: Colors.white,
                                     ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  const SizedBox(height: 2),
+                                  const SizedBox(height: 4),
                                   Row(
                                     children: [
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: const Color(0x22448AFF),
+                                          color: const Color(0xFF1E293B),
                                           borderRadius: BorderRadius.circular(4),
+                                          border: Border.all(color: const Color(0xFF334155)),
                                         ),
                                         child: const Text(
-                                          'HLS HD 1080P',
+                                          '1080P HD',
                                           style: TextStyle(
                                             fontSize: 9,
-                                            fontWeight: FontWeight.bold,
-                                            color: Color(0xFF448AFF),
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF94A3B8),
                                           ),
                                         ),
                                       ),
@@ -195,11 +196,12 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen>
                                       Text(
                                         playback.isCompleted
                                             ? 'Status: Completed ✓'
-                                            : 'Progress saved automatically',
+                                            : 'Auto-saves progress',
                                         style: AppTextStyles.caption.copyWith(
                                           color: playback.isCompleted
-                                              ? AppColors.success
-                                              : AppColors.textMuted,
+                                              ? const Color(0xFF10B981)
+                                              : const Color(0xFF64748B),
+                                          fontSize: 11,
                                         ),
                                       ),
                                     ],

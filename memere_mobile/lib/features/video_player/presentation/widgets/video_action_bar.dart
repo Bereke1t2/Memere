@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
 import 'download_button.dart';
 
 class VideoActionBar extends StatelessWidget {
@@ -36,40 +34,43 @@ class VideoActionBar extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: lessonId.isEmpty ? null : onMarkComplete,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isCompleted ? AppColors.success : AppColors.textPrimary,
-                  foregroundColor: isCompleted ? Colors.white : AppColors.bgPrimary,
-                  minimumSize: const Size.fromHeight(46),
+                  backgroundColor: isCompleted ? const Color(0xFF10B981) : const Color(0xFF1E293B),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(44),
+                  elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                    borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(
+                      color: isCompleted ? const Color(0xFF10B981) : const Color(0xFF334155),
+                    ),
                   ),
                 ),
                 icon: Icon(
-                  isCompleted ? Icons.check_circle_rounded : Icons.check_circle_outline_rounded,
-                  size: 20,
+                  isCompleted ? Icons.check_circle_outline_rounded : Icons.radio_button_unchecked_rounded,
+                  size: 18,
                 ),
                 label: Text(
-                  isCompleted ? 'Completed ✓' : 'Mark as Complete',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  isCompleted ? 'Completed' : 'Mark as Complete',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                 ),
               ),
             ),
-            const SizedBox(width: AppSizes.sm),
-            OutlinedButton.icon(
+            const SizedBox(width: 8),
+            OutlinedButton(
               onPressed: onRefresh,
               style: OutlinedButton.styleFrom(
-                minimumSize: const Size(46, 46),
+                minimumSize: const Size(44, 44),
                 padding: EdgeInsets.zero,
-                side: const BorderSide(color: AppColors.borderStrong),
+                side: const BorderSide(color: Color(0xFF334155)),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              icon: const Icon(Icons.refresh_rounded, color: AppColors.textPrimary, size: 20),
-              label: const SizedBox.shrink(),
+              child: const Icon(Icons.refresh_rounded, color: Colors.white, size: 18),
             ),
           ],
         ),
-        const SizedBox(height: AppSizes.sm),
+        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
@@ -81,20 +82,20 @@ class VideoActionBar extends StatelessWidget {
               ),
             ),
             if (isSavingProgress) ...[
-              const SizedBox(width: AppSizes.sm),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AppColors.bgSecondary,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  border: Border.all(color: AppColors.border),
+                  color: const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFF334155)),
                 ),
                 child: const SizedBox(
-                  width: 18,
-                  height: 18,
+                  width: 16,
+                  height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Color(0xFFFF5252),
+                    color: Colors.white,
                   ),
                 ),
               ),

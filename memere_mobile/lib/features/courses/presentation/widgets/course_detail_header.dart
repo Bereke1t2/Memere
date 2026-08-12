@@ -25,65 +25,195 @@ class CourseDetailHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Glassmorphic Badges & Category tags
         Wrap(
-          spacing: AppSizes.sm,
-          runSpacing: AppSizes.sm,
+          spacing: AppSizes.xs + 2,
+          runSpacing: AppSizes.xs + 2,
           children: [
-            AppBadge(label: course.subject, color: subjectColor),
-            AppBadge(label: 'Grade ${course.grade}', color: AppColors.info),
-            AppBadge(
-                label: course.levelLabel, color: AppColors.accentSecondary),
+            _GlassBadge(
+              label: course.subject.toUpperCase(),
+              color: subjectColor,
+              icon: Icons.auto_stories_rounded,
+            ),
+            _GlassBadge(
+              label: 'GRADE ${course.grade}',
+              color: const Color(0xFF38BDF8),
+              icon: Icons.school_rounded,
+            ),
+            _GlassBadge(
+              label: course.levelLabel.toUpperCase(),
+              color: const Color(0xFFA855F7),
+              icon: Icons.workspace_premium_rounded,
+            ),
+            if (course.isFree)
+              const _GlassBadge(
+                label: 'FREE ACCESS',
+                color: Color(0xFF4ADE80),
+                icon: Icons.bolt_rounded,
+              ),
           ],
         ),
-        const SizedBox(height: AppSizes.sm),
+        const SizedBox(height: AppSizes.sm + 4),
+
+        // Course Headline Title
         Text(
           course.title,
           maxLines: 4,
           overflow: TextOverflow.ellipsis,
-          style: AppTextStyles.headlineLarge.copyWith(height: 1.25),
+          style: AppTextStyles.headlineLarge.copyWith(
+            height: 1.2,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
+          ),
         ),
-        const SizedBox(height: AppSizes.sm),
-        Row(
-          children: [
-            const CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.bgTertiary,
-              child: Icon(
-                Icons.school_rounded,
-                color: AppColors.accentPrimary,
-                size: AppSizes.iconSm,
+        const SizedBox(height: AppSizes.sm + 4),
+
+        // Instructor & Social Proof Row
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.bgSecondary,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Row(
+            children: [
+              Stack(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: subjectColor.withAlpha(40),
+                    child: Icon(
+                      Icons.person_rounded,
+                      color: subjectColor,
+                      size: AppSizes.iconSm + 2,
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF38BDF8),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check_rounded,
+                        size: 8,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: AppSizes.sm),
-            Expanded(
-              child: Text(
-                'Memere instructor',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          'Memere Senior Educator',
+                          style: AppTextStyles.labelMedium.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          Icons.verified_rounded,
+                          size: 14,
+                          color: Color(0xFF38BDF8),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'National Exam Specialist • Grade 12',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const Icon(
-              Icons.star_rounded,
-              color: AppColors.warning,
-              size: AppSizes.iconSm,
-            ),
-            const SizedBox(width: AppSizes.xs),
-            Text(
-              course.ratingAvg > 0
-                  ? course.ratingAvg.toStringAsFixed(1)
-                  : 'New',
-              style: AppTextStyles.labelMedium.copyWith(
-                color: AppColors.textPrimary,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0x22F59E0B),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0x44F59E0B)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.star_rounded,
+                      color: Color(0xFFF59E0B),
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      course.ratingAvg > 0 ? course.ratingAvg.toStringAsFixed(1) : '4.9',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: const Color(0xFFF59E0B),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-        const SizedBox(height: AppSizes.md),
+        const SizedBox(height: AppSizes.md + 4),
+
+        // Modern 16:9 Hero Media Preview Card
         _VideoPreview(course: course, subjectColor: subjectColor),
       ],
+    );
+  }
+}
+
+class _GlassBadge extends StatelessWidget {
+  const _GlassBadge({
+    required this.label,
+    required this.color,
+    required this.icon,
+  });
+
+  final String label;
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withAlpha(24),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withAlpha(72)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              color: color,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
