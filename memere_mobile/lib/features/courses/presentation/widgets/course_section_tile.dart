@@ -24,58 +24,85 @@ class CourseSectionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final numPadded = sectionNumber.toString().padLeft(2, '0');
+
     return AnimatedContainer(
       duration: AppMotion.base,
       curve: AppMotion.standard,
       decoration: BoxDecoration(
-        gradient: AppColors.cardGradient,
-        borderRadius: BorderRadius.circular(AppSizes.radiusXl),
-        border: Border.all(color: AppColors.borderStrong),
+        color: AppColors.bgSecondary,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
         boxShadow: AppShadows.sm,
       ),
       clipBehavior: Clip.antiAlias,
       child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        data: Theme.of(context).copyWith(
+          dividerColor: Colors.transparent,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+        ),
         child: ExpansionTile(
           initiallyExpanded: initiallyExpanded,
           tilePadding: const EdgeInsets.symmetric(
-            horizontal: AppSizes.md,
-            vertical: AppSizes.xs,
+            horizontal: 16,
+            vertical: 8,
           ),
-          childrenPadding: const EdgeInsets.fromLTRB(
-            AppSizes.sm,
-            0,
-            AppSizes.sm,
-            AppSizes.sm,
-          ),
-          title: Text(
-            'Section $sectionNumber',
-            style: AppTextStyles.labelSmall.copyWith(
-              color: AppColors.textSecondary,
-            ),
+          childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: const Color(0x2238BDF8),
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: const Color(0x4438BDF8)),
+                ),
+                child: Text(
+                  'SECTION $numPadded',
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF38BDF8),
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                section.lessonCountLabel,
+                style: AppTextStyles.caption.copyWith(
+                  color: AppColors.textMuted,
+                  fontSize: 11,
+                ),
+              ),
+            ],
           ),
           subtitle: Padding(
-            padding: const EdgeInsets.only(top: AppSizes.xs),
+            padding: const EdgeInsets.only(top: 6),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(section.title, style: AppTextStyles.titleMedium),
+                Text(
+                  section.title,
+                  style: AppTextStyles.titleMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
                 if (section.description.isNotEmpty) ...[
-                  const SizedBox(height: AppSizes.xs),
+                  const SizedBox(height: 4),
                   Text(
                     section.description,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodySmall,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.3,
+                    ),
                   ),
                 ],
               ],
-            ),
-          ),
-          trailing: Text(
-            section.lessonCountLabel,
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.textMuted,
             ),
           ),
           children: [
@@ -89,10 +116,13 @@ class CourseSectionTile extends StatelessWidget {
               )
             else
               ...section.lessons.asMap().entries.map(
-                    (entry) => LessonTile(
-                      lesson: entry.value,
-                      lessonNumber: entry.key + 1,
-                      canOpen: canOpenLessons || entry.value.isFreePreview,
+                    (entry) => Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: LessonTile(
+                        lesson: entry.value,
+                        lessonNumber: entry.key + 1,
+                        canOpen: canOpenLessons || entry.value.isFreePreview,
+                      ),
                     ),
                   ),
           ],
