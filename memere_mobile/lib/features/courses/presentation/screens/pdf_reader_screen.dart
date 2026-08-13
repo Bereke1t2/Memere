@@ -81,6 +81,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
       final pdfFile = await SecurePdfStorage.downloadPdf(
         pdfUrl: widget.pdfUrl,
         fileKey: _fileKey,
+        title: widget.title,
+        content: widget.content,
         onProgress: (progress) {
           if (mounted) {
             setState(() {

@@ -50,93 +50,146 @@ class SecurePdfStorage {
 
   /// Downloads a PDF from backend with live progress callback, validates PDF header,
   /// saves to app sandbox storage, and returns the local File.
+  /// If no remote PDF file is uploaded but lesson text content exists, compiles
+  /// the actual lesson text content into a clean PDF document.
   static Future<File> downloadPdf({
     required String pdfUrl,
     required String fileKey,
+    String? title,
+    String? content,
     void Function(double progress)? onProgress,
   }) async {
     final file = await getPdfFile(fileKey);
 
     final rawUrl = pdfUrl.trim();
-    final targetUrl = rawUrl.isEmpty ? 'sample.pdf' : rawUrl;
-    final resolvedUrl = fixMediaUrl(targetUrl);
+    final isPlaceholder = rawUrl.isEmpty || rawUrl == 'sample.pdf';
 
-    final uri = Uri.tryParse(resolvedUrl);
-    final safeUrl = uri != null ? uri.toString() : Uri.encodeFull(resolvedUrl);
+    // 1. If remote PDF URL is available, attempt network download
+    if (!isPlaceholder) {
+      final resolvedUrl = fixMediaUrl(rawUrl);
+      final uri = Uri.tryParse(resolvedUrl);
+      final safeUrl = uri != null ? uri.toString() : Uri.encodeFull(resolvedUrl);
 
-    final token = await SecureStorageService().getAccessToken();
-    final options = Options(
-      headers: token != null && token.isNotEmpty ? {'Authorization': 'Bearer $token'} : null,
-      responseType: ResponseType.bytes,
-    );
-
-    final dio = Dio();
-    Uint8List? downloadedBytes;
-
-    try {
-      final response = await dio.get<List<int>>(
-        safeUrl,
-        options: options,
-        onReceiveProgress: (received, total) {
-          if (total > 0 && onProgress != null) {
-            onProgress(received / total);
-          }
-        },
+      final token = await SecureStorageService().getAccessToken();
+      final options = Options(
+        headers: token != null && token.isNotEmpty ? {'Authorization': 'Bearer $token'} : null,
+        responseType: ResponseType.bytes,
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 15),
       );
 
-      if (response.data != null && response.data!.length > 200) {
-        final bytes = Uint8List.fromList(response.data!);
-        if (_isValidPdfBytes(bytes)) {
-          downloadedBytes = bytes;
+      final dio = Dio();
+      try {
+        final response = await dio.get<List<int>>(
+          safeUrl,
+          options: options,
+          onReceiveProgress: (received, total) {
+            if (total > 0 && onProgress != null) {
+              onProgress(received / total);
+            }
+          },
+        );
+
+        if (response.statusCode == 200 && response.data != null && response.data!.length > 100) {
+          final bytes = Uint8List.fromList(response.data!);
+          if (_isValidPdfBytes(bytes)) {
+            await file.writeAsBytes(bytes, flush: true);
+            return file;
+          } else {
+            // Check if server returned a JSON error message instead of PDF
+            final responseStr = String.fromCharCodes(bytes.take(200));
+            throw Exception('Server returned non-PDF content: $responseStr');
+          }
+        } else {
+          throw Exception('Backend returned status code ${response.statusCode}');
         }
+      } catch (e) {
+        // If real PDF download failed, but lesson has actual text content, fallback to compiling actual text content
+        if (content != null && content.trim().isNotEmpty) {
+          final textPdfBytes = _generatePdfFromLessonContent(
+            title ?? 'Lesson Study Guide',
+            content,
+          );
+          await file.writeAsBytes(textPdfBytes, flush: true);
+          return file;
+        }
+        // Otherwise rethrow explicit error so UI displays exact issue to student
+        throw Exception('Could not download PDF from server: ${e.toString()}');
       }
-    } catch (_) {
-      // Backend download failed or returned 404
     }
 
-    // Fallback: Generate valid 100% compliant Syncfusion PDF bytes if network/backend returned invalid PDF
-    downloadedBytes ??= _generateValidSamplePdfBytes();
+    // 2. If lesson has text content but no uploaded PDF file, compile text content to PDF
+    final textPdfBytes = _generatePdfFromLessonContent(
+      title ?? 'Lesson Study Guide',
+      content ?? 'Comprehensive Grade 12 National Exam preparation material.',
+    );
 
-    await file.writeAsBytes(downloadedBytes, flush: true);
+    await file.writeAsBytes(textPdfBytes, flush: true);
     return file;
   }
 
+  /// Scans the binary bytes for `%PDF-` signature within the first 1024 bytes
   static bool _isValidPdfBytes(Uint8List bytes) {
     if (bytes.length < 5) return false;
-    return bytes[0] == 0x25 && // %
-        bytes[1] == 0x50 && // P
-        bytes[2] == 0x44 && // D
-        bytes[3] == 0x46 && // F
-        bytes[4] == 0x2D; // -
+    final limit = bytes.length < 1024 ? bytes.length - 4 : 1020;
+    for (int i = 0; i < limit; i++) {
+      if (bytes[i] == 0x25 && // %
+          bytes[i + 1] == 0x50 && // P
+          bytes[i + 2] == 0x44 && // D
+          bytes[i + 3] == 0x46 && // F
+          bytes[i + 4] == 0x2D) { // -
+        return true;
+      }
+    }
+    return false;
   }
 
-  /// Generates 100% valid Syncfusion PDF document bytes
-  static Uint8List _generateValidSamplePdfBytes() {
+  /// Generates a valid Syncfusion PDF document containing the actual lesson title and content
+  static Uint8List _generatePdfFromLessonContent(String title, String content) {
     final document = PdfDocument();
     final page = document.pages.add();
     final graphics = page.graphics;
-    final titleFont = PdfStandardFont(PdfFontFamily.helvetica, 18, style: PdfFontStyle.bold);
-    final bodyFont = PdfStandardFont(PdfFontFamily.helvetica, 12);
 
+    final titleFont = PdfStandardFont(PdfFontFamily.helvetica, 16, style: PdfFontStyle.bold);
+    final subtitleFont = PdfStandardFont(PdfFontFamily.helvetica, 11, style: PdfFontStyle.italic);
+    final bodyFont = PdfStandardFont(PdfFontFamily.helvetica, 11);
+
+    // Draw Title
     graphics.drawString(
-      'Memere Grade 12 National Exam Study Guide',
+      title,
       titleFont,
-      bounds: const Rect.fromLTWH(0, 0, 500, 30),
+      bounds: const Rect.fromLTWH(0, 0, 500, 26),
     );
+
+    // Draw Header Subtitle
     graphics.drawString(
-      'Official Learning & Study Material',
-      bodyFont,
-      bounds: const Rect.fromLTWH(0, 35, 500, 20),
+      'Memere Grade 12 Exam Prep Study Guide',
+      subtitleFont,
+      bounds: const Rect.fromLTWH(0, 28, 500, 18),
     );
-    graphics.drawString(
-      '• Core definitions, formulas, and key concepts for this lesson.',
-      bodyFont,
-      bounds: const Rect.fromLTWH(0, 65, 500, 20),
+
+    // Draw Line Separator
+    graphics.drawLine(
+      PdfPen(PdfColor(200, 200, 200), width: 1),
+      const Offset(0, 50),
+      const Offset(500, 50),
     );
-    graphics.drawString(
-      '• Step-by-step exam preparation guidelines.',
-      bodyFont,
-      bounds: const Rect.fromLTWH(0, 90, 500, 20),
+
+    // Draw Content Body Text
+    final layoutElement = PdfTextElement(
+      text: content.trim().isNotEmpty ? content : 'No detailed notes provided for this lesson.',
+      font: bodyFont,
+      brush: PdfSolidBrush(PdfColor(30, 30, 30)),
+    );
+
+    final layoutFormat = PdfLayoutFormat(
+      layoutType: PdfLayoutType.paginate,
+    );
+
+    layoutElement.draw(
+      page: page,
+      bounds: const Rect.fromLTWH(0, 60, 500, 700),
+      format: layoutFormat,
     );
 
     final List<int> bytes = document.saveSync();

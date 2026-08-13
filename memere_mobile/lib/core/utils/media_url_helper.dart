@@ -9,14 +9,18 @@ String fixMediaUrl(String rawUrl) {
     final apiUri = Uri.parse(Env.baseUrl);
     var host = apiUri.host;
     if (host.isEmpty) {
-      host = '127.0.0.1';
+      host = '10.0.2.2';
     }
 
     final port = (apiUri.hasPort && apiUri.port != 0) ? apiUri.port : 8080;
 
     var url = trimmed;
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      if (url.startsWith('/')) {
+      if (url.startsWith('/uploads/') || url.startsWith('uploads/') ||
+          url.startsWith('/storage/') || url.startsWith('storage/')) {
+        final cleanPath = url.startsWith('/') ? url : '/$url';
+        url = 'http://$host:$port$cleanPath';
+      } else if (url.startsWith('/')) {
         url = 'http://$host:$port$url';
       } else {
         url = 'http://$host:$port/api/v1/$url';
@@ -33,3 +37,4 @@ String fixMediaUrl(String rawUrl) {
     return trimmed;
   }
 }
+

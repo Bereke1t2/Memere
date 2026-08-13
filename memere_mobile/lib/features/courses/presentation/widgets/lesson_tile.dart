@@ -267,7 +267,7 @@ class _LessonTileState extends State<LessonTile> {
         lesson.type == LessonType.mixed ||
         lesson.hasContent ||
         lesson.hasPdf) {
-      final pdfName = lesson.pdfUrl ?? 'sample.pdf';
+      final pdfName = lesson.pdfUrl ?? '';
       context.push(
         AppRoutes.pdfReaderPath(
           title: lesson.title,
