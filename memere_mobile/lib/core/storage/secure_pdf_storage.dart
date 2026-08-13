@@ -12,10 +12,14 @@ import '../utils/media_url_helper.dart';
 /// Downloads, validates, and stores PDF files in app-private sandbox storage
 /// (`/data/user/0/.../app_flutter/pdfs/`), preventing raw files from being shared outside Memere.
 class SecurePdfStorage {
-  /// Generates a safe filename key based on the pdfUrl or lesson title
-  static String getFileKey(String url) {
-    final clean = url.trim().isEmpty ? 'sample.pdf' : url.trim();
-    return 'pdf_${clean.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
+  /// Generates a safe, unique filename key based on the pdfUrl or lesson title
+  static String getFileKey(String url, {String? title}) {
+    final cleanUrl = url.trim();
+    if (cleanUrl.isNotEmpty && cleanUrl != 'sample.pdf') {
+      return 'pdf_${cleanUrl.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
+    }
+    final cleanTitle = (title ?? 'lesson').trim();
+    return 'pdf_note_${cleanTitle.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
   }
 
   /// Gets local File reference for a given fileKey
@@ -28,11 +32,27 @@ class SecurePdfStorage {
     return File('${pdfDir.path}/$fileKey.pdf');
   }
 
-  /// Checks if a valid PDF file exists in app local private storage
+  /// Checks if a valid PDF file exists in app local private storage, validating PDF header
   static Future<bool> isDownloaded(String fileKey) async {
     try {
       final file = await getPdfFile(fileKey);
-      return await file.exists() && (await file.length()) > 200;
+      if (!await file.exists()) return false;
+      final length = await file.length();
+      if (length < 200) {
+        await file.delete();
+        return false;
+      }
+
+      final handle = await file.open(mode: FileMode.read);
+      final headerBytes = await handle.read(1024);
+      await handle.close();
+
+      final isValid = _isValidPdfBytes(Uint8List.fromList(headerBytes));
+      if (!isValid) {
+        await file.delete();
+        return false;
+      }
+      return true;
     } catch (_) {
       return false;
     }

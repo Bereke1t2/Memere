@@ -38,7 +38,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   bool _isNightMode = true;
   late PdfViewerController _pdfViewerController;
 
-  String get _fileKey => SecurePdfStorage.getFileKey(widget.pdfUrl);
+  String get _fileKey => SecurePdfStorage.getFileKey(widget.pdfUrl, title: widget.title);
 
   @override
   void initState() {
@@ -302,7 +302,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                 )
               : SfPdfViewer.file(
                   File(_localPdfPath!),
-                  key: ValueKey(_localPdfPath),
+                  key: ValueKey('${_localPdfPath}_${File(_localPdfPath!).existsSync() ? File(_localPdfPath!).lastModifiedSync().millisecondsSinceEpoch : 0}'),
                   controller: _pdfViewerController,
                   canShowScrollHead: true,
                   canShowScrollStatus: true,
