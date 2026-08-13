@@ -7,7 +7,6 @@ import '../constants/app_colors.dart';
 import '../constants/app_motion.dart';
 import '../constants/app_shadows.dart';
 import '../constants/app_sizes.dart';
-import '../constants/app_text_styles.dart';
 import '../../shared/widgets/app_surface.dart';
 
 /// Hosts the four primary tabs in a persistent bottom navigation. Each tab

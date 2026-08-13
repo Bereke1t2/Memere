@@ -3,12 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/router/app_router.dart';
-import '../../../../shared/widgets/app_surface.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../domain/entities/course_entity.dart';
 import '../providers/course_list_provider.dart';
@@ -491,7 +489,7 @@ class _DailyGoalCard extends StatelessWidget {
                 'CONTINUE STUDYING',
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.extrabold,
+                  fontWeight: FontWeight.w800,
                   letterSpacing: 0.5,
                 ),
               ),
