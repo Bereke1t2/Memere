@@ -56,7 +56,7 @@ class CourseSpotlightCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.brandEmerald.withOpacity(0.15),
+                    color: AppColors.brandEmerald.withAlpha(38),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -153,9 +153,9 @@ class CourseRowCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.brandEmerald.withOpacity(0.12),
+                    color: AppColors.brandEmerald.withAlpha(30),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.brandEmerald.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.brandEmerald.withAlpha(76)),
                   ),
                   child: const Icon(
                     Icons.school_rounded,
@@ -221,7 +221,7 @@ class CourseRowCard extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: AppColors.brandEmerald.withOpacity(0.12),
+                              color: AppColors.brandEmerald.withAlpha(30),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
@@ -245,7 +245,7 @@ class CourseRowCard extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
                               color: course.isFree
-                                  ? AppColors.brandEmerald.withOpacity(0.15)
+                                  ? AppColors.brandEmerald.withAlpha(38)
                                   : AppColors.bgPrimary,
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(

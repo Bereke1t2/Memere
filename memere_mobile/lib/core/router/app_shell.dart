@@ -152,7 +152,7 @@ class _NavItem extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: selected
-                      ? AppColors.brandEmerald.withOpacity(0.18)
+                      ? AppColors.brandEmerald.withAlpha(46)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppSizes.radiusFull),
                 ),

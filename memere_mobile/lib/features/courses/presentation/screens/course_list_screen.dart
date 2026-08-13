@@ -411,7 +411,7 @@ class _DailyGoalCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.brandEmerald.withOpacity(0.15),
+                      color: AppColors.brandEmerald.withAlpha(38),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
@@ -680,7 +680,7 @@ class _TopicGrid extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.brandEmerald.withOpacity(0.15),
+                        color: AppColors.brandEmerald.withAlpha(38),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
