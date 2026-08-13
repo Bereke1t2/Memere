@@ -54,7 +54,7 @@ class CourseSpotlightCard extends StatelessWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.bgQuaternary,
                     shape: BoxShape.circle,
                   ),
