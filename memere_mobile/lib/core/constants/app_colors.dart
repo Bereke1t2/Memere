@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
 
-/// Memere Professional Color System — Duolingo-Inspired Obsidian Dark (Strict 4-Color Palette).
+/// Memere Professional Color System — Duolingo Obsidian Dark with Strict Level Color Scoping.
 ///
-/// 1. Brand Emerald Green (`#10B981`): Primary actions, level progress, completion indicators.
-/// 2. Brand Warm Amber (`#F59E0B`): Streaks 🔥, XP points ⚡, announcements 📢.
-/// 3. Obsidian Black Canvas (`#050505`): Deep pure dark canvas.
-/// 4. Tactile Card Surface (`#111115`): Dark cards with 3D depth borders (`#2C2C35`).
+/// Green & Amber are used VERY WISELY (reserved primarily for Level Badges & CTAs):
+/// - Beginner: `#10B981` (Emerald Green)
+/// - Intermediate: `#F59E0B` (Warm Amber)
+/// - Advanced: `#8B5CF6` (Vibrant Purple)
+/// All background canvas, subject cards, borders, and search controls stay clean obsidian dark.
 abstract class AppColors {
-  // ── 4 Master Theme Colors ────────────────────────────────────────────────
+  // ── 3 Level Badge Colors (Strict Scoped Usage) ───────────────────────────
+  static const Color levelBeginner = Color(0xFF10B981);
+  static const Color levelBeginnerDark = Color(0xFF059669);
+  static const Color levelIntermediate = Color(0xFFF59E0B);
+  static const Color levelIntermediateDark = Color(0xFFD97706);
+  static const Color levelAdvanced = Color(0xFF8B5CF6);
+  static const Color levelAdvancedDark = Color(0xFF7C3AED);
+
+  // ── Master Brand Tokens ──────────────────────────────────────────────────
   static const Color brandEmerald = Color(0xFF10B981);
   static const Color brandEmeraldDark = Color(0xFF059669);
   static const Color brandAmber = Color(0xFFF59E0B);
@@ -20,7 +29,7 @@ abstract class AppColors {
   static const Color bgQuaternary = Color(0xFF25252E);
   static const Color bgOverlay = Color(0xCC000000);
 
-  // ── Accent ───────────────────────────────────────────────────────────────
+  // ── Accent & Neutral Surfaces ────────────────────────────────────────────
   static const Color accentPrimary = Color(0xFF10B981);
   static const Color accentPrimaryDeep = Color(0xFF059669);
   static const Color accentSecondary = Color(0xFFF59E0B);
@@ -43,27 +52,27 @@ abstract class AppColors {
   static const Color warningSurface = Color(0x22F59E0B);
   static const Color info = Color(0xFF38BDF8);
   static const Color infoSurface = Color(0x2238BDF8);
-  static const Color lavender = Color(0xFF10B981);
-  static const Color lavenderSurface = Color(0x2210B981);
+  static const Color lavender = Color(0xFF8B5CF6);
+  static const Color lavenderSurface = Color(0x228B5CF6);
   static const Color coral = Color(0xFFF59E0B);
   static const Color coralSurface = Color(0x22F59E0B);
 
-  // ── Subject Tag Colors (Unified under Brand Palette) ────────────────────
-  static const Color subjectNeutral = Color(0xFF94A3B8);
-  static const Color subjectMath = Color(0xFF10B981);
-  static const Color subjectPhysics = Color(0xFF10B981);
-  static const Color subjectChem = Color(0xFF10B981);
-  static const Color subjectBio = Color(0xFF10B981);
-  static const Color subjectEng = Color(0xFFF59E0B);
-  static const Color subjectHist = Color(0xFFF59E0B);
-  static const Color subjectGeo = Color(0xFF10B981);
-  static const Color subjectEcon = Color(0xFFF59E0B);
-  static const Color subjectCivics = Color(0xFF10B981);
+  // ── Subject Tag Colors (Muted Dark Graphite - Green Removed) ─────────────
+  static const Color subjectNeutral = Color(0xFF71717A);
+  static const Color subjectMath = Color(0xFF71717A);
+  static const Color subjectPhysics = Color(0xFF71717A);
+  static const Color subjectChem = Color(0xFF71717A);
+  static const Color subjectBio = Color(0xFF71717A);
+  static const Color subjectEng = Color(0xFF71717A);
+  static const Color subjectHist = Color(0xFF71717A);
+  static const Color subjectGeo = Color(0xFF71717A);
+  static const Color subjectEcon = Color(0xFF71717A);
+  static const Color subjectCivics = Color(0xFF71717A);
 
-  // ── Borders & Dividers (Tactile 3D Depth) ─────────────────────────────────
+  // ── Borders & Dividers (Neutral Slate Graphite) ───────────────────────────
   static const Color border = Color(0xFF1A1A20);
   static const Color borderStrong = Color(0xFF2C2C35);
-  static const Color borderFocused = Color(0xFF10B981);
+  static const Color borderFocused = Color(0xFF52525B);
   static const Color divider = Color(0xFF1A1A20);
 
   // ── Gradients ────────────────────────────────────────────────────────────

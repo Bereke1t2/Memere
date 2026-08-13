@@ -16,11 +16,10 @@ import '../widgets/course_empty_state.dart';
 import '../widgets/course_list_skeleton.dart';
 import '../widgets/subject_filter_chips.dart';
 
-/// Professional Duolingo-Inspired Obsidian Dark Home Screen for Memere (ExamPrep).
+/// Professional Duolingo Obsidian Dark Home Screen for Memere.
 ///
-/// Features pure obsidian black background (#050505), strict 4-color palette,
-/// backend announcement integration, tactile 3D cards/buttons, daily target progress,
-/// and structured subject lanes. (Grade level selector removed).
+/// Features animated subject boxes, animated daily goal progress, vibrant Course Level Badges
+/// (Beginner, Intermediate, Advanced), and restrained color usage so green is not everywhere.
 class CourseListScreen extends ConsumerStatefulWidget {
   const CourseListScreen({super.key});
 
@@ -187,7 +186,7 @@ class _CourseListContent extends ConsumerWidget {
               ),
             ),
 
-          // 3. Duolingo Daily Target Banner
+          // 3. Animated Daily Target Banner
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(
@@ -200,7 +199,7 @@ class _CourseListContent extends ConsumerWidget {
             ),
           ),
 
-          // 4. Subject Filter Chips (Grade selector removed)
+          // 4. Subject Filter Chips
           SliverToBoxAdapter(
             child: _DashboardFilters(state: state),
           ),
@@ -220,7 +219,7 @@ class _CourseListContent extends ConsumerWidget {
               ),
             )
           else ...[
-            // Subject Lanes Grid
+            // Animated Subject Grid
             SliverToBoxAdapter(
               child: _TopicGrid(courses: state.filteredCourses),
             ),
@@ -310,14 +309,14 @@ class _DashboardHeader extends ConsumerWidget {
                 decoration: BoxDecoration(
                   color: AppColors.bgSecondary,
                   shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.brandEmerald, width: 2),
+                  border: Border.all(color: AppColors.borderStrong, width: 2),
                 ),
                 child: Text(
                   initial,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.brandEmerald,
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ),
@@ -387,14 +386,14 @@ class _DashboardHeader extends ConsumerWidget {
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.bolt_rounded, color: AppColors.brandEmerald, size: 18),
+                    Icon(Icons.bolt_rounded, color: AppColors.brandAmber, size: 18),
                     SizedBox(width: 4),
                     Text(
                       '450',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.brandEmerald,
+                        color: AppColors.brandAmber,
                       ),
                     ),
                   ],
@@ -436,7 +435,7 @@ class _AnnouncementBanner extends StatelessWidget {
           top: BorderSide(color: AppColors.borderStrong),
           left: BorderSide(color: AppColors.borderStrong),
           right: BorderSide(color: AppColors.borderStrong),
-          bottom: BorderSide(color: AppColors.brandAmberDark, width: 4), // Tactile 3D Border
+          bottom: BorderSide(color: AppColors.brandAmberDark, width: 4),
         ),
       ),
       child: Column(
@@ -526,7 +525,7 @@ class _AnnouncementBanner extends StatelessWidget {
   }
 }
 
-/// Duolingo Signature Tactile 3D Daily Goal Banner Card
+/// Duolingo Signature Daily Target Banner Card with Smooth Fill Animation
 class _DailyGoalCard extends StatelessWidget {
   const _DailyGoalCard();
 
@@ -542,7 +541,7 @@ class _DailyGoalCard extends StatelessWidget {
           top: BorderSide(color: AppColors.borderStrong),
           left: BorderSide(color: AppColors.borderStrong),
           right: BorderSide(color: AppColors.borderStrong),
-          bottom: BorderSide(color: AppColors.brandEmeraldDark, width: 4), // 3D Tactile Border
+          bottom: BorderSide(color: AppColors.brandEmeraldDark, width: 4),
         ),
       ),
       child: Column(
@@ -556,12 +555,13 @@ class _DailyGoalCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.brandEmerald.withAlpha(38),
+                      color: AppColors.bgTertiary,
                       borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppColors.borderStrong),
                     ),
                     child: const Icon(
                       Icons.track_changes_rounded,
-                      color: AppColors.brandEmerald,
+                      color: AppColors.textPrimary,
                       size: 20,
                     ),
                   ),
@@ -602,19 +602,26 @@ class _DailyGoalCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
 
-          // Thick Duolingo Progress Bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: const LinearProgressIndicator(
-              value: 0.6,
-              minHeight: 12,
-              backgroundColor: AppColors.bgPrimary,
-              color: AppColors.brandEmerald,
-            ),
+          // Animated Smooth Progress Bar
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0.0, end: 0.6),
+            duration: const Duration(milliseconds: 1000),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) {
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: LinearProgressIndicator(
+                  value: value,
+                  minHeight: 12,
+                  backgroundColor: AppColors.bgPrimary,
+                  color: AppColors.brandEmerald,
+                ),
+              );
+            },
           ),
           const SizedBox(height: 14),
 
-          // Tactile Duolingo 3D Button
+          // Tactile 3D Action Button
           SizedBox(
             width: double.infinity,
             height: 46,
@@ -646,7 +653,7 @@ class _DailyGoalCard extends StatelessWidget {
   }
 }
 
-/// Tactile Search Bar Container
+/// Neutral Slate Search Bar Container
 class _FloatingSearchBar extends ConsumerWidget {
   const _FloatingSearchBar({required this.searchController});
 
@@ -692,7 +699,7 @@ class _FloatingSearchBar extends ConsumerWidget {
             icon: const Icon(
               Icons.tune_rounded,
               size: 20,
-              color: AppColors.brandEmerald,
+              color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(width: 4),
@@ -725,7 +732,7 @@ class _DashboardFilters extends ConsumerWidget {
   }
 }
 
-/// Duolingo Path Subject Grid
+/// Animated Subject Grid with Interactive Press Scale & Character Icons
 class _TopicGrid extends StatelessWidget {
   const _TopicGrid({required this.courses});
 
@@ -771,61 +778,112 @@ class _TopicGrid extends StatelessWidget {
               crossAxisCount: 2,
               mainAxisSpacing: 10,
               crossAxisSpacing: 10,
-              childAspectRatio: 2.6,
+              childAspectRatio: 2.5,
             ),
             itemBuilder: (context, index) {
               final subject = subjects[index];
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.bgSecondary,
-                  borderRadius: BorderRadius.circular(16),
-                  border: const Border(
-                    top: BorderSide(color: AppColors.borderStrong),
-                    left: BorderSide(color: AppColors.borderStrong),
-                    right: BorderSide(color: AppColors.borderStrong),
-                    bottom: BorderSide(color: AppColors.borderStrong, width: 3), // Tactile 3D Depth
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.brandEmerald.withAlpha(38),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _subjectIcon(subject),
-                        size: 18,
-                        color: AppColors.brandEmerald,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _shortSubject(subject),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      size: 18,
-                      color: AppColors.textMuted,
-                    ),
-                  ],
-                ),
-              );
+              return _AnimatedSubjectCard(subject: subject);
             },
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Interactive Micro-Animated Subject Card
+class _AnimatedSubjectCard extends StatefulWidget {
+  const _AnimatedSubjectCard({required this.subject});
+
+  final String subject;
+
+  @override
+  State<_AnimatedSubjectCard> createState() => _AnimatedSubjectCardState();
+}
+
+class _AnimatedSubjectCardState extends State<_AnimatedSubjectCard> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final subject = widget.subject;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
+      onTap: () {},
+      child: AnimatedScale(
+        scale: _isPressed ? 0.96 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOutCubic,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.bgSecondary,
+            borderRadius: BorderRadius.circular(16),
+            border: Border(
+              top: const BorderSide(color: AppColors.borderStrong),
+              left: const BorderSide(color: AppColors.borderStrong),
+              right: const BorderSide(color: AppColors.borderStrong),
+              bottom: BorderSide(
+                color: _isPressed ? AppColors.borderFocused : AppColors.borderStrong,
+                width: 3,
+              ),
+            ),
+          ),
+          child: Row(
+            children: [
+              // Muted Character Icon Tile
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.bgTertiary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.borderStrong),
+                ),
+                child: Icon(
+                  _subjectIcon(subject),
+                  size: 18,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _shortSubject(subject),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Prep Lane',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: AppColors.textMuted,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
