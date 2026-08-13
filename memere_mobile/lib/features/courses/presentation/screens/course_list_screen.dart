@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_surface.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../domain/entities/course_entity.dart';
@@ -15,6 +17,10 @@ import '../widgets/course_empty_state.dart';
 import '../widgets/course_list_skeleton.dart';
 import '../widgets/subject_filter_chips.dart';
 
+/// Professional Duolingo-Inspired Home Screen for Memere (ExamPrep).
+///
+/// Features a strict 4-color palette, tactile 3D cards/buttons, gamified daily target progress,
+/// streak counter, XP tracker, and structured subject lanes.
 class CourseListScreen extends ConsumerStatefulWidget {
   const CourseListScreen({super.key});
 
@@ -66,48 +72,46 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      body: AppPageBackground(
-        child: SafeArea(
-          bottom: false,
-          child: coursesAsync.when(
-            loading: () {
-              final previous = coursesAsync.valueOrNull;
-              if (previous != null && previous.courses.isNotEmpty) {
-                return _CourseListContent(
-                  controller: _scrollController,
-                  searchController: _searchController,
-                  state: previous,
-                );
-              }
-              return Column(
-                children: [
-                  _DashboardHeader(searchController: _searchController),
-                  const SizedBox(height: AppSizes.lg),
-                  const Expanded(child: CourseListSkeleton()),
-                ],
+      body: SafeArea(
+        bottom: false,
+        child: coursesAsync.when(
+          loading: () {
+            final previous = coursesAsync.valueOrNull;
+            if (previous != null && previous.courses.isNotEmpty) {
+              return _CourseListContent(
+                controller: _scrollController,
+                searchController: _searchController,
+                state: previous,
               );
-            },
-            error: (error, _) => Column(
+            }
+            return Column(
               children: [
                 _DashboardHeader(searchController: _searchController),
-                Expanded(
-                  child: CourseEmptyState(
-                    icon: Icons.wifi_off_rounded,
-                    title: 'Could not load courses',
-                    body: error is Failure
-                        ? error.message
-                        : 'Check your connection and try again.',
-                    buttonLabel: 'Retry',
-                    onPressed: () => ref.invalidate(courseListProvider),
-                  ),
-                ),
+                const SizedBox(height: AppSizes.lg),
+                const Expanded(child: CourseListSkeleton()),
               ],
-            ),
-            data: (state) => _CourseListContent(
-              controller: _scrollController,
-              searchController: _searchController,
-              state: state,
-            ),
+            );
+          },
+          error: (error, _) => Column(
+            children: [
+              _DashboardHeader(searchController: _searchController),
+              Expanded(
+                child: CourseEmptyState(
+                  icon: Icons.wifi_off_rounded,
+                  title: 'Could not load courses',
+                  body: error is Failure
+                      ? error.message
+                      : 'Check your connection and try again.',
+                  buttonLabel: 'Retry',
+                  onPressed: () => ref.invalidate(courseListProvider),
+                ),
+              ),
+            ],
+          ),
+          data: (state) => _CourseListContent(
+            controller: _scrollController,
+            searchController: _searchController,
+            state: state,
           ),
         ),
       ),
@@ -129,19 +133,37 @@ class _CourseListContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
-      color: AppColors.accentPrimary,
+      color: AppColors.brandEmerald,
       backgroundColor: AppColors.bgSecondary,
       onRefresh: () => ref.read(courseListProvider.notifier).refresh(),
       child: CustomScrollView(
         controller: controller,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
+          // 1. Duolingo Header (Avatar + Streak + XP)
           SliverToBoxAdapter(
             child: _DashboardHeader(searchController: searchController),
           ),
+
+          // 2. Duolingo Daily Target Banner
+          const SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSizes.screenPaddingH,
+                AppSizes.md,
+                AppSizes.screenPaddingH,
+                0,
+              ),
+              child: _DailyGoalCard(),
+            ),
+          ),
+
+          // 3. Subject Filters & Grade Switcher
           SliverToBoxAdapter(
             child: _DashboardFilters(state: state),
           ),
+
+          // 4. Content List or Empty State
           if (state.filteredCourses.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
@@ -156,23 +178,46 @@ class _CourseListContent extends ConsumerWidget {
               ),
             )
           else ...[
+            // Subject Lanes Grid
             SliverToBoxAdapter(
               child: _TopicGrid(courses: state.filteredCourses),
             ),
+
+            // Section Header: All Courses
             const SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
                   AppSizes.screenPaddingH,
-                  AppSizes.xl,
+                  AppSizes.lg,
                   AppSizes.screenPaddingH,
                   AppSizes.md,
                 ),
-                child: AppSectionHeader(
-                  title: 'All Courses',
-                  subtitle: 'Structured exam prep for Grade 12',
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Exam Prep Courses',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    Text(
+                      'Grade 12',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.brandEmerald,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
+
+            // Course Rows List
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSizes.screenPaddingH,
@@ -186,10 +231,7 @@ class _CourseListContent extends ConsumerWidget {
                     const SizedBox(height: AppSizes.md),
                 itemBuilder: (context, index) {
                   final course = state.filteredCourses[index];
-                  return AppStaggeredReveal(
-                    index: index,
-                    child: CourseRowCard(course: course),
-                  );
+                  return CourseRowCard(course: course);
                 },
               ),
             ),
@@ -203,6 +245,7 @@ class _CourseListContent extends ConsumerWidget {
   }
 }
 
+/// Duolingo Header Top Bar with Profile Avatar, Greeting, Streak 🔥, and XP ⚡ Badges
 class _DashboardHeader extends ConsumerWidget {
   const _DashboardHeader({required this.searchController});
 
@@ -228,43 +271,111 @@ class _DashboardHeader extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          AppSurface(
-            padding: const EdgeInsets.all(AppSizes.md),
-            radius: AppSizes.radiusLg,
-            borderColor: AppColors.borderStrong,
-            shadows: AppShadows.md,
-            child: Row(
-              children: [
-                _Avatar(initial: initial),
-                const SizedBox(width: AppSizes.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        greeting,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.headlineMedium,
-                      ),
-                      const SizedBox(height: AppSizes.xs),
-                      const Text(
-                        'Grade 12 exam prep',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.bodySmall,
-                      ),
-                    ],
+          Row(
+            children: [
+              // Avatar
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.bgSecondary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.brandEmerald, width: 2),
+                ),
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.brandEmerald,
                   ),
                 ),
-                const SizedBox(width: AppSizes.sm),
-                const _HeaderIconButton(icon: Icons.notifications_none),
-                const SizedBox(width: AppSizes.xs),
-                const _HeaderIconButton(icon: Icons.bookmark_border),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+
+              // Greeting & Level
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      greeting,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Grade 12 National Prep',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textMuted,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Duolingo Streak Badge (🔥 7 Days)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.bgSecondary,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.borderStrong),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.local_fire_department_rounded,
+                        color: AppColors.brandAmber, size: 18),
+                    SizedBox(width: 4),
+                    Text(
+                      '7',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.brandAmber,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Duolingo XP Points Badge (⚡ 450 XP)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.bgSecondary,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.borderStrong),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.bolt_rounded, color: AppColors.brandEmerald, size: 18),
+                    SizedBox(width: 4),
+                    Text(
+                      '450',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.brandEmerald,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: AppSizes.md),
+          const SizedBox(height: 14),
+
+          // Floating Search Bar
           _FloatingSearchBar(searchController: searchController),
         ],
       ),
@@ -272,6 +383,127 @@ class _DashboardHeader extends ConsumerWidget {
   }
 }
 
+/// Duolingo Signature Tactile 3D Daily Goal Banner Card
+class _DailyGoalCard extends StatelessWidget {
+  const _DailyGoalCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.bgSecondary,
+        borderRadius: BorderRadius.circular(20),
+        border: const Border(
+          top: BorderSide(color: AppColors.borderStrong),
+          left: BorderSide(color: AppColors.borderStrong),
+          right: BorderSide(color: AppColors.borderStrong),
+          bottom: BorderSide(color: AppColors.brandEmeraldDark, width: 4), // 3D Tactile Border
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandEmerald.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.track_changes_rounded,
+                      color: AppColors.brandEmerald,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'DAILY TARGET',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.brandEmerald,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      Text(
+                        '3 of 5 lessons completed',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const Text(
+                '60%',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.brandEmerald,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Thick Duolingo Progress Bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: const LinearProgressIndicator(
+              value: 0.6,
+              minHeight: 12,
+              backgroundColor: AppColors.bgPrimary,
+              color: AppColors.brandEmerald,
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Tactile Duolingo 3D Button
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: ElevatedButton.icon(
+              onPressed: () => context.go(AppRoutes.learn),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.brandEmerald,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: const BorderSide(color: AppColors.brandEmeraldDark, width: 2),
+                ),
+              ),
+              icon: const Icon(Icons.play_arrow_rounded, size: 20),
+              label: const Text(
+                'CONTINUE STUDYING',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.extrabold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Tactile Search Bar Container
 class _FloatingSearchBar extends ConsumerWidget {
   const _FloatingSearchBar({required this.searchController});
 
@@ -279,52 +511,49 @@ class _FloatingSearchBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return AppSurface(
-      padding: EdgeInsets.zero,
-      radius: AppSizes.radiusMd,
-      color: AppColors.bgSecondary,
-      borderColor: AppColors.borderStrong,
-      shadows: AppShadows.sm,
-      child: SizedBox(
-        height: AppSizes.inputHeight,
-        child: Row(
-          children: [
-            const SizedBox(width: AppSizes.md),
-            const Icon(
-              Icons.search_rounded,
-              size: AppSizes.iconMd,
-              color: AppColors.textPrimary,
-            ),
-            const SizedBox(width: AppSizes.sm),
-            Expanded(
-              child: TextField(
-                controller: searchController,
-                textInputAction: TextInputAction.search,
-                onChanged: ref.read(courseListProvider.notifier).setSearchQuery,
-                style: AppTextStyles.bodyMedium,
-                decoration: InputDecoration(
-                  hintText: 'Search lessons, subjects, exams',
-                  hintStyle: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textMuted,
-                  ),
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  isCollapsed: true,
-                ),
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        color: AppColors.bgSecondary,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderStrong),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 14),
+          const Icon(
+            Icons.search_rounded,
+            size: 20,
+            color: AppColors.textMuted,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: searchController,
+              textInputAction: TextInputAction.search,
+              onChanged: ref.read(courseListProvider.notifier).setSearchQuery,
+              style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+              decoration: const InputDecoration(
+                hintText: 'Search subjects, topics, exams...',
+                hintStyle: TextStyle(fontSize: 14, color: AppColors.textMuted),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                isCollapsed: true,
               ),
             ),
-            IconButton(
-              tooltip: 'Filter',
-              onPressed: () {},
-              icon: const Icon(
-                Icons.tune_rounded,
-                color: AppColors.accentPrimary,
-              ),
+          ),
+          IconButton(
+            tooltip: 'Filter',
+            onPressed: () {},
+            icon: const Icon(
+              Icons.tune_rounded,
+              size: 20,
+              color: AppColors.brandEmerald,
             ),
-            const SizedBox(width: AppSizes.xs),
-          ],
-        ),
+          ),
+          const SizedBox(width: 4),
+        ],
       ),
     );
   }
@@ -342,7 +571,7 @@ class _DashboardFilters extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: AppSizes.md),
+        const SizedBox(height: 14),
         SubjectFilterChips(
           subjects: phase2Subjects,
           selectedSubject: state.selectedSubject,
@@ -350,24 +579,26 @@ class _DashboardFilters extends ConsumerWidget {
             ref.read(courseListProvider.notifier).setSubject(subject);
           },
         ),
-        const SizedBox(height: AppSizes.md),
+        const SizedBox(height: 12),
         Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSizes.screenPaddingH,
           ),
           child: Row(
             children: [
-              Text(
-                'Grade',
-                style: AppTextStyles.labelMedium.copyWith(
-                  color: AppColors.textSecondary,
+              const Text(
+                'Grade Level',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textMuted,
                 ),
               ),
-              const SizedBox(width: AppSizes.md),
+              const SizedBox(width: 12),
               SegmentedButton<int>(
                 segments: const [
-                  ButtonSegment(value: 11, label: Text('11')),
-                  ButtonSegment(value: 12, label: Text('12')),
+                  ButtonSegment(value: 11, label: Text('Grade 11')),
+                  ButtonSegment(value: 12, label: Text('Grade 12')),
                 ],
                 selected: {selectedGrade},
                 onSelectionChanged: (selection) {
@@ -384,6 +615,7 @@ class _DashboardFilters extends ConsumerWidget {
   }
 }
 
+/// Duolingo Path Subject Grid
 class _TopicGrid extends StatelessWidget {
   const _TopicGrid({required this.courses});
 
@@ -406,11 +638,16 @@ class _TopicGrid extends StatelessWidget {
             AppSizes.screenPaddingH,
             AppSizes.lg,
             AppSizes.screenPaddingH,
-            AppSizes.md,
+            AppSizes.sm,
           ),
-          child: AppSectionHeader(
-            title: 'Browse Subjects',
-            subtitle: 'Pick a focused lane for today',
+          child: Text(
+            'Subject Lanes',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.2,
+            ),
           ),
         ),
         Padding(
@@ -422,42 +659,54 @@ class _TopicGrid extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              mainAxisSpacing: AppSizes.sm,
-              crossAxisSpacing: AppSizes.sm,
-              childAspectRatio: 2.8,
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 2.6,
             ),
             itemBuilder: (context, index) {
               final subject = subjects[index];
-              return AppSurface(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSizes.md,
-                  vertical: AppSizes.sm,
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppColors.bgSecondary,
+                  borderRadius: BorderRadius.circular(16),
+                  border: const Border(
+                    top: BorderSide(color: AppColors.borderStrong),
+                    left: BorderSide(color: AppColors.borderStrong),
+                    right: BorderSide(color: AppColors.borderStrong),
+                    bottom: BorderSide(color: AppColors.borderStrong, width: 3), // Tactile 3D Depth
+                  ),
                 ),
-                radius: AppSizes.radiusMd,
-                borderColor: AppColors.borderStrong,
-                shadows: AppShadows.sm,
                 child: Row(
                   children: [
-                    AppIconTile(
-                      icon: _subjectIcon(subject),
-                      size: 34,
-                      iconSize: AppSizes.iconSm,
-                      color: _subjectColor(subject),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.brandEmerald.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _subjectIcon(subject),
+                        size: 18,
+                        color: AppColors.brandEmerald,
+                      ),
                     ),
-                    const SizedBox(width: AppSizes.sm),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         _shortSubject(subject),
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTextStyles.labelMedium.copyWith(
-                          fontWeight: FontWeight.w700,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
                     const Icon(
                       Icons.chevron_right_rounded,
-                      size: AppSizes.iconSm,
+                      size: 18,
                       color: AppColors.textMuted,
                     ),
                   ],
@@ -467,59 +716,6 @@ class _TopicGrid extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  const _Avatar({required this.initial});
-
-  final String initial;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: AppSizes.avatarMd,
-      height: AppSizes.avatarMd,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColors.bgTertiary,
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.borderStrong),
-        boxShadow: AppShadows.md,
-      ),
-      child: Text(
-        initial,
-        style: AppTextStyles.titleMedium.copyWith(
-          color: AppColors.accentPrimary,
-        ),
-      ),
-    );
-  }
-}
-
-class _HeaderIconButton extends StatelessWidget {
-  const _HeaderIconButton({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppPressable(
-      onTap: () {},
-      borderRadius: AppSizes.radiusFull,
-      child: Container(
-        width: 34,
-        height: 34,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.bgTertiary,
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.border),
-        ),
-        child:
-            Icon(icon, color: AppColors.textSecondary, size: AppSizes.iconSm),
-      ),
     );
   }
 }
@@ -548,30 +744,6 @@ IconData _subjectIcon(String subject) {
   }
 }
 
-Color _subjectColor(String subject) {
-  switch (subject.toLowerCase()) {
-    case 'mathematics':
-    case 'math':
-      return AppColors.subjectMath;
-    case 'physics':
-      return AppColors.subjectPhysics;
-    case 'chemistry':
-      return AppColors.subjectChem;
-    case 'biology':
-      return AppColors.subjectBio;
-    case 'english':
-      return AppColors.subjectEng;
-    case 'history':
-      return AppColors.subjectHist;
-    case 'geography':
-      return AppColors.subjectGeo;
-    case 'economics':
-      return AppColors.subjectEcon;
-    default:
-      return AppColors.subjectNeutral;
-  }
-}
-
 String _shortSubject(String subject) {
   final normalized = subject.trim();
   if (normalized.toLowerCase() == 'mathematics') return 'Math';
@@ -591,7 +763,7 @@ class _LoadMoreFooter extends StatelessWidget {
         child: Center(
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            color: AppColors.accentPrimary,
+            color: AppColors.brandEmerald,
           ),
         ),
       );

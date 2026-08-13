@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_motion.dart';
-import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
-import '../../../../core/constants/app_text_styles.dart';
 import '../../../../shared/widgets/app_surface.dart';
 
 class SubjectFilterChips extends StatelessWidget {
@@ -28,7 +26,7 @@ class SubjectFilterChips extends StatelessWidget {
         padding:
             const EdgeInsets.symmetric(horizontal: AppSizes.screenPaddingH),
         itemCount: subjects.length + 1,
-        separatorBuilder: (_, __) => const SizedBox(width: AppSizes.sm),
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final subject = index == 0 ? null : subjects[index - 1];
           final selected = selectedSubject == subject;
@@ -40,46 +38,34 @@ class SubjectFilterChips extends StatelessWidget {
               curve: AppMotion.standard,
               height: 36,
               padding: EdgeInsets.only(
-                left: selected ? AppSizes.sm : AppSizes.md,
-                right: AppSizes.md,
+                left: selected ? 10 : 16,
+                right: 16,
               ),
               decoration: BoxDecoration(
-                color: selected ? AppColors.textPrimary : AppColors.bgSecondary,
-                borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+                color: selected ? AppColors.brandEmerald : AppColors.bgSecondary,
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(
-                  color: selected ? AppColors.textPrimary : AppColors.border,
+                  color: selected ? AppColors.brandEmeraldDark : AppColors.borderStrong,
+                  width: selected ? 2 : 1,
                 ),
-                boxShadow: selected ? AppShadows.accentGlow : AppShadows.sm,
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  AnimatedContainer(
-                    duration: AppMotion.base,
-                    curve: AppMotion.standard,
-                    width: selected ? 24 : 0,
-                    height: 24,
-                    margin: EdgeInsets.only(
-                      right: selected ? AppSizes.xs : 0,
+                  if (selected) ...[
+                    const Icon(
+                      Icons.check_rounded,
+                      size: 16,
+                      color: Colors.white,
                     ),
-                    decoration: BoxDecoration(
-                      color: AppColors.textInverse.withAlpha(26),
-                      shape: BoxShape.circle,
-                    ),
-                    child: selected
-                        ? const Icon(
-                            Icons.check_rounded,
-                            size: AppSizes.iconXs,
-                            color: AppColors.textInverse,
-                          )
-                        : null,
-                  ),
+                    const SizedBox(width: 6),
+                  ],
                   Text(
-                    subject ?? 'All',
-                    style: AppTextStyles.labelMedium.copyWith(
-                      color: selected
-                          ? AppColors.textInverse
-                          : AppColors.textSecondary,
+                    subject ?? 'All Subjects',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: selected ? Colors.white : AppColors.textSecondary,
                     ),
                   ),
                 ],

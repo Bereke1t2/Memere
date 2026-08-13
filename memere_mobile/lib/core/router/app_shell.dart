@@ -153,13 +153,13 @@ class _NavItem extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: selected
-                      ? AppColors.accentPrimary.withAlpha(34)
+                      ? AppColors.brandEmerald.withOpacity(0.18)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppSizes.radiusFull),
                 ),
                 child: Icon(
                   selected ? selectedIcon : icon,
-                  color: selected ? AppColors.textPrimary : AppColors.textMuted,
+                  color: selected ? AppColors.brandEmerald : AppColors.textMuted,
                   size: selected ? AppSizes.iconLg : AppSizes.iconMd,
                 ),
               ),
@@ -170,10 +170,10 @@ class _NavItem extends StatelessWidget {
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.textPrimary,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
+                    style: const TextStyle(
+                      color: AppColors.brandEmerald,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
