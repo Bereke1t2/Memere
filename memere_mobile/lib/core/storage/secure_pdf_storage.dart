@@ -144,56 +144,105 @@ class SecurePdfStorage {
     return false;
   }
 
+  /// Sanitizes text to ensure all characters are supported by Syncfusion PdfStandardFont (WinAnsi / ASCII)
+  static String _sanitizeTextForPdfStandardFont(String text) {
+    if (text.isEmpty) return text;
+
+    // Replace common Unicode punctuation & formatting symbols with safe ASCII equivalents
+    var cleaned = text
+        .replaceAll('“', '"')
+        .replaceAll('”', '"')
+        .replaceAll('‘', "'")
+        .replaceAll('’', "'")
+        .replaceAll('—', '-')
+        .replaceAll('–', '-')
+        .replaceAll('•', '*')
+        .replaceAll('…', '...')
+        .replaceAll('\u00A0', ' ')
+        .replaceAll('≤', '<=')
+        .replaceAll('≥', '>=')
+        .replaceAll('≠', '!=');
+
+    // Strip/replace any code point outside 32..255 (WinAnsi range) to prevent PdfStandardFont ArgumentError
+    final buffer = StringBuffer();
+    for (final char in cleaned.runes) {
+      if ((char >= 32 && char <= 255) || char == 10 || char == 13 || char == 9) {
+        buffer.writeCharCode(char);
+      } else {
+        buffer.write(' ');
+      }
+    }
+
+    final result = buffer.toString().trim();
+    return result.isEmpty ? 'Study Notes Content' : result;
+  }
+
   /// Generates a valid Syncfusion PDF document containing the actual lesson title and content
   static Uint8List _generatePdfFromLessonContent(String title, String content) {
-    final document = PdfDocument();
-    final page = document.pages.add();
-    final graphics = page.graphics;
-
-    final titleFont = PdfStandardFont(PdfFontFamily.helvetica, 16, style: PdfFontStyle.bold);
-    final subtitleFont = PdfStandardFont(PdfFontFamily.helvetica, 11, style: PdfFontStyle.italic);
-    final bodyFont = PdfStandardFont(PdfFontFamily.helvetica, 11);
-
-    // Draw Title
-    graphics.drawString(
-      title,
-      titleFont,
-      bounds: const Rect.fromLTWH(0, 0, 500, 26),
+    final safeTitle = _sanitizeTextForPdfStandardFont(title.isEmpty ? 'Lesson Study Guide' : title);
+    final safeContent = _sanitizeTextForPdfStandardFont(
+      content.trim().isNotEmpty ? content : 'No detailed notes provided for this lesson.',
     );
 
-    // Draw Header Subtitle
-    graphics.drawString(
-      'Memere Grade 12 Exam Prep Study Guide',
-      subtitleFont,
-      bounds: const Rect.fromLTWH(0, 28, 500, 18),
-    );
+    try {
+      final document = PdfDocument();
+      final page = document.pages.add();
+      final graphics = page.graphics;
 
-    // Draw Line Separator
-    graphics.drawLine(
-      PdfPen(PdfColor(200, 200, 200), width: 1),
-      const Offset(0, 50),
-      const Offset(500, 50),
-    );
+      final titleFont = PdfStandardFont(PdfFontFamily.helvetica, 16, style: PdfFontStyle.bold);
+      final subtitleFont = PdfStandardFont(PdfFontFamily.helvetica, 11, style: PdfFontStyle.italic);
+      final bodyFont = PdfStandardFont(PdfFontFamily.helvetica, 11);
 
-    // Draw Content Body Text
-    final layoutElement = PdfTextElement(
-      text: content.trim().isNotEmpty ? content : 'No detailed notes provided for this lesson.',
-      font: bodyFont,
-      brush: PdfSolidBrush(PdfColor(30, 30, 30)),
-    );
+      // Draw Title
+      graphics.drawString(
+        safeTitle,
+        titleFont,
+        bounds: const Rect.fromLTWH(0, 0, 500, 26),
+      );
 
-    final layoutFormat = PdfLayoutFormat(
-      layoutType: PdfLayoutType.paginate,
-    );
+      // Draw Header Subtitle
+      graphics.drawString(
+        'Memere Grade 12 Exam Prep Study Guide',
+        subtitleFont,
+        bounds: const Rect.fromLTWH(0, 28, 500, 18),
+      );
 
-    layoutElement.draw(
-      page: page,
-      bounds: const Rect.fromLTWH(0, 60, 500, 700),
-      format: layoutFormat,
-    );
+      // Draw Line Separator
+      graphics.drawLine(
+        PdfPen(PdfColor(200, 200, 200), width: 1),
+        const Offset(0, 50),
+        const Offset(500, 50),
+      );
 
-    final List<int> bytes = document.saveSync();
-    document.dispose();
-    return Uint8List.fromList(bytes);
+      // Draw Content Body Text
+      final layoutElement = PdfTextElement(
+        text: safeContent,
+        font: bodyFont,
+        brush: PdfSolidBrush(PdfColor(30, 30, 30)),
+      );
+
+      final layoutFormat = PdfLayoutFormat(
+        layoutType: PdfLayoutType.paginate,
+      );
+
+      layoutElement.draw(
+        page: page,
+        bounds: const Rect.fromLTWH(0, 60, 500, 700),
+        format: layoutFormat,
+      );
+
+      final List<int> bytes = document.saveSync();
+      document.dispose();
+      return Uint8List.fromList(bytes);
+    } catch (_) {
+      // Emergency fallback if PDF drawing fails for any reason
+      final document = PdfDocument();
+      final page = document.pages.add();
+      final font = PdfStandardFont(PdfFontFamily.helvetica, 12);
+      page.graphics.drawString('Memere Lesson Notes', font, bounds: const Rect.fromLTWH(0, 0, 500, 30));
+      final List<int> bytes = document.saveSync();
+      document.dispose();
+      return Uint8List.fromList(bytes);
+    }
   }
 }
