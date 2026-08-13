@@ -678,6 +678,14 @@ This project uses [Conventional Commits](https://www.conventionalcommits.org/):
 
 ---
 
+## 🔗 Related Components
+
+- 💻 **Admin Web**: [`../Memere-admin`](../Memere-admin/README.md) — Next.js 15 management web panel
+- 📱 **Mobile App**: [`../memere_mobile`](../memere_mobile/README.md) — Flutter mobile app for Grade 12 students
+- 🌐 **Project Root**: [`../README.md`](../README.md) — Main repository overview & architecture
+
+---
+
 ## 📄 License
 
 This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
