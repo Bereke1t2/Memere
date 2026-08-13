@@ -1,4 +1,12 @@
-# Memere Admin
+# 💻 Memere Admin — Management Web Panel
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Next.js-15+-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js">
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React">
+  <img src="https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind CSS">
+  <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
+</p>
 
 Web admin panel for the **Memere (ExamPrep)** platform — a Next.js 15 client of
 the Go backend (`../Memere-backend`). It owns no database and no business logic;
@@ -119,8 +127,11 @@ docker push registry.example.com/memere-admin:latest
 
 ## Related
 
-- **Backend**: `../Memere-backend` — Go REST API
-- **API contract**: `../Memere-backend/docs/Memere.postman_collection.json`
-- **Design spec**: `docs/Memere_Admin_Design_Specification.md`
-- **Smoke test**: `docs/SMOKE.md`
-- **Deployment**: `docs/DEPLOYMENT.md`
+- ⚙️ **Backend**: [`../Memere-backend`](../Memere-backend/README.md) — Go REST API & Worker
+- 📱 **Mobile**: [`../memere_mobile`](../memere_mobile/README.md) — Flutter mobile app for Grade 12 students
+- 🌐 **Project Root**: [`../README.md`](../README.md) — Main repository overview
+- 📄 **API contract**: [`../Memere-backend/docs/Memere.postman_collection.json`](../Memere-backend/docs/Memere.postman_collection.json)
+- 🎨 **Design spec**: [`docs/Memere_Admin_Design_Specification.md`](docs/Memere_Admin_Design_Specification.md)
+- 🧪 **Smoke test**: [`docs/SMOKE.md`](docs/SMOKE.md)
+- 🚀 **Deployment**: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+
