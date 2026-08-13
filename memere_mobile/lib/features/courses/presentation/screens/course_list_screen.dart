@@ -8,6 +8,7 @@ import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
+import '../../../notifications/presentation/providers/announcement_provider.dart';
 import '../../domain/entities/course_entity.dart';
 import '../providers/course_list_provider.dart';
 import '../widgets/course_card.dart';
@@ -15,10 +16,11 @@ import '../widgets/course_empty_state.dart';
 import '../widgets/course_list_skeleton.dart';
 import '../widgets/subject_filter_chips.dart';
 
-/// Professional Duolingo-Inspired Home Screen for Memere (ExamPrep).
+/// Professional Duolingo-Inspired Obsidian Dark Home Screen for Memere (ExamPrep).
 ///
-/// Features a strict 4-color palette, tactile 3D cards/buttons, gamified daily target progress,
-/// streak counter, XP tracker, and structured subject lanes.
+/// Features pure obsidian black background (#050505), strict 4-color palette,
+/// backend announcement integration, tactile 3D cards/buttons, daily target progress,
+/// and structured subject lanes. (Grade level selector removed).
 class CourseListScreen extends ConsumerStatefulWidget {
   const CourseListScreen({super.key});
 
@@ -29,6 +31,7 @@ class CourseListScreen extends ConsumerStatefulWidget {
 class _CourseListScreenState extends ConsumerState<CourseListScreen> {
   late final TextEditingController _searchController;
   late final ScrollController _scrollController;
+  bool _dismissedAnnouncement = false;
 
   @override
   void initState() {
@@ -80,6 +83,9 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen> {
                 controller: _scrollController,
                 searchController: _searchController,
                 state: previous,
+                dismissedAnnouncement: _dismissedAnnouncement,
+                onDismissAnnouncement: () =>
+                    setState(() => _dismissedAnnouncement = true),
               );
             }
             return Column(
@@ -110,6 +116,9 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen> {
             controller: _scrollController,
             searchController: _searchController,
             state: state,
+            dismissedAnnouncement: _dismissedAnnouncement,
+            onDismissAnnouncement: () =>
+                setState(() => _dismissedAnnouncement = true),
           ),
         ),
       ),
@@ -122,28 +131,63 @@ class _CourseListContent extends ConsumerWidget {
     required this.controller,
     required this.searchController,
     required this.state,
+    required this.dismissedAnnouncement,
+    required this.onDismissAnnouncement,
   });
 
   final ScrollController controller;
   final TextEditingController searchController;
   final CourseListState state;
+  final bool dismissedAnnouncement;
+  final VoidCallback onDismissAnnouncement;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final announcementsAsync = ref.watch(announcementProvider);
+
     return RefreshIndicator(
       color: AppColors.brandEmerald,
       backgroundColor: AppColors.bgSecondary,
-      onRefresh: () => ref.read(courseListProvider.notifier).refresh(),
+      onRefresh: () async {
+        ref.read(courseListProvider.notifier).refresh();
+        ref.invalidate(announcementProvider);
+      },
       child: CustomScrollView(
         controller: controller,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          // 1. Duolingo Header (Avatar + Streak + XP)
+          // 1. Header (Avatar + Streak + XP)
           SliverToBoxAdapter(
             child: _DashboardHeader(searchController: searchController),
           ),
 
-          // 2. Duolingo Daily Target Banner
+          // 2. Backend Announcement Banner (if available & not dismissed)
+          if (!dismissedAnnouncement)
+            SliverToBoxAdapter(
+              child: announcementsAsync.when(
+                data: (announcements) {
+                  if (announcements.isEmpty) return const SizedBox.shrink();
+                  final announcement = announcements.first;
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSizes.screenPaddingH,
+                      AppSizes.md,
+                      AppSizes.screenPaddingH,
+                      0,
+                    ),
+                    child: _AnnouncementBanner(
+                      title: announcement.title,
+                      body: announcement.body,
+                      onDismiss: onDismissAnnouncement,
+                    ),
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+            ),
+
+          // 3. Duolingo Daily Target Banner
           const SliverToBoxAdapter(
             child: Padding(
               padding: EdgeInsets.fromLTRB(
@@ -156,12 +200,12 @@ class _CourseListContent extends ConsumerWidget {
             ),
           ),
 
-          // 3. Subject Filters & Grade Switcher
+          // 4. Subject Filter Chips (Grade selector removed)
           SliverToBoxAdapter(
             child: _DashboardFilters(state: state),
           ),
 
-          // 4. Content List or Empty State
+          // 5. Content List or Empty State
           if (state.filteredCourses.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
@@ -190,27 +234,14 @@ class _CourseListContent extends ConsumerWidget {
                   AppSizes.screenPaddingH,
                   AppSizes.md,
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Exam Prep Courses',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                        letterSpacing: -0.2,
-                      ),
-                    ),
-                    Text(
-                      'Grade 12',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.brandEmerald,
-                      ),
-                    ),
-                  ],
+                child: Text(
+                  'Exam Prep Courses',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.2,
+                  ),
                 ),
               ),
             ),
@@ -292,7 +323,7 @@ class _DashboardHeader extends ConsumerWidget {
               ),
               const SizedBox(width: 12),
 
-              // Greeting & Level
+              // Greeting & Subtitle
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -309,7 +340,7 @@ class _DashboardHeader extends ConsumerWidget {
                     ),
                     const SizedBox(height: 2),
                     const Text(
-                      'Grade 12 National Prep',
+                      'Grade 12 National Exam Prep',
                       style: TextStyle(
                         fontSize: 12,
                         color: AppColors.textMuted,
@@ -375,6 +406,120 @@ class _DashboardHeader extends ConsumerWidget {
 
           // Floating Search Bar
           _FloatingSearchBar(searchController: searchController),
+        ],
+      ),
+    );
+  }
+}
+
+/// Backend Announcement Banner Card (Duolingo Tactile 3D Styling)
+class _AnnouncementBanner extends StatelessWidget {
+  const _AnnouncementBanner({
+    required this.title,
+    required this.body,
+    required this.onDismiss,
+  });
+
+  final String title;
+  final String body;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.bgSecondary,
+        borderRadius: BorderRadius.circular(20),
+        border: const Border(
+          top: BorderSide(color: AppColors.borderStrong),
+          left: BorderSide(color: AppColors.borderStrong),
+          right: BorderSide(color: AppColors.borderStrong),
+          bottom: BorderSide(color: AppColors.brandAmberDark, width: 4), // Tactile 3D Border
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppColors.brandAmber.withAlpha(38),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.campaign_rounded,
+                  color: AppColors.brandAmber,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'ANNOUNCEMENT',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.brandAmber,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+              ),
+              IconButton(
+                onPressed: onDismiss,
+                icon: const Icon(Icons.close_rounded, size: 18, color: AppColors.textMuted),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            body,
+            style: const TextStyle(
+              fontSize: 13,
+              color: AppColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 42,
+            child: ElevatedButton.icon(
+              onPressed: () => context.go(AppRoutes.mockExams),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.brandAmber,
+                foregroundColor: Colors.black,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: AppColors.brandAmberDark, width: 2),
+                ),
+              ),
+              icon: const Icon(Icons.arrow_forward_rounded, size: 18, color: Colors.black),
+              label: const Text(
+                'OPEN MOCK EXAMS',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -564,8 +709,6 @@ class _DashboardFilters extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedGrade = state.selectedGrade ?? 12;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -576,37 +719,6 @@ class _DashboardFilters extends ConsumerWidget {
           onSelected: (subject) {
             ref.read(courseListProvider.notifier).setSubject(subject);
           },
-        ),
-        const SizedBox(height: 12),
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSizes.screenPaddingH,
-          ),
-          child: Row(
-            children: [
-              const Text(
-                'Grade Level',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textMuted,
-                ),
-              ),
-              const SizedBox(width: 12),
-              SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(value: 11, label: Text('Grade 11')),
-                  ButtonSegment(value: 12, label: Text('Grade 12')),
-                ],
-                selected: {selectedGrade},
-                onSelectionChanged: (selection) {
-                  ref
-                      .read(courseListProvider.notifier)
-                      .setGrade(selection.first);
-                },
-              ),
-            ],
-          ),
         ),
       ],
     );

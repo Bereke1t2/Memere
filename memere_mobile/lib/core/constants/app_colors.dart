@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
-/// Memere Professional Color System — Duolingo-Inspired (Strict 4-Color Palette).
+/// Memere Professional Color System — Duolingo-Inspired Obsidian Dark (Strict 4-Color Palette).
 ///
 /// 1. Brand Emerald Green (`#10B981`): Primary actions, level progress, completion indicators.
-/// 2. Brand Warm Amber (`#F59E0B`): Streaks 🔥, XP points ⚡, daily targets.
-/// 3. Background Canvas (`#0B0F17`): Deep slate dark canvas.
-/// 4. Card Surface (`#1E293B`): Tactile cards with 3D depth borders (`#334155`).
+/// 2. Brand Warm Amber (`#F59E0B`): Streaks 🔥, XP points ⚡, announcements 📢.
+/// 3. Obsidian Black Canvas (`#050505`): Deep pure dark canvas.
+/// 4. Tactile Card Surface (`#111115`): Dark cards with 3D depth borders (`#2C2C35`).
 abstract class AppColors {
   // ── 4 Master Theme Colors ────────────────────────────────────────────────
   static const Color brandEmerald = Color(0xFF10B981);
@@ -13,12 +13,12 @@ abstract class AppColors {
   static const Color brandAmber = Color(0xFFF59E0B);
   static const Color brandAmberDark = Color(0xFFD97706);
 
-  // ── Backgrounds ──────────────────────────────────────────────────────────
-  static const Color bgPrimary = Color(0xFF0B0F17);
-  static const Color bgSecondary = Color(0xFF1E293B);
-  static const Color bgTertiary = Color(0xFF131C2E);
-  static const Color bgQuaternary = Color(0xFF334155);
-  static const Color bgOverlay = Color(0xB8000000);
+  // ── Backgrounds (Obsidian Pure Dark) ─────────────────────────────────────
+  static const Color bgPrimary = Color(0xFF050505);
+  static const Color bgSecondary = Color(0xFF111115);
+  static const Color bgTertiary = Color(0xFF18181E);
+  static const Color bgQuaternary = Color(0xFF25252E);
+  static const Color bgOverlay = Color(0xCC000000);
 
   // ── Accent ───────────────────────────────────────────────────────────────
   static const Color accentPrimary = Color(0xFF10B981);
@@ -28,11 +28,11 @@ abstract class AppColors {
   static const Color accentGlow = Color(0x2610B981);
 
   // ── Text ─────────────────────────────────────────────────────────────────
-  static const Color textPrimary = Color(0xFFF8FAFC);
-  static const Color textSecondary = Color(0xFFCBD5E1);
+  static const Color textPrimary = Color(0xFFFFFFFF);
+  static const Color textSecondary = Color(0xFFD4D4D8);
   static const Color textMuted = Color(0xFF94A3B8);
-  static const Color textDisabled = Color(0xFF64748B);
-  static const Color textInverse = Color(0xFF0B0F17);
+  static const Color textDisabled = Color(0xFF52525B);
+  static const Color textInverse = Color(0xFF050505);
 
   // ── Status ───────────────────────────────────────────────────────────────
   static const Color success = Color(0xFF10B981);
@@ -61,16 +61,16 @@ abstract class AppColors {
   static const Color subjectCivics = Color(0xFF10B981);
 
   // ── Borders & Dividers (Tactile 3D Depth) ─────────────────────────────────
-  static const Color border = Color(0xFF1E293B);
-  static const Color borderStrong = Color(0xFF334155);
+  static const Color border = Color(0xFF1A1A20);
+  static const Color borderStrong = Color(0xFF2C2C35);
   static const Color borderFocused = Color(0xFF10B981);
-  static const Color divider = Color(0xFF1E293B);
+  static const Color divider = Color(0xFF1A1A20);
 
   // ── Gradients ────────────────────────────────────────────────────────────
   static const LinearGradient backgroundGradient = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
-    colors: [Color(0xFF0F172A), Color(0xFF0B0F17)],
+    colors: [Color(0xFF09090B), Color(0xFF050505)],
   );
 
   static const LinearGradient primaryGradient = LinearGradient(
@@ -82,13 +82,13 @@ abstract class AppColors {
   static const LinearGradient headerGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+    colors: [Color(0xFF111115), Color(0xFF050505)],
   );
 
   static const LinearGradient cardGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1E293B), Color(0xFF131C2E)],
+    colors: [Color(0xFF111115), Color(0xFF0A0A0D)],
   );
 
   static const LinearGradient warmGradient = LinearGradient(
@@ -100,7 +100,7 @@ abstract class AppColors {
   static const LinearGradient examGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1E293B), Color(0xFF0B0F17)],
+    colors: [Color(0xFF111115), Color(0xFF050505)],
   );
 
   static const RadialGradient glowGradient = RadialGradient(
@@ -111,8 +111,8 @@ abstract class AppColors {
 
   // ── Refinements ─────────────────────────────────────────────────────────
   static const Color scrim = Color(0xCC000000);
-  static const Color hairline = Color(0x33334155);
+  static const Color hairline = Color(0x332C2C35);
   static const Color pressedOverlay = Color(0x1F10B981);
-  static const Color skeletonBase = Color(0xFF131C2E);
-  static const Color skeletonHighlight = Color(0xFF1E293B);
+  static const Color skeletonBase = Color(0xFF0E0E12);
+  static const Color skeletonHighlight = Color(0xFF1C1C24);
 }
