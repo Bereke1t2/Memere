@@ -347,6 +347,196 @@ class _MascotHeroCanvas extends StatelessWidget {
   }
 }
 
+/// Curved Course Content Sheet matching image copy 5.png (Screen 3)
+class _CourseContentSheet extends StatelessWidget {
+  const _CourseContentSheet({
+    required this.detail,
+    required this.hasAccess,
+    required this.selectedTab,
+    required this.onTabChanged,
+  });
+
+  final CourseDetailEntity detail;
+  final bool hasAccess;
+  final int selectedTab;
+  final ValueChanged<int> onTabChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final course = detail.course;
+    final allLessons = <LessonEntity>[];
+    for (final section in detail.sections) {
+      allLessons.addAll(section.lessons);
+    }
+
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: Color(0xFF11141E),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        border: Border(
+          top: BorderSide(color: AppColors.borderStrong),
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Sheet Handle Indicator
+          Center(
+            child: Container(
+              width: 38,
+              height: 4,
+              decoration: BoxDecoration(
+                color: const Color(0xFF334155),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Course Title & Metrics Header
+          Text(
+            course.title,
+            style: const TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+              letterSpacing: -0.4,
+              height: 1.25,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${course.durationLabel} • ${course.totalLessons} lessons • Grade ${course.grade}',
+            style: const TextStyle(
+              fontSize: 13,
+              color: Color(0xFF94A3B8),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Tab Switcher (Course Content / Description)
+          Container(
+            height: 42,
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: AppColors.bgSecondary,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.borderStrong),
+            ),
+            child: Row(
+              children: [
+                _TabButton(
+                  label: 'Course Content',
+                  selected: selectedTab == 0,
+                  onTap: () => onTabChanged(0),
+                ),
+                _TabButton(
+                  label: 'Description',
+                  selected: selectedTab == 1,
+                  onTap: () => onTabChanged(1),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Content Tab or Description Tab
+          if (selectedTab == 0) ...[
+            if (allLessons.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Center(
+                  child: Text(
+                    'Lessons will appear here when this course is published.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                  ),
+                ),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: allLessons.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final lesson = allLessons[index];
+                  return LessonTile(
+                    lesson: lesson,
+                    lessonNumber: index + 1,
+                    canOpen: course.isFree || hasAccess,
+                  );
+                },
+              ),
+          ] else ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.bgSecondary,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.borderStrong),
+              ),
+              child: Text(
+                course.description.isNotEmpty
+                    ? course.description
+                    : (course.shortDescription.isNotEmpty
+                        ? course.shortDescription
+                        : 'Comprehensive lessons and practice materials prepared for national entrance exams.'),
+                style: const TextStyle(
+                  fontSize: 13.5,
+                  color: AppColors.textSecondary,
+                  height: 1.45,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _TabButton extends StatelessWidget {
+  const _TabButton({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? AppColors.brandEmerald : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+              color: selected ? Colors.white : AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _TopIconButton extends StatelessWidget {
   const _TopIconButton({
     required this.icon,
