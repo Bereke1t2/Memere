@@ -43,16 +43,29 @@ type ExamAttemptClientView struct {
 	Questions        []QuestionClientView
 }
 
-// QuestionFeedback is the per-question outcome in a graded result. CorrectAnswerIDs
-// is populated only after grading (post-submission reveal per §4.2.5).
+// FeedbackAnswerView is an answer option with its key and text revealed post-grading.
+type FeedbackAnswerView struct {
+	ID         uuid.UUID
+	Text       string
+	IsCorrect  bool
+	OrderIndex int
+}
+
+// QuestionFeedback is the per-question outcome in a graded result. CorrectAnswerIDs,
+// prompt text, options, and explanation are revealed post-submission per §4.2.5.
 type QuestionFeedback struct {
 	QuestionID       uuid.UUID
+	QuestionText     string
+	Type             entity.QuestionType
+	Subject          *string
+	Topic            *string
 	Correct          bool
 	MarksAwarded     int
 	MarksPossible    int
 	SelectedAnswers  []uuid.UUID
 	CorrectAnswerIDs []uuid.UUID
 	Explanation      *string
+	Answers          []FeedbackAnswerView
 }
 
 // SubjectScore is the per-subject (or per-topic) tally for §9.3 analytics.
