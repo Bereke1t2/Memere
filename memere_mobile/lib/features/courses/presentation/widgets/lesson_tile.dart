@@ -272,6 +272,7 @@ class _LessonTileState extends State<LessonTile> {
         AppRoutes.pdfReaderPath(
           title: lesson.title,
           pdfUrl: pdfName,
+          lessonId: lesson.id,
           content: lesson.content,
         ),
       );
