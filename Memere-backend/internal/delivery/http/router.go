@@ -121,11 +121,13 @@ func NewRouter(deps Deps) *gin.Engine {
 		sections.POST("/:id/lessons", requireAuth, teacherOrAdmin, deps.Courses.AddLesson)
 	}
 
-	// Lesson update/delete routes.
+	// Lesson update/delete and PDF routes.
 	lessons := v1.Group("/lessons")
 	{
 		lessons.PUT("/:id", requireAuth, teacherOrAdmin, deps.Courses.UpdateLesson)
 		lessons.DELETE("/:id", requireAuth, teacherOrAdmin, deps.Courses.DeleteLesson)
+		lessons.POST("/:id/pdf", requireAuth, teacherOrAdmin, deps.Courses.UploadLessonPDF)
+		lessons.GET("/:id/pdf", optionalAuth, deps.Courses.DownloadLessonPDF)
 	}
 
 	// Quiz/exam authoring nested under a course (teacher/admin).
@@ -162,14 +164,16 @@ func NewRouter(deps Deps) *gin.Engine {
 	mockExams := v1.Group("/mock-exams")
 	{
 		mockExams.GET("", optionalAuth, deps.Exams.ListMockExams)
-		mockExams.POST("/:id/start", requireAuth, deps.Exams.Start)
+		mockExams.POST("/:id/start", optionalAuth, deps.Exams.Start)
+		mockExams.GET("/:id/attempts", optionalAuth, deps.Exams.ListMyAttempts)
 	}
 	examAttempts := v1.Group("/exam-attempts")
 	{
-		examAttempts.PATCH("/:id", requireAuth, deps.Exams.SaveProgress)
-		examAttempts.POST("/:id/submit", requireAuth, deps.Exams.Submit)
-		examAttempts.GET("/:id/results", requireAuth, deps.Exams.GetResult)
-		examAttempts.GET("/:id/analytics", requireAuth, deps.Analytics.AttemptAnalytics)
+		examAttempts.GET("/my", optionalAuth, deps.Exams.ListMyAttempts)
+		examAttempts.PATCH("/:id", optionalAuth, deps.Exams.SaveProgress)
+		examAttempts.POST("/:id/submit", optionalAuth, deps.Exams.Submit)
+		examAttempts.GET("/:id/results", optionalAuth, deps.Exams.GetResult)
+		examAttempts.GET("/:id/analytics", optionalAuth, deps.Analytics.AttemptAnalytics)
 	}
 
 	// Student self-analytics.

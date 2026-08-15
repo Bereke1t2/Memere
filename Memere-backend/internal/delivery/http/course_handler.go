@@ -1,8 +1,14 @@
 package http
 
 import (
+	"bytes"
+	"fmt"
+	"io"
 	"net/http"
+	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -11,6 +17,7 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/internal/delivery/middleware"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/service"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/course"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/pagination"
@@ -18,12 +25,17 @@ import (
 
 // CourseHandler adapts the course usecase to HTTP.
 type CourseHandler struct {
-	svc *course.Service
+	svc   *course.Service
+	store service.ObjectStore
 }
 
 // NewCourseHandler builds a CourseHandler.
-func NewCourseHandler(svc *course.Service) *CourseHandler {
-	return &CourseHandler{svc: svc}
+func NewCourseHandler(svc *course.Service, store ...service.ObjectStore) *CourseHandler {
+	var s service.ObjectStore
+	if len(store) > 0 {
+		s = store[0]
+	}
+	return &CourseHandler{svc: svc, store: s}
 }
 
 // actor pulls the authenticated caller from context (nil for anonymous).
@@ -333,3 +345,105 @@ func atoiDefault(s string, def int) int {
 	}
 	return n
 }
+
+// UploadLessonPDF handles POST /lessons/:id/pdf (teacher/admin).
+func (h *CourseHandler) UploadLessonPDF(c *gin.Context) {
+	id, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		respondError(c, apperror.BadRequest("missing 'file' form field", err))
+		return
+	}
+	defer file.Close()
+
+	if header.Size > 50*1024*1024 {
+		respondError(c, apperror.BadRequest("file size exceeds maximum 50MB limit", nil))
+		return
+	}
+
+	var buf bytes.Buffer
+	if _, err := io.Copy(&buf, file); err != nil {
+		respondError(c, apperror.Internal(err))
+		return
+	}
+
+	rawBytes := buf.Bytes()
+	limit := len(rawBytes)
+	if limit > 1024 {
+		limit = 1024
+	}
+	if len(rawBytes) < 5 || !bytes.Contains(rawBytes[:limit], []byte("%PDF-")) {
+		respondError(c, apperror.BadRequest("uploaded file is not a valid PDF document", nil))
+		return
+	}
+
+	key := fmt.Sprintf("lessons/%s/notes.pdf", id.String())
+	if h.store != nil {
+		if err := h.store.Put(c.Request.Context(), key, "application/pdf", bytes.NewReader(rawBytes)); err != nil {
+			respondError(c, apperror.Internal(err))
+			return
+		}
+	}
+
+	updated, err := h.svc.SetLessonPdfURL(c.Request.Context(), actor(c), id, key)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	resp := dto.NewLessonResponse(updated)
+	respondJSON(c, http.StatusOK, &resp)
+}
+
+// DownloadLessonPDF handles GET /lessons/:id/pdf.
+func (h *CourseHandler) DownloadLessonPDF(c *gin.Context) {
+	id, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	l, err := h.svc.GetLessonByID(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	if l.PdfURL == nil || strings.TrimSpace(*l.PdfURL) == "" {
+		respondError(c, apperror.NotFound("no PDF attached to this lesson", nil))
+		return
+	}
+
+	pdfPath := strings.TrimSpace(*l.PdfURL)
+
+	// If it's already an absolute URL
+	if strings.HasPrefix(pdfPath, "http://") || strings.HasPrefix(pdfPath, "https://") {
+		c.Redirect(http.StatusFound, pdfPath)
+		return
+	}
+
+	if h.store != nil {
+		presigned, err := h.store.PresignGet(c.Request.Context(), pdfPath, 1*time.Hour)
+		if err == nil && presigned != "" {
+			c.Redirect(http.StatusFound, presigned)
+			return
+		}
+
+		rc, err := h.store.Get(c.Request.Context(), pdfPath)
+		if err == nil {
+			defer rc.Close()
+			c.Header("Content-Type", "application/pdf")
+			c.Header("Content-Disposition", fmt.Sprintf("inline; filename=%q", filepath.Base(pdfPath)))
+			io.Copy(c.Writer, rc)
+			return
+		}
+	}
+
+	respondError(c, apperror.NotFound("PDF document not found in storage", nil))
+}
+
