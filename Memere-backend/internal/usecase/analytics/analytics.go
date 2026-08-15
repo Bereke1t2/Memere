@@ -79,15 +79,19 @@ type ExamStats struct {
 	PassRate      float64 // 0–100
 }
 
+// GuestUserID is the system identifier used for anonymous / unregistered exam attempts.
+var GuestUserID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
+
 // GetAttemptAnalytics returns the §9.3 metrics for one of the actor's own
-// attempts. It reads the per-subject breakdown persisted in answers_snapshot,
-// derives weak areas (subjects where marks were lost, ranked), and fetches the
-// percentile from Redis. It never mutates the attempt.
+// attempts (or a guest attempt). It reads the per-subject breakdown persisted in
+// answers_snapshot, derives weak areas (subjects where marks were lost, ranked),
+// and fetches the percentile from Redis for registered users. It never mutates the attempt.
 func (s *Service) GetAttemptAnalytics(ctx context.Context, actor *Actor, attemptID uuid.UUID) (*AttemptAnalytics, error) {
-	if actor == nil {
-		return nil, apperror.Unauthorized("authentication required", nil)
+	studentID := GuestUserID
+	if actor != nil {
+		studentID = actor.UserID
 	}
-	attempt, err := s.examAttempts.FindByID(ctx, attemptID, actor.UserID)
+	attempt, err := s.examAttempts.FindByID(ctx, attemptID, studentID)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +115,7 @@ func (s *Service) GetAttemptAnalytics(ctx context.Context, actor *Actor, attempt
 		out.Percentage = *attempt.Percentage
 	}
 
-	if s.ranking != nil {
+	if s.ranking != nil && actor != nil {
 		if pct, ok, err := s.ranking.PercentileRank(ctx, attempt.ExamID, actor.UserID); err == nil && ok {
 			p := pct
 			out.Percentile = &p
