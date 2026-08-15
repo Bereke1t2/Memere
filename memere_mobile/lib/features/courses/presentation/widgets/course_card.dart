@@ -432,3 +432,160 @@ String _shortSubject(String subject) {
   if (normalized.toLowerCase() == 'mathematics') return 'Math';
   return normalized;
 }
+
+/// Fallback decorative banner when no image thumbnail is provided
+class _SubjectFallbackBanner extends StatelessWidget {
+  const _SubjectFallbackBanner({required this.course});
+
+  final CourseEntity course;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            _subjectGradientStart(course.subject),
+            _subjectGradientEnd(course.subject),
+          ],
+        ),
+      ),
+      child: Stack(
+        children: [
+          // Ambient background geometry
+          Positioned(
+            right: -10,
+            bottom: -20,
+            child: Icon(
+              _subjectIcon(course.subject),
+              size: 110,
+              color: Colors.white.withAlpha(12),
+            ),
+          ),
+          // Overlaid Badges
+          _BannerOverlayBadges(course: course),
+        ],
+      ),
+    );
+  }
+}
+
+/// Overlaid tags & badges on the course card banner
+class _BannerOverlayBadges extends StatelessWidget {
+  const _BannerOverlayBadges({required this.course});
+
+  final CourseEntity course;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Subject Tag Pill
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.black.withAlpha(150),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.white.withAlpha(35)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(_subjectIcon(course.subject), size: 13, color: Colors.white),
+                const SizedBox(width: 5),
+                Text(
+                  _shortSubject(course.subject),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Price Tag Pill
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            decoration: BoxDecoration(
+              color: course.isFree
+                  ? const Color(0xE0065F46)
+                  : Colors.black.withAlpha(150),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: course.isFree
+                    ? const Color(0xFF10B981)
+                    : Colors.white.withAlpha(35),
+              ),
+            ),
+            child: Text(
+              course.priceLabel,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: course.isFree ? Colors.white : const Color(0xFFE2E8F0),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _streamLabel(String subject) {
+  final lower = subject.toLowerCase();
+  if (lower.contains('history') || lower.contains('geography') || lower.contains('economics')) {
+    return 'Social Science';
+  }
+  return 'Natural Science';
+}
+
+Color _subjectGradientStart(String subject) {
+  final lower = subject.toLowerCase();
+  if (lower.contains('bio')) return const Color(0xFF064E3B);
+  if (lower.contains('phys')) return const Color(0xFF1E293B);
+  if (lower.contains('chem')) return const Color(0xFF311B92);
+  if (lower.contains('math')) return const Color(0xFF1E3A8A);
+  return const Color(0xFF182234);
+}
+
+Color _subjectGradientEnd(String subject) {
+  final lower = subject.toLowerCase();
+  if (lower.contains('bio')) return const Color(0xFF022C22);
+  if (lower.contains('phys')) return const Color(0xFF0F172A);
+  if (lower.contains('chem')) return const Color(0xFF1A103C);
+  if (lower.contains('math')) return const Color(0xFF172554);
+  return const Color(0xFF0B0F17);
+}
+
+IconData _subjectIcon(String subject) {
+  switch (subject.toLowerCase()) {
+    case 'mathematics':
+    case 'math':
+      return Icons.calculate_outlined;
+    case 'physics':
+      return Icons.science_outlined;
+    case 'chemistry':
+      return Icons.biotech_outlined;
+    case 'biology':
+      return Icons.eco_outlined;
+    case 'english':
+      return Icons.menu_book_outlined;
+    case 'history':
+      return Icons.history_edu_outlined;
+    case 'geography':
+      return Icons.public_outlined;
+    case 'economics':
+      return Icons.trending_up_rounded;
+    default:
+      return Icons.school_outlined;
+  }
+}
