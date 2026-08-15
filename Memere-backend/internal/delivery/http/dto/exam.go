@@ -130,16 +130,29 @@ func NewStartExamResponse(v *exam.ExamAttemptClientView) StartExamResponse {
 	}
 }
 
+// FeedbackAnswerResponse is one answer option revealed in the result review.
+type FeedbackAnswerResponse struct {
+	ID         uuid.UUID `json:"id"`
+	Text       string    `json:"text"`
+	IsCorrect  bool      `json:"is_correct"`
+	OrderIndex int       `json:"order_index"`
+}
+
 // ExamQuestionFeedbackResponse is the per-question outcome in a graded exam
-// result. Correct answers and explanation appear here ONLY (post-submission).
+// result. Correct answers, prompt text, options, and explanation appear here post-submission.
 type ExamQuestionFeedbackResponse struct {
-	QuestionID       uuid.UUID   `json:"question_id"`
-	Correct          bool        `json:"correct"`
-	MarksAwarded     int         `json:"marks_awarded"`
-	MarksPossible    int         `json:"marks_possible"`
-	SelectedAnswers  []uuid.UUID `json:"selected_answers"`
-	CorrectAnswerIDs []uuid.UUID `json:"correct_answer_ids"`
-	Explanation      *string     `json:"explanation"`
+	QuestionID       uuid.UUID                `json:"question_id"`
+	QuestionText     string                   `json:"question_text"`
+	Type             string                   `json:"type"`
+	Subject          *string                  `json:"subject,omitempty"`
+	Topic            *string                  `json:"topic,omitempty"`
+	Correct          bool                     `json:"correct"`
+	MarksAwarded     int                      `json:"marks_awarded"`
+	MarksPossible    int                      `json:"marks_possible"`
+	SelectedAnswers  []uuid.UUID              `json:"selected_answers"`
+	CorrectAnswerIDs []uuid.UUID              `json:"correct_answer_ids"`
+	Explanation      *string                  `json:"explanation"`
+	Answers          []FeedbackAnswerResponse `json:"answers"`
 }
 
 // ExamResultResponse is the post-submission exam result. passed is decided
@@ -162,14 +175,28 @@ type ExamResultResponse struct {
 func NewExamResultResponse(r *exam.ExamResult) ExamResultResponse {
 	feedback := make([]ExamQuestionFeedbackResponse, 0, len(r.Feedback))
 	for _, f := range r.Feedback {
+		answers := make([]FeedbackAnswerResponse, 0, len(f.Answers))
+		for _, a := range f.Answers {
+			answers = append(answers, FeedbackAnswerResponse{
+				ID:         a.ID,
+				Text:       a.Text,
+				IsCorrect:  a.IsCorrect,
+				OrderIndex: a.OrderIndex,
+			})
+		}
 		feedback = append(feedback, ExamQuestionFeedbackResponse{
 			QuestionID:       f.QuestionID,
+			QuestionText:     f.QuestionText,
+			Type:             string(f.Type),
+			Subject:          f.Subject,
+			Topic:            f.Topic,
 			Correct:          f.Correct,
 			MarksAwarded:     f.MarksAwarded,
 			MarksPossible:    f.MarksPossible,
 			SelectedAnswers:  f.SelectedAnswers,
 			CorrectAnswerIDs: f.CorrectAnswerIDs,
 			Explanation:      f.Explanation,
+			Answers:          answers,
 		})
 	}
 	breakdown := make(map[string]SubjectScoreResponse, len(r.SubjectBreakdown))
@@ -189,4 +216,37 @@ func NewExamResultResponse(r *exam.ExamResult) ExamResultResponse {
 		Feedback:         feedback,
 		SubjectBreakdown: breakdown,
 	}
+}
+
+// ExamAttemptHistoryResponse is an entry in a student's attempt history.
+type ExamAttemptHistoryResponse struct {
+	AttemptID   uuid.UUID  `json:"attempt_id"`
+	ExamID      uuid.UUID  `json:"exam_id"`
+	Status      string     `json:"status"`
+	Score       *float64   `json:"score"`
+	Percentage  *float64   `json:"percentage"`
+	StartedAt   time.Time  `json:"started_at"`
+	SubmittedAt *time.Time `json:"submitted_at"`
+}
+
+// NewExamAttemptHistoryResponse maps an entity.ExamAttempt to history item.
+func NewExamAttemptHistoryResponse(a *entity.ExamAttempt) ExamAttemptHistoryResponse {
+	return ExamAttemptHistoryResponse{
+		AttemptID:   a.ID,
+		ExamID:      a.ExamID,
+		Status:      string(a.Status),
+		Score:       a.Score,
+		Percentage:  a.Percentage,
+		StartedAt:   a.StartedAt,
+		SubmittedAt: a.SubmittedAt,
+	}
+}
+
+// NewExamAttemptHistoryListResponse maps a slice of entity.ExamAttempt.
+func NewExamAttemptHistoryListResponse(attempts []*entity.ExamAttempt) []ExamAttemptHistoryResponse {
+	res := make([]ExamAttemptHistoryResponse, 0, len(attempts))
+	for _, a := range attempts {
+		res = append(res, NewExamAttemptHistoryResponse(a))
+	}
+	return res
 }
