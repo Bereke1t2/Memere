@@ -801,7 +801,7 @@ class _DescriptionTab extends StatelessWidget {
   }
 }
 
-/// Bottom CTA that reflects real access state and drives the free/paid flows.
+/// Bottom Sticky CTA that reflects real access state and drives checkout
 class _CheckoutCtaBar extends ConsumerStatefulWidget {
   const _CheckoutCtaBar({
     required this.course,
@@ -829,15 +829,43 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
 
     return SafeArea(
       top: false,
-      child: AppSurface(
-        padding: const EdgeInsets.all(AppSizes.md),
-        radius: AppSizes.radiusXl,
-        color: AppColors.bgSecondary,
-        shadows: AppShadows.lg,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        decoration: const BoxDecoration(
+          color: Color(0xFF0F121B),
+          border: Border(
+            top: BorderSide(color: AppColors.borderStrong),
+          ),
+        ),
         child: Row(
           children: [
-            const _BookmarkAction(),
-            const SizedBox(width: AppSizes.md),
+            // Bookmark Heart Action Button
+            InkWell(
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Saved to your favorites.')),
+                );
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: 48,
+                height: 48,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.bgSecondary,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.borderStrong),
+                ),
+                child: const Icon(
+                  Icons.favorite_border_rounded,
+                  color: AppColors.textPrimary,
+                  size: 20,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // Primary Action Button (in brand emerald #10B981)
             Expanded(
               child: accessAsync.when(
                 loading: () => const AppButton(
@@ -856,7 +884,7 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
                     return AppButton(
                       label: 'Continue Learning',
                       onPressed: _continueLearning,
-                      suffixIcon: Icons.play_arrow_rounded,
+                      suffixIcon: Icons.arrow_forward_rounded,
                     );
                   }
                   if (widget.course.isFree) {
@@ -896,8 +924,6 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
     );
   }
 
-  /// Opens the first playable lesson (video, else quiz) so the CTA is never a
-  /// dead end. Falls back to a hint if the curriculum has nothing playable yet.
   void _continueLearning() {
     final detail = ref.read(courseDetailProvider(_courseId)).valueOrNull;
     final lesson = _firstPlayableLesson(detail);
@@ -918,6 +944,17 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
     }
     if (lesson.hasQuiz) {
       context.push(AppRoutes.quizDetailPath(lesson.quizId!));
+      return;
+    }
+    if (lesson.hasPdf || lesson.type == LessonType.note) {
+      context.push(
+        AppRoutes.pdfReaderPath(
+          title: lesson.title,
+          pdfUrl: lesson.pdfUrl ?? '',
+          lessonId: lesson.id,
+          content: lesson.content,
+        ),
+      );
     }
   }
 
@@ -925,7 +962,7 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
     if (detail == null) return null;
     for (final section in detail.sections) {
       for (final lesson in section.lessons) {
-        if (lesson.hasVideo || lesson.hasQuiz) return lesson;
+        if (lesson.hasVideo || lesson.hasQuiz || lesson.hasPdf) return lesson;
       }
     }
     return null;
@@ -981,37 +1018,6 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
-    );
-  }
-}
-
-class _BookmarkAction extends StatelessWidget {
-  const _BookmarkAction();
-
-  @override
-  Widget build(BuildContext context) {
-    return AppPressable(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Saved for later.')),
-        );
-      },
-      borderRadius: AppSizes.radiusFull,
-      child: Container(
-        width: AppSizes.buttonHeight,
-        height: AppSizes.buttonHeight,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.bgTertiary,
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.border),
-        ),
-        child: const Icon(
-          Icons.bookmark_border_rounded,
-          color: AppColors.accentPrimary,
-          size: AppSizes.iconMd,
-        ),
-      ),
     );
   }
 }
