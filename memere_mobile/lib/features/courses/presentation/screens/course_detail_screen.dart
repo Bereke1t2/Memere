@@ -112,35 +112,31 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   }
 }
 
-class _DetailTopBand extends StatelessWidget {
-  const _DetailTopBand({required this.title});
+/// Top App Bar with back button and centered Title
+class _DetailTopBar extends StatelessWidget {
+  const _DetailTopBar({
+    required this.title,
+    required this.subject,
+  });
 
   final String title;
+  final String subject;
 
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.paddingOf(context).top;
 
-    return Container(
+    return Padding(
       padding: EdgeInsets.fromLTRB(
         AppSizes.screenPaddingH,
-        topPadding + AppSizes.sm,
+        topPadding + 10,
         AppSizes.screenPaddingH,
-        AppSizes.lg,
-      ),
-      decoration: const BoxDecoration(
-        color: AppColors.bgSecondary,
-        borderRadius: BorderRadius.vertical(
-          bottom: Radius.circular(AppSizes.radiusLg),
-        ),
-        border: Border(
-          bottom: BorderSide(color: AppColors.borderStrong),
-        ),
+        8,
       ),
       child: Row(
         children: [
-          _TopIconButton(
-            icon: Icons.arrow_back_ios_new_rounded,
+          // Back Button
+          InkWell(
             onTap: () {
               if (context.canPop()) {
                 context.pop();
@@ -148,21 +144,65 @@ class _DetailTopBand extends StatelessWidget {
                 context.go(AppRoutes.home);
               }
             },
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.bgSecondary,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.borderStrong),
+              ),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: AppColors.textPrimary,
+                size: 16,
+              ),
+            ),
           ),
-          const SizedBox(width: AppSizes.md),
+          const SizedBox(width: 12),
+
+          // Course Subject / Title
           Expanded(
             child: Text(
-              title,
+              subject.isNotEmpty ? subject : title,
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.titleLarge,
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+                letterSpacing: -0.3,
+              ),
             ),
           ),
-          const SizedBox(width: AppSizes.md),
-          _TopIconButton(
-            icon: Icons.more_horiz_rounded,
-            onTap: () {},
+          const SizedBox(width: 12),
+
+          // Action / Bookmark Button
+          InkWell(
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Course saved to your library.')),
+              );
+            },
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.bgSecondary,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.borderStrong),
+              ),
+              child: const Icon(
+                Icons.bookmark_border_rounded,
+                color: AppColors.textPrimary,
+                size: 18,
+              ),
+            ),
           ),
         ],
       ),
