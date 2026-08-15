@@ -1,6 +1,7 @@
 import '../../../../core/network/dio_client.dart';
 import '../../domain/entities/exam_answer_payload.dart';
 import '../models/exam_attempt_analytics_model.dart';
+import '../models/exam_attempt_history_model.dart';
 import '../models/exam_attempt_model.dart';
 import '../models/exam_result_model.dart';
 import '../models/paginated_mock_exams_model.dart';
@@ -28,6 +29,8 @@ abstract class ExamRemoteDataSource {
   Future<ExamResultModel> getResult(String attemptId);
 
   Future<ExamAttemptAnalyticsModel> getAnalytics(String attemptId);
+
+  Future<List<ExamAttemptHistoryModel>> listMyAttempts({String? examId});
 }
 
 class ExamRemoteDataSourceImpl implements ExamRemoteDataSource {
@@ -118,5 +121,21 @@ class ExamRemoteDataSourceImpl implements ExamRemoteDataSource {
       throw const FormatException('Missing exam analytics response body');
     }
     return ExamAttemptAnalyticsModel.fromJson(data);
+  }
+
+  @override
+  Future<List<ExamAttemptHistoryModel>> listMyAttempts({String? examId}) async {
+    final path = examId != null && examId.isNotEmpty
+        ? '/mock-exams/$examId/attempts'
+        : '/exam-attempts/my';
+    final response = await _client.get<dynamic>(path);
+    final data = response.data;
+    if (data is List) {
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map(ExamAttemptHistoryModel.fromJson)
+          .toList();
+    }
+    return [];
   }
 }

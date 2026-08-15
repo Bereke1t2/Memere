@@ -5,6 +5,7 @@ import '../../../../core/errors/failures.dart';
 import '../../domain/entities/exam_answer_payload.dart';
 import '../../domain/entities/exam_attempt_analytics_entity.dart';
 import '../../domain/entities/exam_attempt_entity.dart';
+import '../../domain/entities/exam_attempt_history_entity.dart';
 import '../../domain/entities/exam_result_entity.dart';
 import '../../domain/entities/paginated_mock_exams_entity.dart';
 import '../../domain/repositories/exam_repository.dart';
@@ -103,6 +104,20 @@ class ExamRepositoryImpl implements ExamRepository {
     try {
       final analytics = await _remoteDataSource.getAnalytics(attemptId);
       return Right(analytics);
+    } on DioException catch (e) {
+      return Left(ServerFailure.fromDioError(e));
+    } catch (e) {
+      return Left(UnknownFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<ExamAttemptHistoryEntity>>> listMyAttempts({
+    String? examId,
+  }) async {
+    try {
+      final attempts = await _remoteDataSource.listMyAttempts(examId: examId);
+      return Right(attempts);
     } on DioException catch (e) {
       return Left(ServerFailure.fromDioError(e));
     } catch (e) {
