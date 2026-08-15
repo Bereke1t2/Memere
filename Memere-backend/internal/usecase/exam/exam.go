@@ -82,14 +82,16 @@ func (s *Service) ListByCourse(ctx context.Context, courseID uuid.UUID) ([]*enti
 	return s.exams.ListByCourse(ctx, courseID)
 }
 
+// GuestUserID is the system identifier used for anonymous / unregistered exam attempts.
+var GuestUserID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
+
 // StartExam begins (or resumes) a student's exam sitting. It is idempotent: an
 // in-progress attempt still within its window is resumed with remaining time. An
 // in-progress attempt found past its deadline is finalized (expired→graded) per
 // the lazy-expiry rule before a fresh attempt is created.
+//
+// Unregistered/anonymous guests (actor == nil) are allowed to take published mock exams.
 func (s *Service) StartExam(ctx context.Context, actor *Actor, examID uuid.UUID) (*ExamAttemptClientView, error) {
-	if actor == nil {
-		return nil, apperror.Unauthorized("authentication required", nil)
-	}
 	exam, err := s.exams.FindByID(ctx, examID)
 	if err != nil {
 		return nil, err
@@ -98,23 +100,30 @@ func (s *Service) StartExam(ctx context.Context, actor *Actor, examID uuid.UUID)
 		return nil, err
 	}
 
-	if existing, err := s.attempts.GetActive(ctx, actor.UserID, examID); err == nil {
-		if s.expired(exam, existing) {
-			if _, err := s.finalizeExpired(ctx, exam, existing); err != nil {
-				return nil, err
+	if actor != nil {
+		if existing, err := s.attempts.GetActive(ctx, actor.UserID, examID); err == nil {
+			if s.expired(exam, existing) {
+				if _, err := s.finalizeExpired(ctx, exam, existing); err != nil {
+					return nil, err
+				}
+			} else {
+				return s.attemptView(ctx, exam, existing)
 			}
-		} else {
-			return s.attemptView(ctx, exam, existing)
+		} else if !apperror.IsNotFound(err) {
+			return nil, err
 		}
-	} else if !apperror.IsNotFound(err) {
-		return nil, err
+	}
+
+	studentID := GuestUserID
+	if actor != nil {
+		studentID = actor.UserID
 	}
 
 	now := s.now()
 	expiresAt := now.Add(time.Duration(exam.DurationMinutes) * time.Minute)
 	attempt := &entity.ExamAttempt{
 		ExamID:    examID,
-		StudentID: actor.UserID,
+		StudentID: studentID,
 		StartedAt: now,
 		Status:    entity.AttemptInProgress,
 	}
@@ -141,10 +150,11 @@ func (s *Service) StartExam(ctx context.Context, actor *Actor, examID uuid.UUID)
 // deadline has passed it lazily finalizes the attempt (expired→graded) and
 // reports the expiry rather than accepting more answers.
 func (s *Service) SaveExamProgress(ctx context.Context, actor *Actor, attemptID uuid.UUID, answers map[string]any) error {
-	if actor == nil {
-		return apperror.Unauthorized("authentication required", nil)
+	studentID := GuestUserID
+	if actor != nil {
+		studentID = actor.UserID
 	}
-	attempt, err := s.attempts.FindByID(ctx, attemptID, actor.UserID)
+	attempt, err := s.attempts.FindByID(ctx, attemptID, studentID)
 	if err != nil {
 		return err
 	}
@@ -168,10 +178,11 @@ func (s *Service) SaveExamProgress(ctx context.Context, actor *Actor, attemptID 
 // deadline the attempt goes expired→graded; otherwise submitted→graded. Every
 // transition is validated through the §9.2 state machine.
 func (s *Service) SubmitExam(ctx context.Context, actor *Actor, attemptID uuid.UUID, answers map[string]any) (*ExamResult, error) {
-	if actor == nil {
-		return nil, apperror.Unauthorized("authentication required", nil)
+	studentID := GuestUserID
+	if actor != nil {
+		studentID = actor.UserID
 	}
-	attempt, err := s.attempts.FindByID(ctx, attemptID, actor.UserID)
+	attempt, err := s.attempts.FindByID(ctx, attemptID, studentID)
 	if err != nil {
 		return nil, err
 	}
@@ -203,10 +214,11 @@ func (s *Service) SubmitExam(ctx context.Context, actor *Actor, attemptID uuid.U
 // It is available only in a terminal state; an attempt found past its deadline
 // while still in progress is finalized first (lazy expiry).
 func (s *Service) GetExamResult(ctx context.Context, actor *Actor, attemptID uuid.UUID) (*ExamResult, error) {
-	if actor == nil {
-		return nil, apperror.Unauthorized("authentication required", nil)
+	studentID := GuestUserID
+	if actor != nil {
+		studentID = actor.UserID
 	}
-	attempt, err := s.attempts.FindByID(ctx, attemptID, actor.UserID)
+	attempt, err := s.attempts.FindByID(ctx, attemptID, studentID)
 	if err != nil {
 		return nil, err
 	}
@@ -226,10 +238,29 @@ func (s *Service) GetExamResult(ctx context.Context, actor *Actor, attemptID uui
 
 // ListMyExamAttempts returns the actor's own attempt history for an exam.
 func (s *Service) ListMyExamAttempts(ctx context.Context, actor *Actor, examID uuid.UUID) ([]*entity.ExamAttempt, error) {
-	if actor == nil {
-		return nil, apperror.Unauthorized("authentication required", nil)
+	studentID := GuestUserID
+	if actor != nil {
+		studentID = actor.UserID
 	}
-	return s.attempts.ListByStudent(ctx, actor.UserID)
+	return s.ListAttemptsByStudent(ctx, studentID, examID)
+}
+
+// ListAttemptsByStudent returns the student's attempt history, optionally filtered by examID.
+func (s *Service) ListAttemptsByStudent(ctx context.Context, studentID uuid.UUID, examID uuid.UUID) ([]*entity.ExamAttempt, error) {
+	all, err := s.attempts.ListByStudent(ctx, studentID)
+	if err != nil {
+		return nil, err
+	}
+	if examID == uuid.Nil {
+		return all, nil
+	}
+	filtered := make([]*entity.ExamAttempt, 0, len(all))
+	for _, a := range all {
+		if a.ExamID == examID {
+			filtered = append(filtered, a)
+		}
+	}
+	return filtered, nil
 }
 
 // finalizeExpired drives an in-progress, past-deadline attempt through
@@ -356,18 +387,18 @@ func (s *Service) stateTTL(exam *entity.Exam) time.Duration {
 	return time.Duration(exam.DurationMinutes)*time.Minute + stateGrace
 }
 
-// assertExamAccess gates a graded exam sitting. An exam tied to a course routes
-// through the shared access.Service and requires FullAccess (owner/admin, free
-// course, active enrollment, or active subscription) — being merely published is
-// no longer enough, so paid-course mock exams need a real entitlement. Standalone
-// exams (no course to enrol in) keep the published-or-admin rule: a published one
-// is open to any authenticated student, an unpublished one is admin-only.
+// assertExamAccess gates an exam sitting. Any published mock exam is open to all
+// participants (including unregistered guests and non-enrolled students).
+// Unpublished/draft exams remain restricted to course owners and admins.
 func (s *Service) assertExamAccess(ctx context.Context, actor *Actor, exam *entity.Exam) error {
-	if exam.CourseID != nil {
-		return s.access.RequireFullAccess(ctx, access.Actor{UserID: actor.UserID, Role: actor.Role}, *exam.CourseID)
-	}
-	if exam.IsPublished || actor.Role == entity.RoleAdmin {
+	if exam.IsPublished {
 		return nil
+	}
+	if actor != nil && actor.Role == entity.RoleAdmin {
+		return nil
+	}
+	if exam.CourseID != nil && actor != nil {
+		return s.access.RequireFullAccess(ctx, access.Actor{UserID: actor.UserID, Role: actor.Role}, *exam.CourseID)
 	}
 	return apperror.Forbidden("you do not have access to this exam", nil)
 }

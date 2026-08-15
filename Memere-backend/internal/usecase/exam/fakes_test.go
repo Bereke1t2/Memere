@@ -104,6 +104,22 @@ func (f *fakeExamRepo) List(_ context.Context, filter repository.ExamFilter, _ *
 	return out, nil, nil
 }
 
+func (f *fakeExamRepo) ListByCourse(_ context.Context, courseID uuid.UUID) ([]*entity.Exam, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []*entity.Exam
+	for _, e := range f.exams {
+		if e.DeletedAt != nil {
+			continue
+		}
+		if e.CourseID != nil && *e.CourseID == courseID {
+			cp := *e
+			out = append(out, &cp)
+		}
+	}
+	return out, nil
+}
+
 func (f *fakeExamRepo) Update(_ context.Context, e *entity.Exam) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
