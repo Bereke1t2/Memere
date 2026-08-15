@@ -641,6 +641,82 @@ class _AnnouncementBannerState extends State<_AnnouncementBanner> {
   }
 }
 
+/// Category Filter Chips Row
+class _CategoryFilterRow extends StatelessWidget {
+  const _CategoryFilterRow({
+    required this.selectedIndex,
+    required this.onSelect,
+  });
+
+  final int selectedIndex;
+  final void Function(int index, String? subject) onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final categories = [
+      ('All', Icons.grid_view_rounded, null),
+      ('Math', Icons.calculate_outlined, 'Mathematics'),
+      ('Physics', Icons.science_outlined, 'Physics'),
+      ('Chemistry', Icons.biotech_outlined, 'Chemistry'),
+      ('Biology', Icons.eco_outlined, 'Biology'),
+      ('English', Icons.menu_book_outlined, 'English'),
+    ];
+
+    return SizedBox(
+      height: 38,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSizes.screenPaddingH),
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final cat = categories[index];
+          final isSelected = selectedIndex == index;
+
+          return InkWell(
+            onTap: () => onSelect(index, cat.$3),
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.brandEmerald
+                    : AppColors.bgSecondary,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected
+                      ? AppColors.brandEmerald
+                      : AppColors.borderStrong,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    cat.$2,
+                    size: 14,
+                    color: isSelected ? Colors.white : AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    cat.$1,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.w600,
+                      color:
+                          isSelected ? Colors.white : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _DashboardHeader extends ConsumerWidget {
   const _DashboardHeader({required this.searchController});
 
