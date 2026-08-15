@@ -7,6 +7,7 @@ import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../shared/widgets/memere_mascot.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../../notifications/presentation/providers/announcement_provider.dart';
 import '../../domain/entities/course_entity.dart';
@@ -337,6 +338,173 @@ class _HomeTopBar extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Overflow-Safe Hero Featured Banner Card with Character Mascot
+class _HeroFeatureCard extends StatelessWidget {
+  const _HeroFeatureCard({required this.totalCount});
+
+  final int totalCount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF1D4ED8), // Royal Blue
+            Color(0xFF2563EB), // Vibrant Blue
+            Color(0xFF1E40AF), // Deep Blue
+          ],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF1D4ED8).withAlpha(90),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: Stack(
+          children: [
+            // Decorative background ambient rings
+            Positioned(
+              right: -25,
+              top: -25,
+              child: Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withAlpha(15),
+                ),
+              ),
+            ),
+
+            // Banner Content & Animated Mascot
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Tag Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3.5),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withAlpha(45),
+                            borderRadius: BorderRadius.circular(16),
+                            border:
+                                Border.all(color: Colors.white.withAlpha(35)),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.stars_rounded,
+                                  size: 12, color: Color(0xFF4ADE80)),
+                              SizedBox(width: 4),
+                              Text(
+                                'National Entrance Prep',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
+                        // Title
+                        const Text(
+                          'Master Your Exams',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            height: 1.15,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+
+                        // Subtitle
+                        Text(
+                          'Grade 12 video lessons, short notes, and practice exams.',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: Colors.white.withAlpha(200),
+                            height: 1.3,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Action Button / Pill
+                        InkWell(
+                          onTap: () => context.go(AppRoutes.mockExams),
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withAlpha(35),
+                              borderRadius: BorderRadius.circular(16),
+                              border:
+                                  Border.all(color: Colors.white.withAlpha(60)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'Explore Mock Exams',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                SizedBox(width: 4),
+                                Icon(Icons.arrow_forward_rounded,
+                                    size: 12, color: Colors.white),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+
+                  // Character Animation from Saved Screen (Safely Constrained)
+                  const SizedBox(
+                    width: 80,
+                    height: 86,
+                    child: MemereMascot(
+                      size: Size(80, 86),
+                      showBackdrop: false,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
