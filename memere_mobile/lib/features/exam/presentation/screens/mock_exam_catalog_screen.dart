@@ -2,18 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
-import '../../../../shared/widgets/app_text_field.dart';
-import '../../../../shared/widgets/app_surface.dart';
-import '../../../courses/presentation/widgets/subject_filter_chips.dart';
+import '../providers/exam_providers.dart';
 import '../providers/mock_exam_catalog_provider.dart';
 import '../widgets/exam_empty_state.dart';
 import '../widgets/mock_exam_card.dart';
 import '../widgets/mock_exam_catalog_skeleton.dart';
 
+/// Refined Obsidian & Soft Emerald Exam Catalog Screen matching Image 5 mockup.
 class MockExamCatalogScreen extends ConsumerStatefulWidget {
   const MockExamCatalogScreen({super.key});
 
@@ -25,6 +23,7 @@ class MockExamCatalogScreen extends ConsumerStatefulWidget {
 class _MockExamCatalogScreenState extends ConsumerState<MockExamCatalogScreen> {
   late final TextEditingController _searchController;
   late final ScrollController _scrollController;
+  int _selectedFilterIndex = 0;
 
   @override
   void initState() {
@@ -66,47 +65,48 @@ class _MockExamCatalogScreenState extends ConsumerState<MockExamCatalogScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
-      body: AppPageBackground(
-        child: SafeArea(
-          child: examsAsync.when(
-            loading: () {
-              final previous = examsAsync.valueOrNull;
-              if (previous != null && previous.exams.isNotEmpty) {
-                return _CatalogContent(
-                  controller: _scrollController,
-                  searchController: _searchController,
-                  state: previous,
-                );
-              }
-              return Column(
-                children: [
-                  const _CatalogHeader(),
-                  _SearchAndFilters(searchController: _searchController),
-                  const Expanded(child: MockExamCatalogSkeleton()),
-                ],
+      body: SafeArea(
+        child: examsAsync.when(
+          loading: () {
+            final previous = examsAsync.valueOrNull;
+            if (previous != null && previous.exams.isNotEmpty) {
+              return _CatalogContent(
+                controller: _scrollController,
+                searchController: _searchController,
+                state: previous,
+                selectedFilterIndex: _selectedFilterIndex,
+                onSelectFilter: (idx) => setState(() => _selectedFilterIndex = idx),
               );
-            },
-            error: (error, _) => Column(
+            }
+            return const Column(
               children: [
-                const _CatalogHeader(),
-                Expanded(
-                  child: ExamEmptyState(
-                    icon: Icons.wifi_off_rounded,
-                    title: 'Could not load mock exams',
-                    body: error is Failure
-                        ? error.message
-                        : 'Check your connection and try again.',
-                    buttonLabel: 'Retry',
-                    onPressed: () => ref.invalidate(mockExamCatalogProvider),
-                  ),
-                ),
+                _CatalogHeader(),
+                Expanded(child: MockExamCatalogSkeleton()),
               ],
-            ),
-            data: (state) => _CatalogContent(
-              controller: _scrollController,
-              searchController: _searchController,
-              state: state,
-            ),
+            );
+          },
+          error: (error, _) => Column(
+            children: [
+              const _CatalogHeader(),
+              Expanded(
+                child: ExamEmptyState(
+                  icon: Icons.wifi_off_rounded,
+                  title: 'Could not load mock exams',
+                  body: error is Failure
+                      ? error.message
+                      : 'Check your connection and try again.',
+                  buttonLabel: 'Retry',
+                  onPressed: () => ref.invalidate(mockExamCatalogProvider),
+                ),
+              ),
+            ],
+          ),
+          data: (state) => _CatalogContent(
+            controller: _scrollController,
+            searchController: _searchController,
+            state: state,
+            selectedFilterIndex: _selectedFilterIndex,
+            onSelectFilter: (idx) => setState(() => _selectedFilterIndex = idx),
           ),
         ),
       ),
@@ -119,31 +119,45 @@ class _CatalogContent extends ConsumerWidget {
     required this.controller,
     required this.searchController,
     required this.state,
+    required this.selectedFilterIndex,
+    required this.onSelectFilter,
   });
 
   final ScrollController controller;
   final TextEditingController searchController;
   final MockExamCatalogState state;
+  final int selectedFilterIndex;
+  final ValueChanged<int> onSelectFilter;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return RefreshIndicator(
-      color: AppColors.accentPrimary,
+      color: AppColors.brandEmerald,
       backgroundColor: AppColors.bgSecondary,
-      onRefresh: () => ref.read(mockExamCatalogProvider.notifier).refresh(),
+      onRefresh: () async {
+        ref.invalidate(myAllExamAttemptsProvider);
+        await ref.read(mockExamCatalogProvider.notifier).refresh();
+      },
       child: CustomScrollView(
         controller: controller,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
+          // 1. Top Header Row + Greeting + Circular Category Badges (Image 5)
           SliverToBoxAdapter(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const _CatalogHeader(),
-                _SearchAndFilters(searchController: searchController),
+                _FilterPillsRow(
+                  selectedIndex: selectedFilterIndex,
+                  onSelect: onSelectFilter,
+                ),
+                const SizedBox(height: 14),
               ],
             ),
           ),
+
+          // 2. 2-Column Grid of Vibrant Gradient Exam Cards (Image 5)
           if (state.filteredExams.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
@@ -163,20 +177,24 @@ class _CatalogContent extends ConsumerWidget {
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSizes.screenPaddingH,
-                AppSizes.md,
+                0,
                 AppSizes.screenPaddingH,
                 AppSizes.lg,
               ),
-              sliver: SliverList.separated(
-                itemCount: state.filteredExams.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: AppSizes.md),
-                itemBuilder: (context, index) {
-                  return AppStaggeredReveal(
-                    index: index,
-                    child: MockExamCard(exam: state.filteredExams[index]),
-                  );
-                },
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                  childAspectRatio: 0.72,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final exam = state.filteredExams[index];
+                    return MockExamCard(exam: exam, cardIndex: index);
+                  },
+                  childCount: state.filteredExams.length,
+                ),
               ),
             ),
           SliverToBoxAdapter(child: _LoadMoreFooter(state: state)),
@@ -186,130 +204,262 @@ class _CatalogContent extends ConsumerWidget {
   }
 }
 
-class _CatalogHeader extends StatelessWidget {
+/// Top Header Row (Logo + Points Badge) + Clean Circular Subject Badges
+class _CatalogHeader extends ConsumerWidget {
   const _CatalogHeader();
 
   @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSizes.screenPaddingH,
-        AppSizes.md,
-        AppSizes.screenPaddingH,
-        AppSizes.lg,
+  Widget build(BuildContext context, WidgetRef ref) {
+    final catalogState = ref.watch(mockExamCatalogProvider).valueOrNull;
+    final currentSubject = catalogState?.selectedSubject;
+
+    final categories = <(IconData, String, String?)>[
+      (Icons.grid_view_rounded, 'All', null),
+      (Icons.calculate_outlined, 'Math', 'Mathematics'),
+      (Icons.science_outlined, 'Physics', 'Physics'),
+      (Icons.biotech_outlined, 'Chemistry', 'Chemistry'),
+      (Icons.eco_outlined, 'Biology', 'Biology'),
+      (Icons.menu_book_outlined, 'English', 'English'),
+      (Icons.history_edu_outlined, 'History', 'History'),
+      (Icons.public_outlined, 'Geography', 'Geography'),
+      (Icons.trending_up_rounded, 'Economics', 'Economics'),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        0,
+        AppSizes.sm,
+        0,
+        AppSizes.xs,
       ),
-      child: AppSurface(
-        padding: EdgeInsets.all(AppSizes.md),
-        gradient: AppColors.cardGradient,
-        shadows: AppShadows.md,
-        child: Row(
-          children: [
-            AppIconTile(
-              icon: Icons.assignment_rounded,
-              gradient: AppColors.examGradient,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top Bar: App Branding + Points / Score Pill
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSizes.screenPaddingH,
             ),
-            SizedBox(width: AppSizes.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Mock exams',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.headlineMedium,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.school_rounded,
+                      color: AppColors.brandEmerald,
+                      size: 22,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Memere Exam Hub',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textPrimary,
+                        letterSpacing: -0.4,
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Points / Score Pill Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgSecondary,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.borderStrong),
                   ),
-                  SizedBox(height: AppSizes.xs),
-                  Text(
-                    'Practice under real exam timing',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodySmall,
+                  child: const Row(
+                    children: [
+                      Icon(Icons.stars_rounded, color: AppColors.brandAmber, size: 16),
+                      SizedBox(width: 5),
+                      Text(
+                        '120 pts',
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            AppBadge(
-              label: 'Timed',
-              color: AppColors.info,
-              icon: Icons.timer_outlined,
+          ),
+          const SizedBox(height: 14),
+
+          // Horizontal Scrollable Row of Outlined Circular Subject Icon Badges
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSizes.screenPaddingH,
             ),
-          ],
-        ),
+            child: Row(
+              children: List.generate(categories.length, (idx) {
+                final cat = categories[idx];
+                final isSelected = (cat.$3 == null && currentSubject == null) ||
+                    (cat.$3 != null && cat.$3 == currentSubject);
+
+                return Padding(
+                  padding: EdgeInsets.only(
+                    right: idx == categories.length - 1 ? 0 : 12,
+                  ),
+                  child: GestureDetector(
+                    onTap: () {
+                      ref
+                          .read(mockExamCatalogProvider.notifier)
+                          .setSubject(cat.$3);
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          width: 48,
+                          height: 48,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? AppColors.brandEmerald.withAlpha(35)
+                                : AppColors.bgSecondary,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.brandEmerald
+                                  : AppColors.borderStrong,
+                              width: isSelected ? 2.0 : 1.2,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color:
+                                          AppColors.brandEmerald.withAlpha(60),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: Icon(
+                            cat.$1,
+                            size: 22,
+                            color: isSelected
+                                ? AppColors.brandEmerald
+                                : AppColors.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          cat.$2,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            color: isSelected
+                                ? AppColors.brandEmerald
+                                : AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
       ),
     );
   }
 }
 
-class _SearchAndFilters extends ConsumerWidget {
-  const _SearchAndFilters({required this.searchController});
+/// Filter Pills Row (Upcoming, Highest Score, Mine) with safe horizontal scrolling
+class _FilterPillsRow extends StatelessWidget {
+  const _FilterPillsRow({
+    required this.selectedIndex,
+    required this.onSelect,
+  });
 
-  final TextEditingController searchController;
+  final int selectedIndex;
+  final ValueChanged<int> onSelect;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(mockExamCatalogProvider).valueOrNull;
-    final selectedGrade = state?.selectedGrade ?? 12;
+  Widget build(BuildContext context) {
+    final filters = [
+      ('Upcoming', Icons.timer_outlined),
+      ('Highest Score', Icons.workspace_premium_outlined),
+      ('Mine', Icons.person_outline_rounded),
+    ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSizes.screenPaddingH,
-          ),
-          child: AppTextField(
-            controller: searchController,
-            hintText: 'Search mock exams',
-            prefixIcon: Icons.search_rounded,
-            textInputAction: TextInputAction.search,
-            onChanged:
-                ref.read(mockExamCatalogProvider.notifier).setSearchQuery,
-          ),
-        ),
-        const SizedBox(height: AppSizes.md),
-        SubjectFilterChips(
-          subjects: mockExamSubjects,
-          selectedSubject: state?.selectedSubject,
-          onSelected: (subject) {
-            ref.read(mockExamCatalogProvider.notifier).setSubject(subject);
-          },
-        ),
-        const SizedBox(height: AppSizes.md),
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSizes.screenPaddingH,
-          ),
-          child: Row(
-            children: [
-              Text(
-                'Grade',
-                style: AppTextStyles.labelMedium.copyWith(
-                  color: AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(width: AppSizes.md),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: SegmentedButton<int>(
-                    segments: const [
-                      ButtonSegment(value: 11, label: Text('11')),
-                      ButtonSegment(value: 12, label: Text('12')),
-                    ],
-                    selected: {selectedGrade},
-                    onSelectionChanged: (selection) {
-                      ref
-                          .read(mockExamCatalogProvider.notifier)
-                          .setGrade(selection.first);
-                    },
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: AppSizes.screenPaddingH),
+      child: Row(
+        children: List.generate(filters.length, (idx) {
+          final filter = filters[idx];
+          final isSelected = selectedIndex == idx;
+
+          return Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: InkWell(
+              onTap: () => onSelect(idx),
+              borderRadius: BorderRadius.circular(16),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? AppColors.brandEmerald
+                      : AppColors.bgSecondary,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.brandEmerald
+                        : AppColors.borderStrong,
                   ),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: AppColors.brandEmerald.withAlpha(60),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      filter.$2,
+                      size: 14,
+                      color: isSelected ? Colors.white : AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      filter.$1,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.w600,
+                        color:
+                            isSelected ? Colors.white : AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          );
+        }),
+      ),
     );
   }
 }
@@ -323,11 +473,11 @@ class _LoadMoreFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     if (state.isLoadingMore) {
       return const Padding(
-        padding: EdgeInsets.only(bottom: AppSizes.xl),
+        padding: EdgeInsets.only(bottom: 96),
         child: Center(
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            color: AppColors.accentPrimary,
+            color: AppColors.brandEmerald,
           ),
         ),
       );
@@ -339,7 +489,7 @@ class _LoadMoreFooter extends StatelessWidget {
           AppSizes.screenPaddingH,
           0,
           AppSizes.screenPaddingH,
-          AppSizes.xl,
+          96,
         ),
         child: Text(
           state.loadMoreError!.message,
@@ -349,6 +499,6 @@ class _LoadMoreFooter extends StatelessWidget {
       );
     }
 
-    return const SizedBox(height: AppSizes.xl);
+    return const SizedBox(height: 96);
   }
 }
