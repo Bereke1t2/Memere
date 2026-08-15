@@ -103,6 +103,7 @@ func (s *Service) loadGradables(ctx context.Context, examID uuid.UUID) ([]gradin
 		}
 		gradables = append(gradables, grading.GradableQuestion{
 			ID:          qa.Question.ID,
+			Text:        qa.Question.Text,
 			Marks:       marksByQ[qa.Question.ID],
 			Type:        qa.Question.Type,
 			Subject:     qa.Question.Subject,
@@ -119,14 +120,28 @@ func (s *Service) loadGradables(ctx context.Context, examID uuid.UUID) ([]gradin
 func (s *Service) result(exam *entity.Exam, attempt *entity.ExamAttempt, core grading.Result) *ExamResult {
 	feedback := make([]QuestionFeedback, 0, len(core.Outcomes))
 	for _, o := range core.Outcomes {
+		answers := make([]FeedbackAnswerView, len(o.Answers))
+		for i, a := range o.Answers {
+			answers[i] = FeedbackAnswerView{
+				ID:         a.ID,
+				Text:       a.Text,
+				IsCorrect:  a.IsCorrect,
+				OrderIndex: i,
+			}
+		}
 		feedback = append(feedback, QuestionFeedback{
 			QuestionID:       o.QuestionID,
+			QuestionText:     o.QuestionText,
+			Type:             o.Type,
+			Subject:          o.Subject,
+			Topic:            o.Topic,
 			Correct:          o.Correct,
 			MarksAwarded:     o.MarksAwarded,
 			MarksPossible:    o.MarksPossible,
 			SelectedAnswers:  o.SelectedAnswers,
 			CorrectAnswerIDs: o.CorrectAnswerIDs,
 			Explanation:      o.Explanation,
+			Answers:          answers,
 		})
 	}
 	breakdown := make(map[string]SubjectScore, len(core.SubjectBreakdown))
