@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +12,7 @@ import '../../../../core/errors/failures.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_surface.dart';
+import '../../../../shared/widgets/memere_mascot.dart';
 import '../../../payment/presentation/providers/checkout_flow_provider.dart';
 import '../../../payment/presentation/providers/course_access_provider.dart';
 import '../../../payment/presentation/providers/purchase_history_provider.dart';
@@ -201,6 +203,141 @@ class _DetailTopBar extends StatelessWidget {
                 Icons.bookmark_border_rounded,
                 color: AppColors.textPrimary,
                 size: 18,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Hero Illustration Area (matching image copy 5.png Screen 3)
+class _HeroIllustrationArea extends StatelessWidget {
+  const _HeroIllustrationArea({required this.course});
+
+  final CourseEntity course;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasImage = course.thumbnailUrl != null &&
+        course.thumbnailUrl!.trim().isNotEmpty &&
+        course.thumbnailUrl!.startsWith('http');
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Center(
+        child: hasImage
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: SizedBox(
+                  height: 180,
+                  width: double.infinity,
+                  child: CachedNetworkImage(
+                    imageUrl: course.thumbnailUrl!,
+                    fit: BoxFit.cover,
+                    placeholder: (_, __) => _MascotHeroCanvas(course: course),
+                    errorWidget: (_, __, ___) =>
+                        _MascotHeroCanvas(course: course),
+                  ),
+                ),
+              )
+            : _MascotHeroCanvas(course: course),
+      ),
+    );
+  }
+}
+
+/// Animated Mascot Hero Canvas with Subject & Grade Pills
+class _MascotHeroCanvas extends StatelessWidget {
+  const _MascotHeroCanvas({required this.course});
+
+  final CourseEntity course;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 180,
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.bgSecondary,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.borderStrong),
+      ),
+      child: Stack(
+        children: [
+          // Background ambient rings
+          Positioned(
+            right: -20,
+            top: -20,
+            child: Container(
+              width: 110,
+              height: 110,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.brandEmerald.withAlpha(12),
+              ),
+            ),
+          ),
+
+          // Mascot Character Illustration (standing on card surface)
+          const Center(
+            child: MemereMascot(
+              size: Size(150, 138),
+              showBackdrop: false,
+            ),
+          ),
+
+          // Left Grade & Subject Badges
+          Positioned(
+            left: 0,
+            top: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.bgTertiary,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppColors.borderStrong),
+              ),
+              child: Text(
+                'Grade ${course.grade}',
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.brandEmerald,
+                ),
+              ),
+            ),
+          ),
+
+          // Right Level / Free Badge
+          Positioned(
+            right: 0,
+            top: 0,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: course.isFree
+                    ? const Color(0x2210B981)
+                    : const Color(0x2238BDF8),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: course.isFree
+                      ? const Color(0x6610B981)
+                      : const Color(0x6638BDF8),
+                ),
+              ),
+              child: Text(
+                course.isFree ? '100% Free' : course.priceLabel,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: course.isFree
+                      ? AppColors.brandEmerald
+                      : const Color(0xFF38BDF8),
+                ),
               ),
             ),
           ),
