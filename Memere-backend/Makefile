@@ -105,6 +105,9 @@ sqlc:
 seed:
 	go run ./scripts/seed
 
+seed-mock-exams:
+	go run ./cmd/seed-mock-exams
+
 # seed-admin — create (or reset) the admin account used for local dev and smoke
 # tests. Idempotent: safe to run multiple times. Override defaults with env vars:
 #   ADMIN_EMAIL=me@example.com ADMIN_PASSWORD=secret make seed-admin

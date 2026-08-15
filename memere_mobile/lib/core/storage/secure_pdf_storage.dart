@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
+import '../constants/env.dart';
 import '../storage/secure_storage_service.dart';
 import '../utils/media_url_helper.dart';
 
@@ -68,6 +69,36 @@ class SecurePdfStorage {
     } catch (_) {}
   }
 
+  /// Determines the best download URL for a lesson PDF.
+  ///
+  /// Strategy:
+  /// 1. If `pdfUrl` is a full http(s) URL pointing to S3/MinIO → use it directly.
+  /// 2. If `pdfUrl` is an S3 key (e.g. `lessons/{id}/notes.pdf`) → use the backend
+  ///    download endpoint `GET /api/v1/lessons/{lessonId}/pdf` which generates a
+  ///    pre-signed redirect.
+  /// 3. If `pdfUrl` is a raw filename (legacy) → use the backend download endpoint
+  ///    which will handle lookup.
+  /// 4. If `pdfUrl` is empty/placeholder → no remote download, generate from text.
+  static String? _resolveDownloadUrl(String pdfUrl, {String? lessonId}) {
+    final raw = pdfUrl.trim();
+    if (raw.isEmpty || raw == 'sample.pdf') return null;
+
+    // Already a full URL (S3 presigned or MinIO direct link)
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      return fixMediaUrl(raw);
+    }
+
+    // It's an S3 key like "lessons/xxx/notes.pdf" or a raw filename like "ACPC 2024.pdf"
+    // Use the backend download endpoint if we have a lessonId
+    if (lessonId != null && lessonId.isNotEmpty) {
+      final apiBase = fixMediaUrl(Env.baseUrl);
+      return '$apiBase/api/v1/lessons/$lessonId/pdf';
+    }
+
+    // Legacy: try to resolve as a relative path
+    return fixMediaUrl(raw);
+  }
+
   /// Downloads a PDF from backend with live progress callback, validates PDF header,
   /// saves to app sandbox storage, and returns the local File.
   /// If no remote PDF file is uploaded but lesson text content exists, compiles
@@ -75,33 +106,30 @@ class SecurePdfStorage {
   static Future<File> downloadPdf({
     required String pdfUrl,
     required String fileKey,
+    String? lessonId,
     String? title,
     String? content,
     void Function(double progress)? onProgress,
   }) async {
     final file = await getPdfFile(fileKey);
+    final resolvedUrl = _resolveDownloadUrl(pdfUrl, lessonId: lessonId);
 
-    final rawUrl = pdfUrl.trim();
-    final isPlaceholder = rawUrl.isEmpty || rawUrl == 'sample.pdf';
-
-    // 1. If remote PDF URL is available, attempt network download
-    if (!isPlaceholder) {
-      final resolvedUrl = fixMediaUrl(rawUrl);
-      final uri = Uri.tryParse(resolvedUrl);
-      final safeUrl = uri != null ? uri.toString() : Uri.encodeFull(resolvedUrl);
-
+    // 1. If a remote URL is available, attempt network download
+    if (resolvedUrl != null) {
       final token = await SecureStorageService().getAccessToken();
       final options = Options(
         headers: token != null && token.isNotEmpty ? {'Authorization': 'Bearer $token'} : null,
         responseType: ResponseType.bytes,
-        receiveTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 60),
         sendTimeout: const Duration(seconds: 15),
+        followRedirects: true,
+        maxRedirects: 5,
       );
 
       final dio = Dio();
       try {
         final response = await dio.get<List<int>>(
-          safeUrl,
+          resolvedUrl,
           options: options,
           onReceiveProgress: (received, total) {
             if (total > 0 && onProgress != null) {
@@ -170,18 +198,18 @@ class SecurePdfStorage {
 
     // Replace common Unicode punctuation & formatting symbols with safe ASCII equivalents
     var cleaned = text
-        .replaceAll('“', '"')
-        .replaceAll('”', '"')
-        .replaceAll('‘', "'")
-        .replaceAll('’', "'")
-        .replaceAll('—', '-')
-        .replaceAll('–', '-')
-        .replaceAll('•', '*')
-        .replaceAll('…', '...')
+        .replaceAll('\u201C', '"')
+        .replaceAll('\u201D', '"')
+        .replaceAll('\u2018', "'")
+        .replaceAll('\u2019', "'")
+        .replaceAll('\u2014', '-')
+        .replaceAll('\u2013', '-')
+        .replaceAll('\u2022', '*')
+        .replaceAll('\u2026', '...')
         .replaceAll('\u00A0', ' ')
-        .replaceAll('≤', '<=')
-        .replaceAll('≥', '>=')
-        .replaceAll('≠', '!=');
+        .replaceAll('\u2264', '<=')
+        .replaceAll('\u2265', '>=')
+        .replaceAll('\u2260', '!=');
 
     // Strip/replace any code point outside 32..255 (WinAnsi range) to prevent PdfStandardFont ArgumentError
     final buffer = StringBuffer();

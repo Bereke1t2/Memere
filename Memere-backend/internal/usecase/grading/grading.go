@@ -30,6 +30,7 @@ type GradableAnswer struct {
 // the key, and optional analytics tags.
 type GradableQuestion struct {
 	ID          uuid.UUID
+	Text        string
 	Marks       int
 	Type        entity.QuestionType
 	Answers     []GradableAnswer
@@ -48,12 +49,17 @@ type Submitted struct {
 // QuestionOutcome is the per-question grading result for the feedback view.
 type QuestionOutcome struct {
 	QuestionID       uuid.UUID
+	QuestionText     string
+	Type             entity.QuestionType
+	Subject          *string
+	Topic            *string
 	Correct          bool
 	MarksAwarded     int
 	MarksPossible    int
 	SelectedAnswers  []uuid.UUID
 	CorrectAnswerIDs []uuid.UUID
 	Explanation      *string
+	Answers          []GradableAnswer
 }
 
 // SubjectScore is the per-subject (or per-topic) tally for §9.3 analytics.
@@ -95,12 +101,17 @@ func Grade(questions []GradableQuestion, sub Submitted) Result {
 
 		res.Outcomes = append(res.Outcomes, QuestionOutcome{
 			QuestionID:       q.ID,
+			QuestionText:     q.Text,
+			Type:             q.Type,
+			Subject:          q.Subject,
+			Topic:            q.Topic,
 			Correct:          ok,
 			MarksAwarded:     awarded,
 			MarksPossible:    q.Marks,
 			SelectedAnswers:  sub.Selected[q.ID],
 			CorrectAnswerIDs: correctIDs,
 			Explanation:      q.Explanation,
+			Answers:          q.Answers,
 		})
 
 		if key := breakdownKey(q); key != "" {

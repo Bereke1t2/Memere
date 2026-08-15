@@ -184,6 +184,26 @@ func (s *Service) loadOwnedLesson(ctx context.Context, actor *Actor, lessonID uu
 	return l, nil
 }
 
+// SetLessonPdfURL updates a lesson's pdf_url after asserting the actor owns the
+// course. This is the usecase entry point for the PDF upload handler.
+func (s *Service) SetLessonPdfURL(ctx context.Context, actor *Actor, lessonID uuid.UUID, pdfURL string) (*entity.Lesson, error) {
+	l, err := s.loadOwnedLesson(ctx, actor, lessonID)
+	if err != nil {
+		return nil, err
+	}
+	l.PdfURL = &pdfURL
+	if err := s.lessons.Update(ctx, l); err != nil {
+		return nil, err
+	}
+	return l, nil
+}
+
+// GetLessonByID returns a lesson by ID. It does NOT enforce ownership — the
+// caller (download handler) is responsible for access control at the route level.
+func (s *Service) GetLessonByID(ctx context.Context, lessonID uuid.UUID) (*entity.Lesson, error) {
+	return s.lessons.FindByID(ctx, lessonID)
+}
+
 // validateLessonInput validates a lesson payload, including the type enum.
 func validateLessonInput(in LessonInput) error {
 	v := validator.New()

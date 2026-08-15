@@ -398,7 +398,7 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 		JWT:       jwtManager,
 		Sessions:  sessionRepo,
 		Auth:      delivery_http.NewAuthHandler(authSvc, userRepo),
-		Courses:   delivery_http.NewCourseHandler(courseSvc),
+		Courses:   delivery_http.NewCourseHandler(courseSvc, store),
 		Quizzes:   delivery_http.NewQuizHandler(quizSvc),
 		Exams:     delivery_http.NewExamHandler(examSvc),
 		Analytics: delivery_http.NewAnalyticsHandler(analyticsSvc),

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 
 class ExamTimerBadge extends StatelessWidget {
@@ -22,43 +20,57 @@ class ExamTimerBadge extends StatelessWidget {
     final warning = value <= 300;
 
     final color = critical
-        ? AppColors.error
+        ? const Color(0xFFEF4444)
         : warning
-            ? AppColors.warning
-            : AppColors.textPrimary;
-    final surface = critical
-        ? AppColors.errorSurface
+            ? const Color(0xFFF59E0B)
+            : const Color(0xFF10B981);
+
+    final bgTint = critical
+        ? const Color(0x28EF4444)
         : warning
-            ? AppColors.warningSurface
-            : AppColors.bgTertiary;
+            ? const Color(0x28F59E0B)
+            : const Color(0x2010B981);
+
     final borderColor = critical
-        ? AppColors.error
+        ? const Color(0xFFEF4444).withAlpha(120)
         : warning
-            ? AppColors.warning
-            : AppColors.border;
+            ? const Color(0xFFF59E0B).withAlpha(120)
+            : const Color(0xFF10B981).withAlpha(100);
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSizes.sm,
-        vertical: AppSizes.xs,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-        border: Border.all(color: borderColor),
+        color: bgTint,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: critical || warning
+            ? [
+                BoxShadow(
+                  color: color.withAlpha(50),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            Icons.timer_outlined,
-            size: AppSizes.iconXs,
-            color: critical || warning ? color : AppColors.textSecondary,
+            critical
+                ? Icons.alarm_rounded
+                : Icons.timer_outlined,
+            size: 15,
+            color: color,
           ),
-          const SizedBox(width: AppSizes.xs),
+          const SizedBox(width: 5),
           Text(
             formatExamTimer(value),
-            style: AppTextStyles.labelMedium.copyWith(color: color),
+            style: AppTextStyles.labelMedium.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
           ),
         ],
       ),

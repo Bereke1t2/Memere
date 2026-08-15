@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/delivery/http/dto"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/delivery/middleware"
@@ -227,4 +228,34 @@ func (h *ExamHandler) GetResult(c *gin.Context) {
 	}
 	resp := dto.NewExamResultResponse(result)
 	respondJSON(c, http.StatusOK, &resp)
+}
+
+// ListMyAttempts handles GET /mock-exams/:id/attempts or GET /exam-attempts/my → 200.
+func (h *ExamHandler) ListMyAttempts(c *gin.Context) {
+	examIDStr := c.Param("id")
+	var examID uuid.UUID
+	var err error
+	if examIDStr != "" {
+		examID, err = uuid.Parse(examIDStr)
+		if err != nil {
+			respondError(c, apperror.BadRequest("invalid exam id", err))
+			return
+		}
+	}
+
+	actor := examActor(c)
+	var studentID uuid.UUID
+	if actor != nil {
+		studentID = actor.UserID
+	} else {
+		studentID = exam.GuestUserID
+	}
+
+	attempts, err := h.svc.ListAttemptsByStudent(c.Request.Context(), studentID, examID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	resp := dto.NewExamAttemptHistoryListResponse(attempts)
+	respondJSON(c, http.StatusOK, resp)
 }

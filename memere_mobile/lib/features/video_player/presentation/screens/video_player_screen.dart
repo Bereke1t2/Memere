@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../shared/widgets/ai_robot_mascot.dart';
 import '../../domain/entities/video_status_entity.dart';
 import '../providers/video_player_controller_provider.dart';
 import '../widgets/hls_video_player.dart';
@@ -43,6 +44,63 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _openAiTutor() {
+    final lessonTitle = (widget.title == null || widget.title!.trim().isEmpty)
+        ? 'Lesson Video'
+        : widget.title!;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.bgSecondary,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Row(
+                children: [
+                  AiRobotMascot(size: 32),
+                  SizedBox(width: 10),
+                  Text(
+                    'AI Concept Tutor',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Asking AI Tutor about "$lessonTitle"...\nGet instant step-by-step explanations of video formulas and entrance exam topics!',
+                style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.brandEmerald,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 44),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: const Icon(Icons.smart_toy_rounded, size: 18),
+                label: const Text('Start AI Discussion'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -86,6 +144,7 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen>
           ],
         ),
       ),
+      floatingActionButton: AiTutorFab(onPressed: _openAiTutor),
       body: SafeArea(
         top: false,
         child: playbackAsync.when(
@@ -238,7 +297,7 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen>
                         // Tab Bar
                         TabBar(
                           controller: _tabController,
-                          indicatorColor: AppColors.accentPrimary,
+                          indicatorColor: AppColors.brandEmerald,
                           labelColor: AppColors.textPrimary,
                           unselectedLabelColor: AppColors.textMuted,
                           labelStyle: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.bold),
@@ -295,15 +354,15 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen>
                                   ),
                                   child: Column(
                                     children: [
-                                      const Icon(Icons.forum_outlined, color: AppColors.textMuted, size: 32),
-                                      const SizedBox(height: 8),
+                                      const AiRobotMascot(size: 40),
+                                      const SizedBox(height: 10),
                                       const Text(
-                                        'Student Community Q&A',
+                                        'Student Community & AI Tutor',
                                         style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textPrimary),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        'Ask questions and discuss solutions with fellow Grade 12 students.',
+                                        'Ask questions and discuss solutions with fellow Grade 12 students or tap the AI Robot FAB.',
                                         style: AppTextStyles.caption.copyWith(color: AppColors.textMuted),
                                         textAlign: TextAlign.center,
                                       ),
@@ -335,7 +394,7 @@ class _VideoLoadingState extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Center(
       child: CircularProgressIndicator(
-        color: AppColors.accentPrimary,
+        color: AppColors.brandEmerald,
         strokeWidth: 2,
       ),
     );

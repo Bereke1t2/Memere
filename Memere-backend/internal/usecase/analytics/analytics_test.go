@@ -220,6 +220,9 @@ func (f *fakeExamRepo) ListQuestions(context.Context, uuid.UUID) ([]*entity.Exam
 func (f *fakeExamRepo) GetExamWithQuestions(context.Context, uuid.UUID) (*repository.ExamWithQuestions, error) {
 	return nil, nil
 }
+func (f *fakeExamRepo) ListByCourse(_ context.Context, _ uuid.UUID) ([]*entity.Exam, error) {
+	return nil, nil
+}
 func (f *fakeExamRepo) GetQuestionsForClient(context.Context, uuid.UUID) ([]repository.ClientExamQuestion, error) {
 	return nil, nil
 }

@@ -4,6 +4,7 @@ import '../../../../core/errors/failures.dart';
 import '../entities/exam_answer_payload.dart';
 import '../entities/exam_attempt_analytics_entity.dart';
 import '../entities/exam_attempt_entity.dart';
+import '../entities/exam_attempt_history_entity.dart';
 import '../entities/exam_result_entity.dart';
 import '../entities/paginated_mock_exams_entity.dart';
 
@@ -32,4 +33,8 @@ abstract class ExamRepository {
   Future<Either<Failure, ExamAttemptAnalyticsEntity>> getAnalytics(
     String attemptId,
   );
+
+  Future<Either<Failure, List<ExamAttemptHistoryEntity>>> listMyAttempts({
+    String? examId,
+  });
 }

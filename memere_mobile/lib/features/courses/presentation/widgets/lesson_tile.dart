@@ -2,14 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_motion.dart';
 import '../../../../core/constants/app_sizes.dart';
-import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/router/app_router.dart';
 import '../../domain/entities/lesson_entity.dart';
 
-/// Professional, Coursera/MasterClass-grade Lesson Tile with Checkbox indicator
-/// and direct launcher for HLS Video Player and In-App PDF Reader Screen.
+/// Clean, numbered Lesson Tile matching image copy 5.png (Screen 3)
 class LessonTile extends StatefulWidget {
   const LessonTile({
     super.key,
@@ -27,14 +24,6 @@ class LessonTile extends StatefulWidget {
 }
 
 class _LessonTileState extends State<LessonTile> {
-  bool _isCompleted = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _isCompleted = widget.canOpen && widget.lesson.isFreePreview;
-  }
-
   LessonEntity get lesson => widget.lesson;
   int get lessonNumber => widget.lessonNumber;
   bool get canOpen => widget.canOpen;
@@ -42,105 +31,32 @@ class _LessonTileState extends State<LessonTile> {
   @override
   Widget build(BuildContext context) {
     final isOpenable = canOpen || lesson.isFreePreview;
-    final hasActiveMedia = lesson.hasVideo ||
-        lesson.hasQuiz ||
-        lesson.hasContent ||
-        lesson.hasPdf ||
-        lesson.type == LessonType.note ||
-        lesson.type == LessonType.mixed;
+    final numStr = lessonNumber.toString().padLeft(2, '0');
 
     return InkWell(
       onTap: () => _handleTap(context),
-      borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-      child: AnimatedContainer(
-        duration: AppMotion.base,
-        curve: AppMotion.standard,
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSizes.md,
-          vertical: AppSizes.sm + 2,
-        ),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: _isCompleted
-              ? AppColors.bgSecondary.withAlpha(200)
-              : AppColors.bgSecondary,
-          borderRadius: BorderRadius.circular(AppSizes.radiusLg),
-          border: Border.all(
-            color: _isCompleted
-                ? AppColors.border
-                : AppColors.borderStrong.withAlpha(120),
-          ),
+          color: AppColors.bgSecondary,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.borderStrong.withAlpha(90)),
         ),
         child: Row(
           children: [
-            // Professional Checkbox / Progress Indicator
-            GestureDetector(
-              onTap: isOpenable
-                  ? () {
-                      setState(() => _isCompleted = !_isCompleted);
-                    }
-                  : null,
-              child: AnimatedContainer(
-                duration: AppMotion.base,
-                width: 28,
-                height: 28,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: _isCompleted
-                      ? AppColors.textPrimary
-                      : isOpenable
-                          ? AppColors.bgTertiary
-                          : AppColors.bgTertiary.withAlpha(80),
-                  borderRadius: BorderRadius.circular(AppSizes.radiusSm + 2),
-                  border: Border.all(
-                    color: _isCompleted
-                        ? AppColors.textPrimary
-                        : isOpenable
-                            ? AppColors.borderStrong
-                            : AppColors.border,
-                  ),
-                ),
-                child: _isCompleted
-                    ? const Icon(
-                        Icons.check_rounded,
-                        size: 18,
-                        color: AppColors.bgPrimary,
-                      )
-                    : isOpenable
-                        ? Text(
-                            '$lessonNumber',
-                            style: AppTextStyles.labelMedium.copyWith(
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          )
-                        : const Icon(
-                            Icons.lock_outline_rounded,
-                            size: 14,
-                            color: AppColors.textDisabled,
-                          ),
+            // Left Number: e.g. "01."
+            Text(
+              '$numStr.',
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF94A3B8),
               ),
             ),
-            const SizedBox(width: AppSizes.md),
+            const SizedBox(width: 12),
 
-            // Format type icon box
-            Container(
-              width: 38,
-              height: 38,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: _typeBgColor(lesson),
-                borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                border: Border.all(color: _typeBorderColor(lesson)),
-              ),
-              child: Icon(
-                _lessonIcon(lesson),
-                size: 20,
-                color: _typeIconColor(lesson),
-              ),
-            ),
-            const SizedBox(width: AppSizes.md),
-
-            // Lesson Title & Subtitle Metadata
+            // Middle Column: Title & Duration / Type Subtitle
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -149,83 +65,56 @@ class _LessonTileState extends State<LessonTile> {
                     lesson.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                      letterSpacing: -0.2,
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                      height: 1.25,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: [
-                      Text(
-                        _buildSubtitleText(lesson),
-                        style: AppTextStyles.caption.copyWith(
-                          color: AppColors.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                      if (lesson.hasPdf)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                          decoration: BoxDecoration(
-                            color: const Color(0x22FF5252),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: const Color(0x55FF5252)),
-                          ),
-                          child: const Text(
-                            'PDF DOC',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFFFF5252),
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      if (lesson.hasContent && !lesson.hasPdf)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                          decoration: BoxDecoration(
-                            color: const Color(0x22448AFF),
-                            borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: const Color(0x55448AFF)),
-                          ),
-                          child: const Text(
-                            'STUDY NOTE',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFF448AFF),
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                    ],
+                  const SizedBox(height: 3),
+                  Text(
+                    _buildSubtitleText(lesson),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: AppSizes.sm),
+            const SizedBox(width: 10),
 
-            // Right Action Status Indicator
-            AnimatedSwitcher(
-              duration: AppMotion.base,
-              switchInCurve: AppMotion.emphasized,
-              child: _isCompleted
-                  ? const _CompletedMark()
-                  : isOpenable && hasActiveMedia
-                      ? _PlayMark(isNote: lesson.hasPdf || lesson.type == LessonType.note)
-                      : lesson.isFreePreview
-                          ? _PreviewBadge()
-                          : const Icon(
-                              Icons.lock_outline_rounded,
-                              size: 16,
-                              color: AppColors.textDisabled,
-                            ),
+            // Right Action Icon Pill (Play / Document / Quiz / Lock)
+            Container(
+              width: 36,
+              height: 36,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: isOpenable
+                    ? (lesson.isFreePreview && !canOpen
+                        ? const Color(0x2238BDF8)
+                        : const Color(0x2210B981))
+                    : const Color(0xFF1E2433),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: isOpenable
+                      ? (lesson.isFreePreview && !canOpen
+                          ? const Color(0x5538BDF8)
+                          : const Color(0x5510B981))
+                      : const Color(0xFF2A3449),
+                ),
+              ),
+              child: Icon(
+                isOpenable ? _actionIcon(lesson) : Icons.lock_outline_rounded,
+                size: 18,
+                color: isOpenable
+                    ? (lesson.isFreePreview && !canOpen
+                        ? const Color(0xFF38BDF8)
+                        : const Color(0xFF10B981))
+                    : const Color(0xFF64748B),
+              ),
             ),
           ],
         ),
@@ -233,13 +122,28 @@ class _LessonTileState extends State<LessonTile> {
     );
   }
 
+  IconData _actionIcon(LessonEntity lesson) {
+    if (lesson.hasVideo || lesson.type == LessonType.video) {
+      return Icons.play_arrow_rounded;
+    }
+    if (lesson.hasPdf || lesson.type == LessonType.note || lesson.hasContent) {
+      return Icons.description_rounded;
+    }
+    if (lesson.hasQuiz || lesson.type == LessonType.quiz) {
+      return Icons.quiz_outlined;
+    }
+    return Icons.arrow_forward_rounded;
+  }
+
   void _handleTap(BuildContext context) {
-    if (!canOpen && !lesson.isFreePreview) {
+    final isOpenable = canOpen || lesson.isFreePreview;
+
+    if (!isOpenable) {
       _showMessage(context, 'Enroll in this course to unlock this lesson.');
       return;
     }
 
-    // 1. Video playback
+    // 1. Video content
     if (lesson.hasVideo) {
       context.push(
         AppRoutes.videoPlayerPath(
@@ -272,6 +176,7 @@ class _LessonTileState extends State<LessonTile> {
         AppRoutes.pdfReaderPath(
           title: lesson.title,
           pdfUrl: pdfName,
+          lessonId: lesson.id,
           content: lesson.content,
         ),
       );
@@ -288,9 +193,10 @@ class _LessonTileState extends State<LessonTile> {
   }
 
   String _buildSubtitleText(LessonEntity lesson) {
-    if (lesson.hasPdf) return 'PDF Document • ${lesson.durationLabel}';
-    if (lesson.hasContent) return 'Study Note • ${lesson.durationLabel}';
-    return '${lesson.typeLabel} • ${lesson.durationLabel}';
+    if (lesson.hasPdf) return '${lesson.durationLabel} • PDF Notes';
+    if (lesson.hasContent) return '${lesson.durationLabel} • Study Note';
+    if (lesson.hasQuiz || lesson.type == LessonType.quiz) return 'Practice Quiz';
+    return '${lesson.durationLabel} • Video Lesson';
   }
 
   void _showMessage(BuildContext context, String message) {
@@ -302,107 +208,4 @@ class _LessonTileState extends State<LessonTile> {
       ),
     );
   }
-}
-
-class _CompletedMark extends StatelessWidget {
-  const _CompletedMark();
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      key: const ValueKey('completed'),
-      tween: Tween(begin: 0.82, end: 1),
-      duration: AppMotion.base,
-      curve: AppMotion.emphasized,
-      builder: (context, value, child) {
-        return Transform.scale(scale: value, child: child);
-      },
-      child: const Icon(
-        Icons.check_circle_rounded,
-        color: AppColors.textPrimary,
-        size: 20,
-      ),
-    );
-  }
-}
-
-class _PlayMark extends StatelessWidget {
-  const _PlayMark({this.isNote = false});
-
-  final bool isNote;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      key: ValueKey(isNote ? 'note' : 'play'),
-      width: 28,
-      height: 28,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColors.bgTertiary,
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.borderStrong),
-      ),
-      child: Icon(
-        isNote ? Icons.description_rounded : Icons.play_arrow_rounded,
-        color: AppColors.textPrimary,
-        size: 16,
-      ),
-    );
-  }
-}
-
-class _PreviewBadge extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      key: const ValueKey('preview'),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSizes.sm,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.bgTertiary,
-        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-        border: Border.all(color: AppColors.borderStrong),
-      ),
-      child: Text(
-        'Preview',
-        style: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary, fontSize: 10),
-      ),
-    );
-  }
-}
-
-IconData _lessonIcon(LessonEntity lesson) {
-  if (lesson.hasPdf) return Icons.picture_as_pdf_rounded;
-  if (lesson.hasContent) return Icons.article_rounded;
-  switch (lesson.type) {
-    case LessonType.note:
-      return Icons.article_outlined;
-    case LessonType.quiz:
-      return Icons.quiz_outlined;
-    case LessonType.mixed:
-      return Icons.widgets_outlined;
-    case LessonType.video:
-      return Icons.play_circle_outline_rounded;
-  }
-}
-
-Color _typeBgColor(LessonEntity lesson) {
-  if (lesson.hasPdf) return const Color(0x22FF5252);
-  if (lesson.hasContent) return const Color(0x22448AFF);
-  return AppColors.bgTertiary;
-}
-
-Color _typeBorderColor(LessonEntity lesson) {
-  if (lesson.hasPdf) return const Color(0x44FF5252);
-  if (lesson.hasContent) return const Color(0x44448AFF);
-  return AppColors.border;
-}
-
-Color _typeIconColor(LessonEntity lesson) {
-  if (lesson.hasPdf) return const Color(0xFFFF5252);
-  if (lesson.hasContent) return const Color(0xFF448AFF);
-  return AppColors.textPrimary;
 }

@@ -433,33 +433,89 @@ func (h *harness) correctOption(examID, questionID uuid.UUID) uuid.UUID {
 
 // --- access gate (Phase 4) ----------------------------------------------------
 
-// A student with no entitlement to a paid course is blocked from a graded sitting
-// with NOT_ENROLLED — the gate now routes through access.Service.
-func TestStartExam_NonEnrolledBlocked(t *testing.T) {
+// A student is blocked from an unpublished exam unless they are the teacher owner or admin.
+func TestStartExam_UnpublishedExamBlocked(t *testing.T) {
 	h := newHarness(t)
 	course := &entity.Course{ID: uuid.New(), TeacherID: uuid.New(), IsPublished: true, IsFree: false}
-	exam := h.seedExamForCourse(t, course)
+	owner := &Actor{UserID: course.TeacherID, Role: entity.RoleTeacher}
+	h.courses.add(course)
+
+	exam, err := h.svc.CreateExam(context.Background(), owner, CreateExamInput{
+		CourseID:        &course.ID,
+		Title:           "Draft Exam",
+		Subject:         "Math",
+		Grade:           12,
+		DurationMinutes: 60,
+		PassMarks:       5,
+	})
+	if err != nil {
+		t.Fatalf("CreateExam: %v", err)
+	}
 	stu := &Actor{UserID: uuid.New(), Role: entity.RoleStudent}
 
-	_, err := h.svc.StartExam(context.Background(), stu, exam.ID)
-	if !apperror.IsCode(err, "NOT_ENROLLED") {
-		t.Fatalf("non-enrolled student should be blocked with NOT_ENROLLED, got %v", err)
+	_, err = h.svc.StartExam(context.Background(), stu, exam.ID)
+	if err == nil {
+		t.Fatalf("student should be blocked from unpublished exam")
 	}
 }
 
-// Once the same student holds an active enrollment, the gate admits them.
-func TestStartExam_EnrolledAllowed(t *testing.T) {
+// Published exams are accessible to students and guests.
+func TestStartExam_PublishedExamAllowed(t *testing.T) {
 	h := newHarness(t)
 	course := &entity.Course{ID: uuid.New(), TeacherID: uuid.New(), IsPublished: true, IsFree: false}
 	exam := h.seedExamForCourse(t, course)
 	stu := &Actor{UserID: uuid.New(), Role: entity.RoleStudent}
-	h.enroll.enroll(stu.UserID, course.ID)
 
 	view, err := h.svc.StartExam(context.Background(), stu, exam.ID)
 	if err != nil {
-		t.Fatalf("enrolled student should start an exam: %v", err)
+		t.Fatalf("student should start published exam: %v", err)
 	}
 	if view == nil || len(view.Questions) == 0 {
 		t.Fatalf("expected a started attempt with questions, got %+v", view)
+	}
+}
+
+// Unregistered/anonymous guest (actor == nil) can start, save, submit, and view results for a published exam.
+func TestStartExam_GuestUnregisteredAllowed(t *testing.T) {
+	h := newHarness(t)
+	exam := h.seedPublishedExam(t)
+
+	// 1. Guest starts exam
+	view, err := h.svc.StartExam(context.Background(), nil, exam.ID)
+	if err != nil {
+		t.Fatalf("guest should be allowed to start published exam: %v", err)
+	}
+	if view == nil || len(view.Questions) != 2 {
+		t.Fatalf("expected 2 questions for guest, got %+v", view)
+	}
+	if view.AttemptID == uuid.Nil {
+		t.Fatal("expected non-nil attempt ID for guest")
+	}
+
+	q1 := view.Questions[0]
+	corr := h.correctOption(exam.ID, q1.QuestionID)
+
+	// 2. Guest auto-saves progress
+	answers := map[string]any{q1.QuestionID.String(): map[string]any{"selected": []any{corr.String()}}}
+	if err := h.svc.SaveExamProgress(context.Background(), nil, view.AttemptID, answers); err != nil {
+		t.Fatalf("guest should be allowed to save progress: %v", err)
+	}
+
+	// 3. Guest submits exam
+	res, err := h.svc.SubmitExam(context.Background(), nil, view.AttemptID, answers)
+	if err != nil {
+		t.Fatalf("guest should be allowed to submit exam: %v", err)
+	}
+	if res == nil || res.Score <= 0 {
+		t.Fatalf("expected graded score > 0 for guest, got %+v", res)
+	}
+
+	// 4. Guest views result
+	resView, err := h.svc.GetExamResult(context.Background(), nil, view.AttemptID)
+	if err != nil {
+		t.Fatalf("guest should be allowed to view result: %v", err)
+	}
+	if resView == nil || resView.Score != res.Score {
+		t.Fatalf("expected result view matching submitted result, got %+v", resView)
 	}
 }
