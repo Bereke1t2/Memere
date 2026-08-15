@@ -4,14 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_motion.dart';
-import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
-import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/app_surface.dart';
 import '../../../../shared/widgets/memere_mascot.dart';
 import '../../../payment/presentation/providers/checkout_flow_provider.dart';
 import '../../../payment/presentation/providers/course_access_provider.dart';
@@ -21,12 +17,17 @@ import '../../domain/entities/course_detail_entity.dart';
 import '../../domain/entities/course_entity.dart';
 import '../../domain/entities/lesson_entity.dart';
 import '../providers/course_detail_provider.dart';
-import '../widgets/course_detail_header.dart';
 import '../widgets/course_detail_skeleton.dart';
 import '../widgets/course_empty_state.dart';
-import '../widgets/course_section_tile.dart';
-import '../widgets/course_stats_row.dart';
+import '../widgets/lesson_tile.dart';
 
+/// Clean, refined Course Detail Screen matching image copy 5.png (Screen 3)
+///
+/// Features:
+/// - Top App Bar with back button and centered Course Title
+/// - Hero Illustration Area with character mascot or course thumbnail
+/// - Curved Course Content Sheet with numbered lessons (01. Title -> [ ▶ ])
+/// - Bottom Sticky Checkout/Enrollment Action Bar
 class CourseDetailScreen extends ConsumerStatefulWidget {
   const CourseDetailScreen({
     super.key,
@@ -59,55 +60,68 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
         ),
         orElse: () => null,
       ),
-      body: AppPageBackground(
-        child: SafeArea(
-          top: false,
-          child: detailAsync.when(
-            loading: () => const CourseDetailSkeleton(),
-            error: (error, _) {
-              final failure = error is Failure ? error : null;
-              final isNotFound =
-                  failure is ServerFailure && failure.statusCode == 404;
-              return CourseEmptyState(
-                icon: isNotFound
-                    ? Icons.hide_source_rounded
-                    : Icons.error_outline_rounded,
-                title:
-                    isNotFound ? 'Course not found' : 'Could not load course',
-                body: isNotFound
-                    ? 'This course may have been removed or unpublished.'
-                    : failure?.message ?? 'Please try again.',
-                buttonLabel: 'Retry',
-                onPressed: () => ref.invalidate(courseDetailProvider(courseId)),
-              );
-            },
-            data: (detail) {
-              return RefreshIndicator(
-                color: AppColors.accentPrimary,
-                backgroundColor: AppColors.bgSecondary,
-                onRefresh: () async {
-                  ref.invalidate(courseDetailProvider(courseId));
-                  ref.invalidate(courseAccessProvider(courseId));
-                  await ref.read(courseDetailProvider(courseId).future);
-                },
-                child: ListView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.zero,
-                  children: [
-                    _DetailTopBand(title: detail.course.title),
-                    _DetailContent(
+      body: SafeArea(
+        top: false,
+        child: detailAsync.when(
+          loading: () => const CourseDetailSkeleton(),
+          error: (error, _) {
+            final failure = error is Failure ? error : null;
+            final isNotFound =
+                failure is ServerFailure && failure.statusCode == 404;
+            return CourseEmptyState(
+              icon: isNotFound
+                  ? Icons.hide_source_rounded
+                  : Icons.error_outline_rounded,
+              title:
+                  isNotFound ? 'Course not found' : 'Could not load course',
+              body: isNotFound
+                  ? 'This course may have been removed or unpublished.'
+                  : failure?.message ?? 'Please try again.',
+              buttonLabel: 'Retry',
+              onPressed: () => ref.invalidate(courseDetailProvider(courseId)),
+            );
+          },
+          data: (detail) {
+            final course = detail.course;
+
+            return RefreshIndicator(
+              color: AppColors.brandEmerald,
+              backgroundColor: AppColors.bgSecondary,
+              onRefresh: () async {
+                ref.invalidate(courseDetailProvider(courseId));
+                ref.invalidate(courseAccessProvider(courseId));
+                await ref.read(courseDetailProvider(courseId).future);
+              },
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  // 1. Top Bar with back button & course title
+                  SliverToBoxAdapter(
+                    child: _DetailTopBar(
+                      title: course.title,
+                      subject: course.subject,
+                    ),
+                  ),
+
+                  // 2. Hero Illustration Area (Mascot or Thumbnail)
+                  SliverToBoxAdapter(
+                    child: _HeroIllustrationArea(course: course),
+                  ),
+
+                  // 3. Curved Course Content Sheet
+                  SliverToBoxAdapter(
+                    child: _CourseContentSheet(
                       detail: detail,
                       hasAccess: hasAccess,
                       selectedTab: _selectedTab,
-                      onTabChanged: (index) {
-                        setState(() => _selectedTab = index);
-                      },
+                      onTabChanged: (index) =>
+                          setState(() => _selectedTab = index),
                     ),
-                  ],
-                ),
-              );
-            },
-          ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
@@ -537,270 +551,6 @@ class _TabButton extends StatelessWidget {
   }
 }
 
-class _TopIconButton extends StatelessWidget {
-  const _TopIconButton({
-    required this.icon,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppPressable(
-      onTap: onTap,
-      borderRadius: AppSizes.radiusFull,
-      child: Container(
-        width: 36,
-        height: 36,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.bgTertiary,
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.borderStrong),
-        ),
-        child:
-            Icon(icon, color: AppColors.textSecondary, size: AppSizes.iconSm),
-      ),
-    );
-  }
-}
-
-class _DetailContent extends StatelessWidget {
-  const _DetailContent({
-    required this.detail,
-    required this.hasAccess,
-    required this.selectedTab,
-    required this.onTabChanged,
-  });
-
-  final CourseDetailEntity detail;
-  final bool hasAccess;
-  final int selectedTab;
-  final ValueChanged<int> onTabChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final course = detail.course;
-    final bottomInset = MediaQuery.paddingOf(context).bottom;
-
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        AppSizes.screenPaddingH,
-        AppSizes.md,
-        AppSizes.screenPaddingH,
-        AppSizes.xxxl + AppSizes.buttonHeight + bottomInset,
-      ),
-      decoration: const BoxDecoration(
-        color: AppColors.bgPrimary,
-        borderRadius: BorderRadius.zero,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CourseDetailHeader(course: course),
-          const SizedBox(height: AppSizes.md),
-          CourseStatsRow(course: course),
-          const SizedBox(height: AppSizes.md),
-          _PriceBand(
-            label: course.priceLabel,
-            isFree: course.isFree,
-            hasAccess: hasAccess,
-          ),
-          const SizedBox(height: AppSizes.md),
-          _DetailTabs(
-            selectedIndex: selectedTab,
-            onChanged: onTabChanged,
-          ),
-          const SizedBox(height: AppSizes.md),
-          AnimatedSwitcher(
-            duration: AppMotion.slow,
-            switchInCurve: AppMotion.standard,
-            switchOutCurve: AppMotion.exit,
-            child: selectedTab == 0
-                ? _CurriculumTab(
-                    key: const ValueKey('classes'),
-                    detail: detail,
-                    canOpenLessons: course.isFree || hasAccess,
-                  )
-                : _DescriptionTab(
-                    key: const ValueKey('description'),
-                    course: course,
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DetailTabs extends StatelessWidget {
-  const _DetailTabs({
-    required this.selectedIndex,
-    required this.onChanged,
-  });
-
-  final int selectedIndex;
-  final ValueChanged<int> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 44,
-      decoration: BoxDecoration(
-        color: AppColors.bgTertiary,
-        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-        border: Border.all(color: AppColors.borderStrong),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final width = constraints.maxWidth / 2;
-          return Stack(
-            children: [
-              AnimatedPositioned(
-                duration: AppMotion.base,
-                curve: AppMotion.standard,
-                left: selectedIndex * width,
-                top: 4,
-                bottom: 4,
-                width: width,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.textPrimary.withAlpha(28),
-                    borderRadius: BorderRadius.circular(AppSizes.radiusFull),
-                    boxShadow: AppShadows.sm,
-                  ),
-                ),
-              ),
-              Row(
-                children: [
-                  _TabButton(
-                    label: 'All Classes',
-                    selected: selectedIndex == 0,
-                    onTap: () => onChanged(0),
-                  ),
-                  _TabButton(
-                    label: 'Description',
-                    selected: selectedIndex == 1,
-                    onTap: () => onChanged(1),
-                  ),
-                ],
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _TabButton extends StatelessWidget {
-  const _TabButton({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: AppPressable(
-        onTap: onTap,
-        borderRadius: AppSizes.radiusFull,
-        child: Center(
-          child: AnimatedDefaultTextStyle(
-            duration: AppMotion.base,
-            style: AppTextStyles.labelMedium.copyWith(
-              color: selected ? AppColors.textPrimary : AppColors.textSecondary,
-            ),
-            child: Text(label),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CurriculumTab extends StatelessWidget {
-  const _CurriculumTab({
-    super.key,
-    required this.detail,
-    required this.canOpenLessons,
-  });
-
-  final CourseDetailEntity detail;
-  final bool canOpenLessons;
-
-  @override
-  Widget build(BuildContext context) {
-    if (detail.sections.isEmpty) {
-      return const CourseEmptyState(
-        icon: Icons.menu_book_outlined,
-        title: 'No curriculum yet',
-        body: 'Lessons will appear here when this course is ready.',
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppSectionHeader(
-          title: 'All Classes',
-          subtitle: '${detail.sections.length} sections',
-        ),
-        const SizedBox(height: AppSizes.md),
-        ...detail.sections.asMap().entries.map(
-              (entry) => Padding(
-                padding: const EdgeInsets.only(bottom: AppSizes.md),
-                child: CourseSectionTile(
-                  section: entry.value,
-                  sectionNumber: entry.key + 1,
-                  initiallyExpanded: true,
-                  canOpenLessons: canOpenLessons,
-                ),
-              ),
-            ),
-      ],
-    );
-  }
-}
-
-class _DescriptionTab extends StatelessWidget {
-  const _DescriptionTab({
-    super.key,
-    required this.course,
-  });
-
-  final CourseEntity course;
-
-  @override
-  Widget build(BuildContext context) {
-    final description = course.description.isNotEmpty
-        ? course.description
-        : course.shortDescription;
-
-    return AppSurface(
-      padding: const EdgeInsets.all(AppSizes.lg),
-      color: AppColors.bgSecondary,
-      radius: AppSizes.radiusXl,
-      shadows: AppShadows.sm,
-      child: Text(
-        description.isNotEmpty
-            ? description
-            : 'Course details will appear here when this class is ready.',
-        style: AppTextStyles.bodyMedium.copyWith(
-          color: AppColors.textSecondary,
-        ),
-      ),
-    );
-  }
-}
-
 /// Bottom Sticky CTA that reflects real access state and drives checkout
 class _CheckoutCtaBar extends ConsumerStatefulWidget {
   const _CheckoutCtaBar({
@@ -1018,124 +768,6 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
-    );
-  }
-}
-
-class _PriceBand extends StatelessWidget {
-  const _PriceBand({
-    required this.label,
-    required this.isFree,
-    required this.hasAccess,
-  });
-
-  final String label;
-  final bool isFree;
-  final bool hasAccess;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.bgSecondary,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: hasAccess ? const Color(0xFF4ADE80) : const Color(0x44FF5252),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: hasAccess
-                      ? const Color(0x224ADE80)
-                      : (isFree ? const Color(0x224ADE80) : const Color(0x22FF5252)),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  hasAccess
-                      ? Icons.verified_rounded
-                      : (isFree ? Icons.lock_open_rounded : Icons.workspace_premium_rounded),
-                  color: hasAccess
-                      ? const Color(0xFF4ADE80)
-                      : (isFree ? const Color(0xFF4ADE80) : const Color(0xFFFF5252)),
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      hasAccess
-                          ? 'Full Course Access Unlocked'
-                          : (isFree ? '100% Free Course' : 'Lifetime Access • $label'),
-                      style: AppTextStyles.titleMedium.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      hasAccess
-                          ? 'You are enrolled. Open any lesson below to learn.'
-                          : 'One-time payment • No monthly subscription',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.textMuted,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: AppColors.border),
-          const SizedBox(height: 10),
-          const Wrap(
-            spacing: 16,
-            runSpacing: 8,
-            children: [
-              _FeatureCheck(label: 'Full HD Video Lessons'),
-              _FeatureCheck(label: 'Downloadable PDF Notes'),
-              _FeatureCheck(label: 'Interactive Quizzes'),
-              _FeatureCheck(label: 'Certificate Included'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FeatureCheck extends StatelessWidget {
-  const _FeatureCheck({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.check_circle_rounded, size: 14, color: Color(0xFF4ADE80)),
-        const SizedBox(width: 6),
-        Text(
-          label,
-          style: AppTextStyles.caption.copyWith(
-            color: AppColors.textSecondary,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
     );
   }
 }
