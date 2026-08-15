@@ -53,6 +53,7 @@ abstract class AppRoutes {
   static String pdfReaderPath({
     required String title,
     required String pdfUrl,
+    String? lessonId,
     String? content,
   }) {
     return Uri(
@@ -60,6 +61,7 @@ abstract class AppRoutes {
       queryParameters: {
         'title': title,
         'pdfUrl': pdfUrl,
+        if (lessonId != null && lessonId.isNotEmpty) 'lessonId': lessonId,
         if (content != null && content.isNotEmpty) 'content': content,
       },
     ).toString();
@@ -247,6 +249,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           return PdfReaderScreen(
             title: query['title'] ?? 'Lesson Document',
             pdfUrl: query['pdfUrl'] ?? '',
+            lessonId: query['lessonId'],
             content: query['content'],
           );
         },
