@@ -274,6 +274,74 @@ class _CourseListContent extends ConsumerWidget {
 }
 
 /// Duolingo Header Top Bar with Profile Avatar, Greeting, Streak 🔥, and XP ⚡ Badges
+/// Minimalist App Bar: 'Memere' on left, Profile avatar on right
+class _HomeTopBar extends ConsumerWidget {
+  const _HomeTopBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider).valueOrNull?.user;
+    final firstName = user?.firstName.trim();
+    final initial = firstName == null || firstName.isEmpty
+        ? 'M'
+        : firstName.substring(0, 1).toUpperCase();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSizes.screenPaddingH,
+        AppSizes.md,
+        AppSizes.screenPaddingH,
+        0,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Memere Brand Name
+          const Text(
+            'Memere',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+              color: AppColors.brandEmerald,
+              letterSpacing: -0.6,
+            ),
+          ),
+
+          // Clickable Profile Avatar (navigates to Account page)
+          InkWell(
+            onTap: () => context.go(AppRoutes.profile),
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: AppColors.brandEmerald,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.brandEmerald.withAlpha(80),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Text(
+                initial,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _DashboardHeader extends ConsumerWidget {
   const _DashboardHeader({required this.searchController});
 
