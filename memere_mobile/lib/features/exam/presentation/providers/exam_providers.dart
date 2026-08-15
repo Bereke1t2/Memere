@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/dio_client.dart';
 import '../../data/datasources/exam_remote_datasource.dart';
 import '../../data/repositories/exam_repository_impl.dart';
+import '../../domain/entities/exam_attempt_history_entity.dart';
 import '../../domain/repositories/exam_repository.dart';
 import '../../domain/usecases/get_exam_analytics_usecase.dart';
 import '../../domain/usecases/get_exam_result_usecase.dart';
 import '../../domain/usecases/list_mock_exams_usecase.dart';
+import '../../domain/usecases/list_my_exam_attempts_usecase.dart';
 import '../../domain/usecases/save_exam_progress_usecase.dart';
 import '../../domain/usecases/start_exam_usecase.dart';
 import '../../domain/usecases/submit_exam_usecase.dart';
@@ -43,4 +45,31 @@ final getExamResultUseCaseProvider = Provider<GetExamResultUseCase>((ref) {
 final getExamAnalyticsUseCaseProvider =
     Provider<GetExamAnalyticsUseCase>((ref) {
   return GetExamAnalyticsUseCase(ref.watch(examRepositoryProvider));
+});
+
+final listMyExamAttemptsUseCaseProvider =
+    Provider<ListMyExamAttemptsUseCase>((ref) {
+  return ListMyExamAttemptsUseCase(ref.watch(examRepositoryProvider));
+});
+
+/// Fetches all attempts made by the current user across all mock exams.
+final myAllExamAttemptsProvider =
+    FutureProvider<List<ExamAttemptHistoryEntity>>((ref) async {
+  final useCase = ref.watch(listMyExamAttemptsUseCaseProvider);
+  final result = await useCase();
+  return result.fold(
+    (failure) => <ExamAttemptHistoryEntity>[],
+    (attempts) => attempts,
+  );
+});
+
+/// Fetches attempts made by the user for a specific exam.
+final examAttemptsByExamProvider =
+    FutureProvider.family<List<ExamAttemptHistoryEntity>, String>((ref, examId) async {
+  final useCase = ref.watch(listMyExamAttemptsUseCaseProvider);
+  final result = await useCase(examId: examId);
+  return result.fold(
+    (failure) => <ExamAttemptHistoryEntity>[],
+    (attempts) => attempts,
+  );
 });
