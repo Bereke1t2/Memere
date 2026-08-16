@@ -1,20 +1,17 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:go_router/go_router.dart';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/storage/secure_pdf_storage.dart';
 import '../../../../shared/widgets/ai_robot_mascot.dart';
 
 /// In-App PDF & Study Notes Reader for Memere.
-/// Features:
-/// - Dual-mode workspace: [ Study Notes ] and [ PDF Document ]
-/// - Top Obsidian Header with dynamic Page X of Y, % completion badge, and Day/Night mode
-/// - Adjustable font scaling and 1-tap Copy Notes
-/// - High-performance PDF Document Viewer with Jump to Page dialog & orientation toggle
-/// - In-App Quick Notes taking & AI Concept Tutor
+/// Uses the high-performance native PDFView background engine (from btluBook-Store)
+/// while maintaining the full Obsidian header, dual-mode tabs, font controls,
+/// and note-taking UI.
 class PdfReaderScreen extends StatefulWidget {
   const PdfReaderScreen({
     super.key,
@@ -45,9 +42,9 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   bool _isNightMode = true;
   double _fontSize = 15.0;
   int _activeTab = 0; // 0: Study Notes, 1: PDF Document
-  PdfScrollDirection _scrollDirection = PdfScrollDirection.vertical;
+  bool _isSwipeHorizontal = false;
 
-  late PdfViewerController _pdfViewerController;
+  PDFViewController? _pdfViewController;
   final List<String> _userNotes = [];
 
   String get _effectiveContent =>
@@ -62,7 +59,6 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   @override
   void initState() {
     super.initState();
-    _pdfViewerController = PdfViewerController();
 
     // Default to PDF Document if a specific PDF is attached, otherwise Study Notes
     if (widget.pdfUrl.trim().isNotEmpty && widget.pdfUrl.trim() != 'sample.pdf') {
@@ -72,12 +68,6 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     }
 
     _initializePdf();
-  }
-
-  @override
-  void dispose() {
-    _pdfViewerController.dispose();
-    super.dispose();
   }
 
   Future<void> _initializePdf() async {
@@ -225,7 +215,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               onPressed: () {
                 final page = int.tryParse(textController.text.trim());
                 if (page != null && page >= 1 && page <= _totalPages) {
-                  _pdfViewerController.jumpToPage(page);
+                  _pdfViewController?.setPage(page - 1);
+                  setState(() => _currentPage = page);
                   Navigator.pop(context);
                 }
               },
@@ -1187,7 +1178,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     );
   }
 
-  /// Full Syncfusion PDF Reader Canvas with Bottom Navigation & Jump Controls
+  /// Full PDF Reader Canvas using native PDFView from btluBook-Store
   Widget _buildPdfCanvasView(
     Color cardColor,
     Color textColor,
@@ -1202,7 +1193,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(24),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
                           Icons.error_outline_rounded,
@@ -1248,35 +1239,51 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                     ),
                   ),
                 )
-              : SfPdfViewer.file(
-                  File(_localPdfPath!),
+              : PDFView(
                   key: ValueKey(
-                    '${_localPdfPath}_${File(_localPdfPath!).existsSync() ? File(_localPdfPath!).lastModifiedSync().millisecondsSinceEpoch : 0}',
+                    '${_localPdfPath}_${_isSwipeHorizontal}_${File(_localPdfPath!).existsSync() ? File(_localPdfPath!).lastModifiedSync().millisecondsSinceEpoch : 0}',
                   ),
-                  controller: _pdfViewerController,
-                  scrollDirection: _scrollDirection,
-                  canShowScrollHead: true,
-                  canShowScrollStatus: true,
-                  enableDoubleTapZooming: true,
-                  onDocumentLoaded: (PdfDocumentLoadedDetails details) {
+                  filePath: _localPdfPath!,
+                  enableSwipe: true,
+                  swipeHorizontal: _isSwipeHorizontal,
+                  autoSpacing: false,
+                  pageFling: true,
+                  pageSnap: true,
+                  fitPolicy: FitPolicy.BOTH,
+                  preventLinkNavigation: false,
+                  defaultPage: _currentPage > 0 ? _currentPage - 1 : 0,
+                  onRender: (pages) {
                     if (mounted) {
                       setState(() {
-                        _totalPages = details.document.pages.count;
+                        _totalPages = pages ?? 1;
                         _pdfRenderError = null;
                       });
                     }
                   },
-                  onPageChanged: (PdfPageChangedDetails details) {
+                  onError: (error) {
                     if (mounted) {
                       setState(() {
-                        _currentPage = details.newPageNumber;
+                        _pdfRenderError = error.toString();
                       });
                     }
                   },
-                  onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
+                  onPageError: (page, error) {
                     if (mounted) {
                       setState(() {
-                        _pdfRenderError = '${details.error}: ${details.description}';
+                        _pdfRenderError = 'Page $page: ${error.toString()}';
+                      });
+                    }
+                  },
+                  onViewCreated: (PDFViewController pdfViewController) {
+                    _pdfViewController = pdfViewController;
+                  },
+                  onPageChanged: (int? page, int? total) {
+                    if (mounted) {
+                      setState(() {
+                        _currentPage = (page ?? 0) + 1;
+                        if (total != null && total > 0) {
+                          _totalPages = total;
+                        }
                       });
                     }
                   },
@@ -1296,7 +1303,9 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               // Previous Page Button
               IconButton(
                 onPressed: _currentPage > 1
-                    ? () => _pdfViewerController.previousPage()
+                    ? () {
+                        _pdfViewController?.setPage((_currentPage - 2).clamp(0, _totalPages - 1));
+                      }
                     : null,
                 icon: const Icon(Icons.chevron_left_rounded),
                 color: textColor,
@@ -1335,7 +1344,9 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               // Next Page Button
               IconButton(
                 onPressed: _currentPage < _totalPages
-                    ? () => _pdfViewerController.nextPage()
+                    ? () {
+                        _pdfViewController?.setPage(_currentPage.clamp(0, _totalPages - 1));
+                      }
                     : null,
                 icon: const Icon(Icons.chevron_right_rounded),
                 color: textColor,
@@ -1346,19 +1357,17 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               IconButton(
                 onPressed: () {
                   setState(() {
-                    _scrollDirection = _scrollDirection == PdfScrollDirection.vertical
-                        ? PdfScrollDirection.horizontal
-                        : PdfScrollDirection.vertical;
+                    _isSwipeHorizontal = !_isSwipeHorizontal;
                   });
                 },
                 icon: Icon(
-                  _scrollDirection == PdfScrollDirection.vertical
+                  !_isSwipeHorizontal
                       ? Icons.swap_horiz_rounded
                       : Icons.swap_vert_rounded,
                   size: 20,
                 ),
                 color: mutedColor,
-                tooltip: _scrollDirection == PdfScrollDirection.vertical
+                tooltip: !_isSwipeHorizontal
                     ? 'Switch to Horizontal Flip'
                     : 'Switch to Vertical Scroll',
               ),
