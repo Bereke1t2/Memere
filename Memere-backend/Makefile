@@ -105,6 +105,9 @@ sqlc:
 seed:
 	go run ./scripts/seed
 
+seed-courses:
+	go run ./cmd/seed-comprehensive-courses
+
 seed-mock-exams:
 	go run ./cmd/seed-mock-exams
 
