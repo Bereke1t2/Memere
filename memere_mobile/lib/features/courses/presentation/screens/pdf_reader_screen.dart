@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
@@ -7,9 +8,13 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/storage/secure_pdf_storage.dart';
 import '../../../../shared/widgets/ai_robot_mascot.dart';
 
-/// Secure In-App PDF Document & Lesson Notes Reader.
-/// Stored in app-private sandbox storage (`/data/user/0/.../app_flutter/pdfs/`)
-/// with DRM-protected playback preventing external sharing or export.
+/// In-App PDF & Study Notes Reader for Memere.
+/// Features:
+/// - Dual-mode workspace: [ Study Notes ] and [ PDF Document ]
+/// - Top Obsidian Header with dynamic Page X of Y, % completion badge, and Day/Night mode
+/// - Adjustable font scaling and 1-tap Copy Notes
+/// - High-performance PDF Document Viewer with Jump to Page dialog & orientation toggle
+/// - In-App Quick Notes taking & AI Concept Tutor
 class PdfReaderScreen extends StatefulWidget {
   const PdfReaderScreen({
     super.key,
@@ -38,15 +43,35 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   int _currentPage = 1;
   int _totalPages = 1;
   bool _isNightMode = true;
-  late PdfViewerController _pdfViewerController;
+  double _fontSize = 15.0;
+  int _activeTab = 0; // 0: Study Notes, 1: PDF Document
+  PdfScrollDirection _scrollDirection = PdfScrollDirection.vertical;
 
-  String get _fileKey => SecurePdfStorage.getFileKey(widget.pdfUrl, title: widget.title);
+  late PdfViewerController _pdfViewerController;
+  final List<String> _userNotes = [];
+
+  String get _effectiveContent =>
+      SecurePdfStorage.getEffectiveContent(widget.title, widget.content);
+
+  String get _fileKey =>
+      SecurePdfStorage.getFileKey(widget.pdfUrl, title: widget.title);
+
+  int get _progressPercent =>
+      _totalPages > 0 ? ((_currentPage / _totalPages) * 100).clamp(0, 100).toInt() : 0;
 
   @override
   void initState() {
     super.initState();
     _pdfViewerController = PdfViewerController();
-    _initializeAndOpen();
+
+    // Default to PDF Document if a specific PDF is attached, otherwise Study Notes
+    if (widget.pdfUrl.trim().isNotEmpty && widget.pdfUrl.trim() != 'sample.pdf') {
+      _activeTab = 1;
+    } else {
+      _activeTab = 0;
+    }
+
+    _initializePdf();
   }
 
   @override
@@ -55,7 +80,13 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     super.dispose();
   }
 
-  Future<void> _initializeAndOpen() async {
+  Future<void> _initializePdf() async {
+    setState(() {
+      _isDownloading = true;
+      _downloadProgress = 0.1;
+      _pdfRenderError = null;
+    });
+
     try {
       final isSaved = await SecurePdfStorage.isDownloaded(_fileKey);
       if (isSaved) {
@@ -65,23 +96,23 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
             _localPdfPath = pdfFile.path;
             _isSavedToDownloads = true;
             _showPdfCanvas = true;
+            _isDownloading = false;
           });
           return;
         }
       }
     } catch (_) {}
 
-    // If not already cached, start automatic download & compilation
     if (mounted) {
       _downloadPdf();
     }
   }
 
   Future<void> _downloadPdf() async {
-    if (_isDownloading) return;
+    if (_isDownloading && _downloadProgress > 0.3) return;
     setState(() {
       _isDownloading = true;
-      _downloadProgress = 0.05;
+      _downloadProgress = 0.15;
       _pdfRenderError = null;
     });
 
@@ -91,7 +122,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
         fileKey: _fileKey,
         lessonId: widget.lessonId,
         title: widget.title,
-        content: widget.content,
+        content: _effectiveContent,
         onProgress: (progress) {
           if (mounted) {
             setState(() {
@@ -130,11 +161,201 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('PDF removed from offline storage cache.'),
+          content: Text('Document removed from local cache.'),
           duration: Duration(seconds: 2),
         ),
       );
     } catch (_) {}
+  }
+
+  void _showJumpToPageDialog() {
+    final textController = TextEditingController(text: '$_currentPage');
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: _isNightMode ? AppColors.bgSecondary : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Jump to Page',
+            style: TextStyle(
+              fontFamily: 'Sora',
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+              color: _isNightMode ? Colors.white : Colors.black87,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Enter page number (1 to $_totalPages):',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: _isNightMode ? AppColors.textMuted : Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: textController,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: _isNightMode ? Colors.white : Colors.black,
+                ),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: _isNightMode ? const Color(0xFF141824) : const Color(0xFFF1F5F9),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final page = int.tryParse(textController.text.trim());
+                if (page != null && page >= 1 && page <= _totalPages) {
+                  _pdfViewerController.jumpToPage(page);
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.brandEmerald,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Go'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showAddNoteBottomSheet() {
+    final noteCtrl = TextEditingController();
+    final cardColor = _isNightMode ? AppColors.bgSecondary : Colors.white;
+    final textColor = _isNightMode ? Colors.white : const Color(0xFF0F172A);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: cardColor,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              border: Border.all(
+                color: _isNightMode ? AppColors.borderStrong : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    const Icon(Icons.edit_note_rounded, color: AppColors.brandEmerald, size: 22),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Study Notes for ${widget.title}',
+                      style: TextStyle(
+                        fontFamily: 'Sora',
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: noteCtrl,
+                  maxLines: 4,
+                  autofocus: true,
+                  style: TextStyle(color: textColor, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Jot down key formulas, insights, or questions...',
+                    hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                    filled: true,
+                    fillColor: _isNightMode ? const Color(0xFF141824) : const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: _isNightMode ? AppColors.borderStrong : const Color(0xFFE2E8F0),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    final text = noteCtrl.text.trim();
+                    if (text.isNotEmpty) {
+                      setState(() {
+                        _userNotes.add(text);
+                      });
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Note saved to this lesson!'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.brandEmerald,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 44),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.check_rounded, size: 18),
+                  label: const Text('Save Note'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _copyNotesToClipboard() {
+    Clipboard.setData(ClipboardData(text: _effectiveContent));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Lesson notes copied to clipboard.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _openAiTutor() {
@@ -166,7 +387,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               ),
               const SizedBox(height: 14),
               Text(
-                'Studying "${widget.title}"...\nAsk questions or get instant step-by-step explanations for formulas and exam questions!',
+                'Studying "${widget.title}"...\nAsk questions, request step-by-step formula derivations, or solve entrance exam questions with AI!',
                 style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
               ),
               const SizedBox(height: 20),
@@ -192,75 +413,710 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = _isNightMode ? const Color(0xFF0B0F17) : const Color(0xFFF8FAFC);
-    final cardColor = _isNightMode ? const Color(0xFF131C2E) : Colors.white;
-    final textColor = _isNightMode ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A);
-    final mutedColor = _isNightMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
-    final borderColor = _isNightMode ? const Color(0xFF1E293B) : const Color(0xFFE2E8F0);
+    final bgColor = _isNightMode ? AppColors.bgPrimary : const Color(0xFFF8FAFC);
+    final cardColor = _isNightMode ? AppColors.bgSecondary : Colors.white;
+    final textColor = _isNightMode ? AppColors.textPrimary : const Color(0xFF0F172A);
+    final mutedColor = _isNightMode ? AppColors.textMuted : const Color(0xFF64748B);
+    final borderColor = _isNightMode ? AppColors.borderStrong : const Color(0xFFE2E8F0);
 
     return Scaffold(
       backgroundColor: bgColor,
-      appBar: AppBar(
-        backgroundColor: cardColor,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_rounded,
-            color: textColor,
-            size: 20,
-          ),
-          onPressed: () => context.pop(),
-          tooltip: 'Back',
-        ),
-        title: Text(
-          widget.title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: textColor,
-          ),
-        ),
-        actions: [
-          if (_isSavedToDownloads) ...[
-            IconButton(
-              icon: const Icon(Icons.cached_rounded, size: 20),
-              color: mutedColor,
-              tooltip: 'Reload PDF Document',
-              onPressed: _downloadPdf,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.brandEmerald,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 8,
+        tooltip: 'Add Note / Ask AI Tutor',
+        onPressed: _showAddNoteBottomSheet,
+        child: const Icon(Icons.edit_note_rounded, size: 26),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // 1. Premium Obsidian Header
+            _buildObsidianHeader(cardColor, textColor, mutedColor, borderColor),
+
+            // 2. Mode Switcher Bar ([ Study Notes ] [ PDF Document ])
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+              child: Container(
+                height: 38,
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: borderColor),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _ReaderTabItem(
+                        label: 'Study Notes',
+                        icon: Icons.article_outlined,
+                        isSelected: _activeTab == 0,
+                        isNightMode: _isNightMode,
+                        onTap: () => setState(() => _activeTab = 0),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: _ReaderTabItem(
+                        label: 'PDF Document',
+                        icon: Icons.picture_as_pdf_outlined,
+                        isSelected: _activeTab == 1,
+                        isNightMode: _isNightMode,
+                        onTap: () {
+                          setState(() => _activeTab = 1);
+                          if (_localPdfPath == null && !_isDownloading) {
+                            _downloadPdf();
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            IconButton(
-              icon: const Icon(Icons.delete_outline_rounded, size: 20),
-              color: mutedColor,
-              tooltip: 'Clear Offline Cache',
-              onPressed: _deletePdf,
+
+            // 3. Sub-Toolbar for Study Notes (Font sizing & copy action)
+            if (_activeTab == 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text(
+                        'Font Size',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textMuted,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      InkWell(
+                        onTap: _fontSize > 12.0
+                            ? () => setState(() => _fontSize -= 1.5)
+                            : null,
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: _isNightMode ? const Color(0xFF181820) : const Color(0xFFE2E8F0),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'A-',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: _fontSize > 12.0 ? textColor : mutedColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${_fontSize.toInt()}pt',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: textColor,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      InkWell(
+                        onTap: _fontSize < 22.0
+                            ? () => setState(() => _fontSize += 1.5)
+                            : null,
+                        borderRadius: BorderRadius.circular(6),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: _isNightMode ? const Color(0xFF181820) : const Color(0xFFE2E8F0),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'A+',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: _fontSize < 22.0 ? textColor : mutedColor,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      InkWell(
+                        onTap: _copyNotesToClipboard,
+                        borderRadius: BorderRadius.circular(6),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.copy_rounded, size: 14, color: mutedColor),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Copy Notes',
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: textColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // 4. Main Body Content
+            Expanded(
+              child: _activeTab == 0
+                  ? _buildStudyNotesView(textColor, mutedColor, borderColor, cardColor)
+                  : (_isDownloading
+                      ? _buildLoadingView(cardColor, textColor, mutedColor, borderColor)
+                      : (_showPdfCanvas && _localPdfPath != null
+                          ? _buildPdfCanvasView(cardColor, textColor, mutedColor, borderColor)
+                          : _buildErrorOrEmptyView(cardColor, textColor, mutedColor, borderColor))),
             ),
           ],
-          IconButton(
-            icon: Icon(
-              _isNightMode ? Icons.wb_sunny_outlined : Icons.nightlight_round,
-              color: textColor,
-              size: 20,
-            ),
-            tooltip: _isNightMode ? 'Light Mode' : 'Dark Mode',
-            onPressed: () => setState(() => _isNightMode = !_isNightMode),
-          ),
-        ],
-      ),
-      floatingActionButton: AiTutorFab(onPressed: _openAiTutor),
-      body: SafeArea(
-        child: _isDownloading
-            ? _buildLoadingView(cardColor, textColor, mutedColor, borderColor)
-            : (_showPdfCanvas && _localPdfPath != null
-                ? _buildPdfCanvasView(cardColor, textColor, mutedColor, borderColor)
-                : _buildErrorOrEmptyView(cardColor, textColor, mutedColor, borderColor)),
+        ),
       ),
     );
   }
 
-  /// Downloading & Preparation View
+  /// Floating Header with Back, Title, Progress Pill, and Action Buttons
+  Widget _buildObsidianHeader(
+    Color cardColor,
+    Color textColor,
+    Color mutedColor,
+    Color borderColor,
+  ) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+      decoration: BoxDecoration(
+        color: cardColor,
+        border: Border(bottom: BorderSide(color: borderColor)),
+      ),
+      child: Row(
+        children: [
+          // Back icon
+          GestureDetector(
+            onTap: () => context.pop(),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: _isNightMode ? const Color(0xFF161B26) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                color: textColor,
+                size: 16,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // Title & Progress Subtitle
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.title,
+                  style: TextStyle(
+                    fontFamily: 'Sora',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: textColor,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                if (_activeTab == 1 && _showPdfCanvas)
+                  Text(
+                    'Page $_currentPage of $_totalPages',
+                    style: TextStyle(fontSize: 11, color: mutedColor),
+                  )
+                else
+                  Text(
+                    'Grade 12 National Exam Prep',
+                    style: TextStyle(fontSize: 11, color: mutedColor),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // Progress % Badge
+          if (_activeTab == 1 && _showPdfCanvas && _totalPages > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0x1810B981),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0x3510B981)),
+              ),
+              child: Text(
+                '$_progressPercent%',
+                style: const TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.brandEmerald,
+                ),
+              ),
+            ),
+
+          // Night / Light Mode Toggle
+          IconButton(
+            icon: Icon(
+              _isNightMode ? Icons.wb_sunny_outlined : Icons.nightlight_round,
+              color: textColor,
+              size: 19,
+            ),
+            tooltip: _isNightMode ? 'Light Mode' : 'Dark Mode',
+            onPressed: () => setState(() => _isNightMode = !_isNightMode),
+          ),
+
+          // Options Menu (Reload / Clear Cache)
+          if (_activeTab == 1 && _isSavedToDownloads)
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert_rounded, color: mutedColor, size: 20),
+              color: cardColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              onSelected: (val) {
+                if (val == 'reload') {
+                  _downloadPdf();
+                } else if (val == 'delete') {
+                  _deletePdf();
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'reload',
+                  child: Row(
+                    children: [
+                      Icon(Icons.refresh_rounded, size: 16, color: textColor),
+                      const SizedBox(width: 8),
+                      Text('Reload Document', style: TextStyle(color: textColor, fontSize: 13)),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFEF4444)),
+                      SizedBox(width: 8),
+                      Text('Clear Cache', style: TextStyle(color: Color(0xFFEF4444), fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+          // AI Tutor Quick Button
+          IconButton(
+            icon: const Icon(Icons.smart_toy_outlined, color: AppColors.brandEmerald, size: 20),
+            tooltip: 'AI Concept Tutor',
+            onPressed: _openAiTutor,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Rich Study Notes View for reading lecture notes and summaries
+  Widget _buildStudyNotesView(
+    Color textColor,
+    Color mutedColor,
+    Color borderColor,
+    Color cardColor,
+  ) {
+    final noteContent = _effectiveContent;
+    final wordCount = noteContent.split(RegExp(r'\s+')).length;
+    final estimatedReadTime = ((wordCount / 180).ceil()).clamp(1, 45);
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 90),
+      children: [
+        // Header Meta Pill
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0x1810B981),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0x3510B981)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.school_rounded,
+                    size: 13,
+                    color: AppColors.brandEmerald,
+                  ),
+                  SizedBox(width: 5),
+                  Text(
+                    'STUDY NOTES',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.brandEmerald,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              '~$estimatedReadTime min read',
+              style: TextStyle(
+                fontSize: 12,
+                color: mutedColor,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Title
+        Text(
+          widget.title,
+          style: TextStyle(
+            fontFamily: 'Sora',
+            fontSize: 21,
+            fontWeight: FontWeight.w800,
+            color: textColor,
+            letterSpacing: -0.4,
+            height: 1.25,
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        Divider(color: borderColor, height: 1),
+        const SizedBox(height: 16),
+
+        // Formatted Note Paragraphs & Sections
+        ..._parseAndRenderNotes(noteContent, textColor, mutedColor, borderColor, cardColor),
+
+        // Personal User Notes Section (if any added)
+        if (_userNotes.isNotEmpty) ...[
+          const SizedBox(height: 24),
+          Text(
+            'My Revision Notes (${_userNotes.length})',
+            style: TextStyle(
+              fontFamily: 'Sora',
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ..._userNotes.map(
+            (n) => Container(
+              margin: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _isNightMode ? const Color(0xFF141824) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0x3510B981)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.bookmark_outline_rounded, size: 16, color: AppColors.brandEmerald),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      n,
+                      style: TextStyle(fontSize: 13, color: textColor),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+
+        const SizedBox(height: 32),
+
+        // End of Lesson Note Card
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: borderColor),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: Color(0x1810B981),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.check_circle_rounded,
+                  color: AppColors.brandEmerald,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'End of Study Notes',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Ready to test your knowledge? Try the mock practice or ask the AI Tutor.',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        color: mutedColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Parses text lines into clean, formatted typographic blocks
+  List<Widget> _parseAndRenderNotes(
+    String content,
+    Color textColor,
+    Color mutedColor,
+    Color borderColor,
+    Color cardColor,
+  ) {
+    final widgets = <Widget>[];
+    final lines = content.split('\n');
+
+    for (int i = 0; i < lines.length; i++) {
+      final line = lines[i].trim();
+      if (line.isEmpty) {
+        widgets.add(const SizedBox(height: 10));
+        continue;
+      }
+
+      // 1. Heading 1 (# Heading)
+      if (line.startsWith('# ')) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 14, bottom: 8),
+            child: Text(
+              line.substring(2).trim(),
+              style: TextStyle(
+                fontFamily: 'Sora',
+                fontSize: _fontSize + 4,
+                fontWeight: FontWeight.w800,
+                color: textColor,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ),
+        );
+      }
+      // 2. Heading 2 (## Heading)
+      else if (line.startsWith('## ')) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 12, bottom: 6),
+            child: Text(
+              line.substring(3).trim(),
+              style: TextStyle(
+                fontFamily: 'Sora',
+                fontSize: _fontSize + 2,
+                fontWeight: FontWeight.w700,
+                color: textColor,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ),
+        );
+      }
+      // 3. Heading 3 (### Heading)
+      else if (line.startsWith('### ')) {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 10, bottom: 4),
+            child: Text(
+              line.substring(4).trim(),
+              style: TextStyle(
+                fontSize: _fontSize + 1,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
+            ),
+          ),
+        );
+      }
+      // 4. Quote / Callout Block (> Note...)
+      else if (line.startsWith('> ') || line.startsWith('Important:') || line.startsWith('Note:')) {
+        final text = line.startsWith('> ') ? line.substring(2) : line;
+        widgets.add(
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: _isNightMode
+                  ? const Color(0xFF141824)
+                  : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10),
+              border: Border(
+                left: const BorderSide(color: AppColors.brandEmerald, width: 3.5),
+                top: BorderSide(color: borderColor),
+                right: BorderSide(color: borderColor),
+                bottom: BorderSide(color: borderColor),
+              ),
+            ),
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: _fontSize - 0.5,
+                fontWeight: FontWeight.w500,
+                color: textColor,
+                height: 1.45,
+              ),
+            ),
+          ),
+        );
+      }
+      // 5. Bullet List Items (- or * or •)
+      else if (line.startsWith('- ') || line.startsWith('* ') || line.startsWith('• ')) {
+        final bulletText = line.substring(2).trim();
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6, left: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, right: 8),
+                  child: Container(
+                    width: 5,
+                    height: 5,
+                    decoration: const BoxDecoration(
+                      color: AppColors.brandEmerald,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    _stripMarkdownMarkers(bulletText),
+                    style: TextStyle(
+                      fontSize: _fontSize,
+                      color: textColor,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      // 6. Numbered items (1. 2. etc.)
+      else if (RegExp(r'^\d+\.\s+').hasMatch(line)) {
+        final match = RegExp(r'^(\d+\.)\s+(.*)$').firstMatch(line);
+        final numPrefix = match?.group(1) ?? '';
+        final bodyText = match?.group(2) ?? line;
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6, left: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 24,
+                  child: Text(
+                    numPrefix,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.brandEmerald,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Text(
+                    _stripMarkdownMarkers(bodyText),
+                    style: TextStyle(
+                      fontSize: _fontSize,
+                      color: textColor,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      // 7. Standard Paragraph Text
+      else {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: SelectableText(
+              _stripMarkdownMarkers(line),
+              style: TextStyle(
+                fontSize: _fontSize,
+                color: textColor.withAlpha(240),
+                height: 1.6,
+                letterSpacing: 0.1,
+              ),
+            ),
+          ),
+        );
+      }
+    }
+
+    return widgets;
+  }
+
+  String _stripMarkdownMarkers(String text) {
+    return text
+        .replaceAll('**', '')
+        .replaceAll('__', '')
+        .replaceAll('`', '');
+  }
+
+  /// Loading View for PDF
   Widget _buildLoadingView(
     Color cardColor,
     Color textColor,
@@ -278,16 +1134,17 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
             const AiRobotMascot(size: 64, backgroundColor: AppColors.brandEmerald),
             const SizedBox(height: 20),
             Text(
-              'Loading Study Material...',
+              'Opening Study Document...',
               style: TextStyle(
-                fontSize: 17,
+                fontFamily: 'Sora',
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: textColor,
               ),
             ),
             const SizedBox(height: 6),
             Text(
-              'Decrypting and caching in secure local storage.',
+              'Rendering high-yield exam guide & diagrams.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 12, color: mutedColor),
             ),
@@ -317,13 +1174,20 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 24),
+            TextButton.icon(
+              onPressed: () => setState(() => _activeTab = 0),
+              icon: const Icon(Icons.article_outlined, size: 16),
+              label: const Text('Read Study Notes instead'),
+              style: TextButton.styleFrom(foregroundColor: AppColors.brandEmerald),
+            ),
           ],
         ),
       ),
     );
   }
 
-  /// Full Syncfusion PDF Reader Canvas
+  /// Full Syncfusion PDF Reader Canvas with Bottom Navigation & Jump Controls
   Widget _buildPdfCanvasView(
     Color cardColor,
     Color textColor,
@@ -340,11 +1204,19 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 48),
+                        const Icon(
+                          Icons.error_outline_rounded,
+                          color: Color(0xFFEF4444),
+                          size: 48,
+                        ),
                         const SizedBox(height: 12),
                         Text(
-                          'Could not render PDF file',
-                          style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16),
+                          'Could not render PDF document',
+                          style: TextStyle(
+                            color: textColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(
@@ -353,11 +1225,24 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 20),
-                        ElevatedButton.icon(
-                          onPressed: _downloadPdf,
-                          style: ElevatedButton.styleFrom(backgroundColor: AppColors.brandEmerald),
-                          icon: const Icon(Icons.refresh_rounded, size: 16),
-                          label: const Text('Re-download PDF'),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: _downloadPdf,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.brandEmerald,
+                              ),
+                              icon: const Icon(Icons.refresh_rounded, size: 16),
+                              label: const Text('Re-render Document'),
+                            ),
+                            const SizedBox(width: 12),
+                            OutlinedButton.icon(
+                              onPressed: () => setState(() => _activeTab = 0),
+                              icon: const Icon(Icons.article_outlined, size: 16),
+                              label: const Text('Read Notes'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -365,8 +1250,11 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                 )
               : SfPdfViewer.file(
                   File(_localPdfPath!),
-                  key: ValueKey('${_localPdfPath}_${File(_localPdfPath!).existsSync() ? File(_localPdfPath!).lastModifiedSync().millisecondsSinceEpoch : 0}'),
+                  key: ValueKey(
+                    '${_localPdfPath}_${File(_localPdfPath!).existsSync() ? File(_localPdfPath!).lastModifiedSync().millisecondsSinceEpoch : 0}',
+                  ),
                   controller: _pdfViewerController,
+                  scrollDirection: _scrollDirection,
                   canShowScrollHead: true,
                   canShowScrollStatus: true,
                   enableDoubleTapZooming: true,
@@ -394,7 +1282,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                   },
                 ),
         ),
-        // Bottom Navigation & Page Numbering Bar
+
+        // Bottom Reader Navigation Bar
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
@@ -404,31 +1293,74 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Previous Page Button
               IconButton(
                 onPressed: _currentPage > 1
                     ? () => _pdfViewerController.previousPage()
                     : null,
                 icon: const Icon(Icons.chevron_left_rounded),
                 color: textColor,
+                tooltip: 'Previous Page',
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _isNightMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: borderColor),
-                ),
-                child: Text(
-                  'Page $_currentPage of $_totalPages',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: textColor),
+
+              // Page Indicator Pill (Tap to Jump)
+              InkWell(
+                onTap: _showJumpToPageDialog,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _isNightMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: borderColor),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Page $_currentPage of $_totalPages',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: textColor,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.unfold_more_rounded, size: 14, color: mutedColor),
+                    ],
+                  ),
                 ),
               ),
+
+              // Next Page Button
               IconButton(
                 onPressed: _currentPage < _totalPages
                     ? () => _pdfViewerController.nextPage()
                     : null,
                 icon: const Icon(Icons.chevron_right_rounded),
                 color: textColor,
+                tooltip: 'Next Page',
+              ),
+
+              // Scroll Direction Toggle (Horizontal / Vertical)
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    _scrollDirection = _scrollDirection == PdfScrollDirection.vertical
+                        ? PdfScrollDirection.horizontal
+                        : PdfScrollDirection.vertical;
+                  });
+                },
+                icon: Icon(
+                  _scrollDirection == PdfScrollDirection.vertical
+                      ? Icons.swap_horiz_rounded
+                      : Icons.swap_vert_rounded,
+                  size: 20,
+                ),
+                color: mutedColor,
+                tooltip: _scrollDirection == PdfScrollDirection.vertical
+                    ? 'Switch to Horizontal Flip'
+                    : 'Switch to Vertical Scroll',
               ),
             ],
           ),
@@ -450,29 +1382,51 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.menu_book_rounded, color: AppColors.brandEmerald, size: 54),
+            const Icon(
+              Icons.menu_book_rounded,
+              color: AppColors.brandEmerald,
+              size: 54,
+            ),
             const SizedBox(height: 14),
             Text(
               widget.title,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
+              style: TextStyle(
+                fontFamily: 'Sora',
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
-              _pdfRenderError ?? 'Ready to open lesson study guide.',
+              _pdfRenderError ?? 'Ready to open lesson study document.',
               style: TextStyle(fontSize: 13, color: mutedColor),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: _downloadPdf,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.brandEmerald,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              icon: const Icon(Icons.download_rounded, size: 18),
-              label: const Text('Open Study Document'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _downloadPdf,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.brandEmerald,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(Icons.download_rounded, size: 18),
+                  label: const Text('Load Document'),
+                ),
+                const SizedBox(width: 12),
+                OutlinedButton.icon(
+                  onPressed: () => setState(() => _activeTab = 0),
+                  icon: const Icon(Icons.article_outlined, size: 18),
+                  label: const Text('Read Notes'),
+                ),
+              ],
             ),
           ],
         ),
@@ -480,3 +1434,61 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     );
   }
 }
+
+class _ReaderTabItem extends StatelessWidget {
+  const _ReaderTabItem({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.isNightMode,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final bool isNightMode;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.brandEmerald
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected
+                  ? Colors.white
+                  : (isNightMode ? AppColors.textMuted : const Color(0xFF64748B)),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                color: isSelected
+                    ? Colors.white
+                    : (isNightMode ? AppColors.textSecondary : const Color(0xFF334155)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+

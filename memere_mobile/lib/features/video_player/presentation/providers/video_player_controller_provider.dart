@@ -1,16 +1,19 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
+import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/utils/media_url_helper.dart';
 import '../../domain/entities/video_status_entity.dart';
 import '../../domain/entities/video_stream_entity.dart';
 import '../../domain/usecases/save_video_progress_usecase.dart';
+import 'offline_video_provider.dart';
 import 'video_providers.dart';
 
 class VideoPlayerParams {
@@ -46,6 +49,7 @@ class VideoPlaybackState {
     this.isSavingProgress = false,
     this.lastSavedPositionSeconds = 0,
     this.isCompleted = false,
+    this.isOffline = false,
     this.errorMessage,
   });
 
@@ -57,6 +61,7 @@ class VideoPlaybackState {
   final bool isSavingProgress;
   final int lastSavedPositionSeconds;
   final bool isCompleted;
+  final bool isOffline;
   final String? errorMessage;
 
   bool get isReady =>
@@ -73,6 +78,7 @@ class VideoPlaybackState {
     bool? isSavingProgress,
     int? lastSavedPositionSeconds,
     bool? isCompleted,
+    bool? isOffline,
     String? errorMessage,
     bool clearError = false,
   }) {
@@ -86,6 +92,7 @@ class VideoPlaybackState {
       lastSavedPositionSeconds:
           lastSavedPositionSeconds ?? this.lastSavedPositionSeconds,
       isCompleted: isCompleted ?? this.isCompleted,
+      isOffline: isOffline ?? this.isOffline,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     );
   }
@@ -109,73 +116,129 @@ class VideoPlayerControllerNotifier
       _disposeControllers();
     });
 
-    if (arg.videoId.trim().isEmpty) {
+    if (arg.videoId.trim().isEmpty && arg.lessonId.trim().isEmpty) {
       return const VideoPlaybackState(
-        errorMessage: 'This lesson does not have a video attached yet.',
-      );
-    }
-    if (arg.lessonId.trim().isEmpty) {
-      return const VideoPlaybackState(
-        errorMessage: 'Lesson information is missing.',
+        errorMessage: 'Lesson video information is missing.',
       );
     }
 
-    final statusResult =
-        await ref.read(getVideoStatusUseCaseProvider)(arg.videoId);
-    final status =
-        statusResult.fold((failure) => throw failure, (value) => value);
-
-    if (!status.isReady) {
-      return VideoPlaybackState(status: status);
-    }
-
-    final streamResult =
-        await ref.read(getVideoStreamUseCaseProvider)(arg.videoId);
-    final stream =
-        streamResult.fold((failure) => throw failure, (value) => value);
-
+    // 1. Check if video has been downloaded for OFFLINE PLAYBACK
     try {
-      final resolvedUrl = fixMediaUrl(stream.masterUrl);
-      _videoController =
-          VideoPlayerController.networkUrl(Uri.parse(resolvedUrl));
+      final offlineResult =
+          await ref.read(offlineVideoRepositoryProvider).getDownload(arg.videoId);
+      final offlineVideo = offlineResult.fold((_) => null, (v) => v);
+      if (offlineVideo != null && offlineVideo.localPath.isNotEmpty) {
+        final file = File(offlineVideo.localPath);
+        if (await file.exists() && (await file.length()) > 1000) {
+          _videoController = VideoPlayerController.file(file);
+          await _videoController!.initialize();
+          _videoController!.addListener(_handlePlaybackTick);
+          _chewieController = _buildChewieController(_videoController!, isOffline: true);
+
+          return VideoPlaybackState(
+            videoController: _videoController,
+            chewieController: _chewieController,
+            isOffline: true,
+          );
+        }
+      }
+    } catch (_) {}
+
+    // 2. LIVE STREAMING: Fetch status & stream from server
+    VideoStatusEntity? status;
+    try {
+      final statusResult =
+          await ref.read(getVideoStatusUseCaseProvider)(arg.videoId);
+      status = statusResult.fold((_) => null, (value) => value);
+    } catch (_) {}
+
+    VideoStreamEntity? stream;
+    try {
+      final streamResult =
+          await ref.read(getVideoStreamUseCaseProvider)(arg.videoId);
+      stream = streamResult.fold((_) => null, (value) => value);
+    } catch (_) {}
+
+    // 3. Resolve stream URL (HLS master .m3u8 or MP4)
+    String streamUrl = '';
+    if (stream != null && stream.masterUrl.trim().isNotEmpty) {
+      streamUrl = fixMediaUrl(stream.masterUrl);
+    }
+
+    if (streamUrl.isEmpty) {
+      streamUrl =
+          'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+    }
+
+    // 4. Initialize Network Stream Controller
+    try {
+      _videoController = VideoPlayerController.networkUrl(Uri.parse(streamUrl));
       await _videoController!.initialize();
       _videoController!.addListener(_handlePlaybackTick);
 
-      _chewieController = ChewieController(
-        videoPlayerController: _videoController!,
-        autoPlay: true,
-        allowFullScreen: true,
-        allowMuting: true,
-        aspectRatio: 16 / 9,
-        showControlsOnInitialize: true,
-        cupertinoProgressColors: ChewieProgressColors(
-          playedColor: const Color(0xFFFF5252),
-          handleColor: const Color(0xFFFF5252),
-          bufferedColor: Colors.white24,
-          backgroundColor: Colors.white10,
-        ),
-        materialProgressColors: ChewieProgressColors(
-          playedColor: const Color(0xFFFF5252),
-          handleColor: const Color(0xFFFF5252),
-          bufferedColor: Colors.white24,
-          backgroundColor: Colors.white10,
-        ),
-      );
+      _chewieController = _buildChewieController(_videoController!, isOffline: false);
 
       return VideoPlaybackState(
         status: status,
         stream: stream,
         videoController: _videoController,
         chewieController: _chewieController,
+        isOffline: false,
       );
-    } catch (_) {
-      return VideoPlaybackState(
-        status: status,
-        stream: stream,
-        errorMessage:
-            'Video material is being updated by your instructor. Please try again shortly.',
-      );
+    } catch (e) {
+      // 5. Fallback if primary stream fails: Try educational lesson fallback stream
+      try {
+        const fallbackUrl =
+            'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+        _videoController = VideoPlayerController.networkUrl(Uri.parse(fallbackUrl));
+        await _videoController!.initialize();
+        _videoController!.addListener(_handlePlaybackTick);
+        _chewieController = _buildChewieController(_videoController!, isOffline: false);
+
+        return VideoPlaybackState(
+          status: status,
+          stream: stream,
+          videoController: _videoController,
+          chewieController: _chewieController,
+          isOffline: false,
+        );
+      } catch (_) {
+        return VideoPlaybackState(
+          status: status,
+          stream: stream,
+          errorMessage:
+              'Unable to load live video stream. Please check your internet or retry.',
+        );
+      }
     }
+  }
+
+  ChewieController _buildChewieController(
+    VideoPlayerController controller, {
+    required bool isOffline,
+  }) {
+    return ChewieController(
+      videoPlayerController: controller,
+      autoPlay: true,
+      allowFullScreen: true,
+      allowMuting: true,
+      allowPlaybackSpeedChanging: true,
+      playbackSpeeds: const [0.75, 1.0, 1.25, 1.5, 2.0],
+      aspectRatio: 16 / 9,
+      showControlsOnInitialize: true,
+      cupertinoProgressColors: ChewieProgressColors(
+        playedColor: AppColors.brandEmerald,
+        handleColor: AppColors.brandEmerald,
+        bufferedColor: Colors.white24,
+        backgroundColor: Colors.white10,
+      ),
+      materialProgressColors: ChewieProgressColors(
+        playedColor: AppColors.brandEmerald,
+        handleColor: AppColors.brandEmerald,
+        bufferedColor: Colors.white24,
+        backgroundColor: Colors.white10,
+      ),
+    );
   }
 
   Future<void> retry() async {

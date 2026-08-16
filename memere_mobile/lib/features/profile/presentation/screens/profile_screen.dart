@@ -3,20 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/router/app_router.dart';
-import '../../../../shared/widgets/memere_mascot.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../../payment/presentation/providers/purchase_history_provider.dart';
 
-/// Clean, professional Profile & Account Screen for Memere.
+/// Refined, mature, and professional Profile & Account Screen for Memere.
 ///
-/// Features:
-/// - Hero Student Card with avatar, student credentials, and animated mascot
-/// - Quick Learning Stats Strip (Enrolled Courses, Mock Exams, Saved Items)
-/// - Organized Settings & Navigation Sections (Learning, Billing, Preferences, Security)
-/// - Confirmation Dialog for Sign Out
+/// Design Highlights:
+/// - Clean obsidian surfaces with subtle borders and shadows (no childish candy colors or mascots)
+/// - Refined Hero Student Card with initials avatar, verification badge, and curriculum stream metadata
+/// - Quick Academic Metric Strip with press feedback
+/// - Cohesive, grouped navigation settings with unified neutral icon badges
+/// - Elegant sign-out confirmation and support modals
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -56,7 +57,7 @@ class ProfileScreen extends ConsumerWidget {
               AppSizes.xxl,
             ),
             children: [
-              // 1. Top App Bar with back button (if can pop) & Screen Title
+              // 1. Sleek Top Bar
               _ProfileTopBar(
                 canPop: context.canPop(),
                 onPop: () {
@@ -69,7 +70,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSizes.md),
 
-              // 2. Hero Student Profile Card with Avatar & Character Mascot
+              // 2. Refined Hero Student Profile Card
               _StudentHeroCard(
                 name: fullName.isEmpty ? 'Student' : fullName,
                 email: user?.email ?? '',
@@ -77,62 +78,62 @@ class ProfileScreen extends ConsumerWidget {
                 role: user?.role.name ?? 'student',
                 initials: _initials(user?.firstName, user?.lastName),
               ),
-              const SizedBox(height: AppSizes.lg),
+              const SizedBox(height: AppSizes.md),
 
-              // 3. Quick Learning Stats Row
+              // 3. Academic Metric Strip
               _LearningStatsRow(
                 enrolledCount: enrolledCount,
                 purchasesCount: purchasesCount,
               ),
               const SizedBox(height: AppSizes.xl),
 
-              // 4. Learning & Academic Section
-              const _SectionHeader(title: 'Learning & Academics'),
+              // 4. Academic & Learning Section
+              const _SectionHeader(title: 'Academic & Learning'),
               const SizedBox(height: AppSizes.xs),
               _SettingsGroup(
                 items: [
                   _SettingsItemData(
-                    icon: Icons.menu_book_rounded,
-                    iconColor: const Color(0xFF38BDF8),
-                    title: 'My Enrolled Courses',
-                    subtitle: '$enrolledCount active courses in progress',
+                    icon: Icons.menu_book_outlined,
+                    title: 'Enrolled Courses',
+                    subtitle: enrolledCount == 0
+                        ? 'Explore curriculum courses'
+                        : '$enrolledCount active courses in progress',
                     onTap: () => context.go(AppRoutes.learn),
                   ),
                   _SettingsItemData(
-                    icon: Icons.assignment_turned_in_outlined,
-                    iconColor: const Color(0xFFF59E0B),
+                    icon: Icons.assignment_outlined,
                     title: 'Mock Exams & Results',
-                    subtitle: 'Take national entrance exams & view history',
+                    subtitle: 'National entrance exams and score analytics',
                     onTap: () => context.go(AppRoutes.mockExams),
                   ),
                   _SettingsItemData(
-                    icon: Icons.bookmark_border_rounded,
-                    iconColor: AppColors.brandEmerald,
-                    title: 'Saved Notes & Downloads',
-                    subtitle: 'Offline study guides and PDF materials',
+                    icon: Icons.bookmark_outline_rounded,
+                    title: 'Saved Notes & Library',
+                    subtitle: 'Offline study guides and bookmarked materials',
                     onTap: () => context.go(AppRoutes.saved),
                   ),
                 ],
               ),
               const SizedBox(height: AppSizes.lg),
 
-              // 5. Billing & Memberships Section
-              const _SectionHeader(title: 'Billing & Memberships'),
+              // 5. Memberships & Purchases Section
+              const _SectionHeader(title: 'Membership & Billing'),
               const SizedBox(height: AppSizes.xs),
               _SettingsGroup(
                 items: [
                   _SettingsItemData(
-                    icon: Icons.workspace_premium_rounded,
-                    iconColor: const Color(0xFFA855F7),
+                    icon: Icons.workspace_premium_outlined,
+                    iconAccent: AppColors.brandAmber,
                     title: 'All-Access Plans',
-                    subtitle: 'Upgrade for unlimited mock exams & courses',
+                    subtitle: 'Unlock unlimited mock exams & full solutions',
                     onTap: () => context.push(AppRoutes.subscriptionPlans),
                   ),
                   _SettingsItemData(
-                    icon: Icons.receipt_long_outlined,
-                    iconColor: const Color(0xFF38BDF8),
-                    title: 'Payment & Purchase History',
-                    subtitle: 'View receipts and active transactions',
+                    icon: Icons.receipt_outlined,
+                    title: 'Purchase History & Receipts',
+                    subtitle: purchasesCount == 0
+                        ? 'View transaction history and invoices'
+                        : '$purchasesCount recorded transactions',
                     onTap: () => context.push(AppRoutes.purchaseHistory),
                   ),
                 ],
@@ -145,36 +146,37 @@ class ProfileScreen extends ConsumerWidget {
               _SettingsGroup(
                 items: [
                   _SettingsItemData(
-                    icon: Icons.translate_rounded,
-                    iconColor: const Color(0xFF14B8A6),
+                    icon: Icons.school_outlined,
                     title: 'Curriculum Stream',
-                    subtitle: 'Natural Science (Grade 12)',
+                    subtitle: 'Natural Science (Grade 12 EUEE)',
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Natural Science curriculum stream selected.'),
+                          content: Text(
+                            'Curriculum Stream: Natural Science (Grade 12)',
+                          ),
+                          behavior: SnackBarBehavior.floating,
                         ),
                       );
                     },
                   ),
                   _SettingsItemData(
                     icon: Icons.notifications_none_rounded,
-                    iconColor: const Color(0xFFF43F5E),
                     title: 'Exam Reminders & Notifications',
-                    subtitle: 'Daily study goals and announcement alerts',
+                    subtitle: 'Daily study schedules and mock announcements',
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Notifications are currently enabled.'),
+                          content: Text('Study notifications are currently enabled.'),
+                          behavior: SnackBarBehavior.floating,
                         ),
                       );
                     },
                   ),
                   _SettingsItemData(
                     icon: Icons.help_outline_rounded,
-                    iconColor: const Color(0xFF94A3B8),
-                    title: 'Help Center & Feedback',
-                    subtitle: 'FAQs, contact support, report issues',
+                    title: 'Help Center & Support',
+                    subtitle: 'FAQs, contact instructors, report an issue',
                     onTap: () => _showHelpDialog(context),
                   ),
                 ],
@@ -188,7 +190,6 @@ class ProfileScreen extends ConsumerWidget {
                 items: [
                   _SettingsItemData(
                     icon: Icons.logout_rounded,
-                    iconColor: AppColors.error,
                     title: 'Sign Out',
                     subtitle: 'Log out of your account on this device',
                     isDestructive: true,
@@ -199,23 +200,23 @@ class ProfileScreen extends ConsumerWidget {
               const SizedBox(height: AppSizes.xl),
 
               // 8. Footer Brand & Version
-              Center(
+              const Center(
                 child: Column(
                   children: [
-                    const Text(
-                      'Memere • Ethiopian Entrance Exam Prep',
+                    Text(
+                      'Memere • Ethiopian University Entrance Exam Prep',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textMuted,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Text(
                       'Version 1.0.0 (Build 42)',
                       style: TextStyle(
                         fontSize: 11,
-                        color: AppColors.textMuted.withAlpha(150),
+                        color: AppColors.textDisabled,
                       ),
                     ),
                   ],
@@ -235,7 +236,7 @@ class ProfileScreen extends ConsumerWidget {
     if (f.isNotEmpty) buffer.write(f[0]);
     if (l.isNotEmpty) buffer.write(l[0]);
     final result = buffer.toString().toUpperCase();
-    return result.isEmpty ? 'M' : result;
+    return result.isEmpty ? 'S' : result;
   }
 
   Future<void> _confirmSignOut(BuildContext context, WidgetRef ref) async {
@@ -247,34 +248,62 @@ class ProfileScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(20),
           side: const BorderSide(color: AppColors.borderStrong),
         ),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.logout_rounded, color: AppColors.error, size: 22),
-            SizedBox(width: 10),
-            Text('Sign Out', style: AppTextStyles.titleLarge),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0x1DEF4444),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.logout_rounded,
+                color: AppColors.error,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Sign Out',
+              style: AppTextStyles.titleLarge,
+            ),
           ],
         ),
         content: const Text(
-          'Are you sure you want to sign out? You can sign back in anytime to access your courses and exams.',
+          'Are you sure you want to sign out? You can sign back in anytime to access your courses, mock exams, and saved study materials.',
           style: TextStyle(
             fontSize: 13.5,
             color: AppColors.textSecondary,
-            height: 1.4,
+            height: 1.45,
           ),
         ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Sign Out'),
+            child: const Text(
+              'Sign Out',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -296,22 +325,30 @@ class ProfileScreen extends ConsumerWidget {
         ),
         title: const Text('Help & Support', style: AppTextStyles.titleLarge),
         content: const Text(
-          'For questions about course enrollments, mock exams, or payment receipts, reach out to our team at support@memere.et.',
+          'Need help with course materials, mock exams, or payment confirmations? Contact the Memere academic support team at support@memere.et.',
           style: TextStyle(
             fontSize: 13.5,
             color: AppColors.textSecondary,
-            height: 1.4,
+            height: 1.45,
           ),
         ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         actions: [
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.brandEmerald,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('OK'),
+            child: const Text(
+              'Done',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
         ],
       ),
@@ -319,7 +356,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-/// Top Bar for Profile Screen
+/// Sleek Top Bar for Profile Screen
 class _ProfileTopBar extends StatelessWidget {
   const _ProfileTopBar({
     required this.canPop,
@@ -350,38 +387,51 @@ class _ProfileTopBar extends StatelessWidget {
               child: const Icon(
                 Icons.arrow_back_ios_new_rounded,
                 color: AppColors.textPrimary,
-                size: 16,
+                size: 15,
               ),
             ),
           )
         else
-          const Text(
-            'Account & Profile',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              color: AppColors.textPrimary,
-              letterSpacing: -0.5,
+          const Expanded(
+            child: Text(
+              'Profile & Account',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontFamily: 'Sora',
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+                letterSpacing: -0.5,
+              ),
             ),
           ),
+        const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: const Color(0x1810B981),
+            color: AppColors.bgSecondary,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0x3510B981)),
+            border: Border.all(color: AppColors.borderStrong),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.verified_rounded, size: 13, color: AppColors.brandEmerald),
-              SizedBox(width: 4),
-              Text(
-                'Student Account',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
+              Container(
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
                   color: AppColors.brandEmerald,
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Text(
+                'Active Student',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
                 ),
               ),
             ],
@@ -392,7 +442,7 @@ class _ProfileTopBar extends StatelessWidget {
   }
 }
 
-/// Hero Student Profile Card with Character Mascot
+/// Refined Hero Student Profile Card with Minimalist Obsidian Styling
 class _StudentHeroCard extends StatelessWidget {
   const _StudentHeroCard({
     required this.name,
@@ -414,147 +464,133 @@ class _StudentHeroCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF1D4ED8), // Royal Blue
-            Color(0xFF1E3A8A), // Deep Blue
-            Color(0xFF0F172A), // Dark Slate
-          ],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF1D4ED8).withAlpha(80),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
+        color: AppColors.bgSecondary,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderStrong),
+        boxShadow: AppShadows.sm,
       ),
-      child: Stack(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Ambient depth circle
-          Positioned(
-            right: -20,
-            bottom: -20,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withAlpha(12),
-              ),
-            ),
-          ),
-
-          // Content Row
-          Row(
+          // Sleek Avatar with Active Ring
+          Stack(
+            clipBehavior: Clip.none,
             children: [
-              // Avatar Circle
               Container(
-                width: 60,
-                height: 60,
+                width: 58,
+                height: 58,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppColors.brandEmerald,
+                  color: const Color(0xFF181820),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.brandEmerald.withAlpha(100),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+                  border: Border.all(
+                    color: const Color(0xFF2C2C38),
+                    width: 1.5,
+                  ),
                 ),
                 child: Text(
                   initials,
                   style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
+                    fontFamily: 'Sora',
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.5,
                   ),
                 ),
               ),
-              const SizedBox(width: 14),
-
-              // Name, Email, & Badge
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                        ),
-                      ],
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: AppColors.bgSecondary,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.bgSecondary,
+                      width: 2,
                     ),
-                    const SizedBox(height: 2),
-                    if (email.isNotEmpty)
-                      Text(
-                        email,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: Colors.white.withAlpha(210),
-                        ),
-                      ),
-                    if (phoneNumber.isNotEmpty) ...[
-                      const SizedBox(height: 1),
-                      Text(
-                        phoneNumber,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: Colors.white.withAlpha(170),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 8),
+                  ),
+                  child: const Icon(
+                    Icons.check_circle_rounded,
+                    size: 14,
+                    color: AppColors.brandEmerald,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 14),
+
+          // Name, Email, & Metadata Badges
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: 'Sora',
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                if (email.isNotEmpty)
+                  Text(
+                    email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                if (phoneNumber.isNotEmpty) ...[
+                  const SizedBox(height: 1),
+                  Text(
+                    phoneNumber,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: AppColors.textDisabled,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withAlpha(60),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white.withAlpha(35)),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
                       ),
-                      child: Text(
-                        'GRADE 12 • ${role.toUpperCase()}',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF67E8F9),
-                          letterSpacing: 0.5,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF181820),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFF282834)),
+                      ),
+                      child: const Text(
+                        'GRADE 12 • NATURAL SCIENCE',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textSecondary,
+                          letterSpacing: 0.4,
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 6),
-
-              // Floating Character Mascot (Micro animated)
-              const SizedBox(
-                width: 64,
-                height: 70,
-                child: MemereMascot(
-                  size: Size(64, 70),
-                  showBackdrop: false,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
@@ -562,7 +598,7 @@ class _StudentHeroCard extends StatelessWidget {
   }
 }
 
-/// Learning Stats Row (Enrolled Courses, Mock Exams, Saved Library)
+/// Academic Metric Strip (Courses, Mock Exams, Saved Library)
 class _LearningStatsRow extends StatelessWidget {
   const _LearningStatsRow({
     required this.enrolledCount,
@@ -578,30 +614,27 @@ class _LearningStatsRow extends StatelessWidget {
       children: [
         Expanded(
           child: _StatCard(
-            icon: Icons.school_rounded,
-            iconColor: const Color(0xFF38BDF8),
+            icon: Icons.menu_book_outlined,
             label: 'Courses',
-            value: '$enrolledCount',
+            value: '$enrolledCount Enrolled',
             onTap: () => context.go(AppRoutes.learn),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Expanded(
           child: _StatCard(
-            icon: Icons.quiz_rounded,
-            iconColor: const Color(0xFFF59E0B),
-            label: 'Exams',
-            value: 'Mock prep',
+            icon: Icons.assignment_outlined,
+            label: 'Mock Prep',
+            value: 'National Exams',
             onTap: () => context.go(AppRoutes.mockExams),
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: 8),
         Expanded(
           child: _StatCard(
-            icon: Icons.bookmark_rounded,
-            iconColor: AppColors.brandEmerald,
-            label: 'Saved',
-            value: 'Library',
+            icon: Icons.bookmark_outline_rounded,
+            label: 'Library',
+            value: 'Saved Notes',
             onTap: () => context.go(AppRoutes.saved),
           ),
         ),
@@ -613,14 +646,12 @@ class _LearningStatsRow extends StatelessWidget {
 class _StatCard extends StatelessWidget {
   const _StatCard({
     required this.icon,
-    required this.iconColor,
     required this.label,
     required this.value,
     required this.onTap,
   });
 
   final IconData icon;
-  final Color iconColor;
   final String label;
   final String value;
   final VoidCallback onTap;
@@ -638,16 +669,17 @@ class _StatCard extends StatelessWidget {
           border: Border.all(color: AppColors.borderStrong),
         ),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 20, color: iconColor),
-            const SizedBox(height: 6),
+            Icon(icon, size: 18, color: AppColors.textMuted),
+            const SizedBox(height: 8),
             Text(
               value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
               ),
             ),
@@ -680,8 +712,8 @@ class _SectionHeader extends StatelessWidget {
         title.toUpperCase(),
         style: const TextStyle(
           fontSize: 11,
-          fontWeight: FontWeight.w800,
-          color: Color(0xFF64748B),
+          fontWeight: FontWeight.w700,
+          color: AppColors.textMuted,
           letterSpacing: 0.8,
         ),
       ),
@@ -692,18 +724,18 @@ class _SectionHeader extends StatelessWidget {
 class _SettingsItemData {
   const _SettingsItemData({
     required this.icon,
-    required this.iconColor,
     required this.title,
     required this.subtitle,
     required this.onTap,
+    this.iconAccent,
     this.isDestructive = false,
   });
 
   final IconData icon;
-  final Color iconColor;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
+  final Color? iconAccent;
   final bool isDestructive;
 }
 
@@ -717,7 +749,7 @@ class _SettingsGroup extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.bgSecondary,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.borderStrong),
       ),
       clipBehavior: Clip.antiAlias,
@@ -727,9 +759,23 @@ class _SettingsGroup extends StatelessWidget {
         padding: EdgeInsets.zero,
         itemCount: items.length,
         separatorBuilder: (_, __) =>
-            const Divider(height: 1, color: AppColors.borderStrong),
+            const Divider(height: 1, color: AppColors.border),
         itemBuilder: (context, index) {
           final item = items[index];
+          final Color iconColor = item.isDestructive
+              ? AppColors.error
+              : (item.iconAccent ?? AppColors.textSecondary);
+          final Color iconBg = item.isDestructive
+              ? const Color(0x1DEF4444)
+              : (item.iconAccent != null
+                  ? item.iconAccent!.withAlpha(20)
+                  : const Color(0xFF181820));
+          final Color iconBorder = item.isDestructive
+              ? const Color(0x35EF4444)
+              : (item.iconAccent != null
+                  ? item.iconAccent!.withAlpha(45)
+                  : const Color(0xFF282834));
+
           return InkWell(
             onTap: item.onTap,
             child: Padding(
@@ -737,15 +783,15 @@ class _SettingsGroup extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 38,
-                    height: 38,
+                    width: 36,
+                    height: 36,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: item.iconColor.withAlpha(25),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: item.iconColor.withAlpha(50)),
+                      color: iconBg,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: iconBorder),
                     ),
-                    child: Icon(item.icon, size: 18, color: item.iconColor),
+                    child: Icon(item.icon, size: 18, color: iconColor),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -755,8 +801,8 @@ class _SettingsGroup extends StatelessWidget {
                         Text(
                           item.title,
                           style: TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
                             color: item.isDestructive
                                 ? AppColors.error
                                 : AppColors.textPrimary,
@@ -776,10 +822,10 @@ class _SettingsGroup extends StatelessWidget {
                   ),
                   Icon(
                     Icons.chevron_right_rounded,
-                    size: 20,
+                    size: 18,
                     color: item.isDestructive
-                        ? AppColors.error.withAlpha(160)
-                        : const Color(0xFF475569),
+                        ? AppColors.error.withAlpha(150)
+                        : AppColors.textDisabled,
                   ),
                 ],
               ),
@@ -790,3 +836,4 @@ class _SettingsGroup extends StatelessWidget {
     );
   }
 }
+

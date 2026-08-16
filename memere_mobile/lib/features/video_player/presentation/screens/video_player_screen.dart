@@ -236,25 +236,51 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen>
                                   Row(
                                     children: [
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF1E293B),
+                                          color: playback.isOffline
+                                              ? const Color(0x2210B981)
+                                              : const Color(0xFF1E293B),
                                           borderRadius: BorderRadius.circular(4),
-                                          border: Border.all(color: const Color(0xFF334155)),
-                                        ),
-                                        child: const Text(
-                                          '1080P HD',
-                                          style: TextStyle(
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w600,
-                                            color: Color(0xFF94A3B8),
+                                          border: Border.all(
+                                            color: playback.isOffline
+                                                ? const Color(0x4510B981)
+                                                : const Color(0xFF334155),
                                           ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              playback.isOffline
+                                                  ? Icons.offline_pin_rounded
+                                                  : Icons.stream_rounded,
+                                              color: playback.isOffline
+                                                  ? AppColors.brandEmerald
+                                                  : const Color(0xFF38BDF8),
+                                              size: 12,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              playback.isOffline
+                                                  ? 'OFFLINE PLAYBACK'
+                                                  : 'LIVE STREAM • 1080P HD',
+                                              style: TextStyle(
+                                                fontSize: 9,
+                                                fontWeight: FontWeight.w700,
+                                                color: playback.isOffline
+                                                    ? AppColors.brandEmerald
+                                                    : const Color(0xFF38BDF8),
+                                                letterSpacing: 0.3,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                       const SizedBox(width: 8),
                                       Text(
                                         playback.isCompleted
-                                            ? 'Status: Completed ✓'
+                                            ? 'Completed ✓'
                                             : 'Auto-saves progress',
                                         style: AppTextStyles.caption.copyWith(
                                           color: playback.isCompleted

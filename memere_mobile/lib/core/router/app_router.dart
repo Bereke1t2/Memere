@@ -246,11 +246,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.pdfReader,
         builder: (_, state) {
           final query = state.uri.queryParameters;
+          final extraMap = state.extra is Map<String, dynamic>
+              ? state.extra as Map<String, dynamic>
+              : null;
           return PdfReaderScreen(
-            title: query['title'] ?? 'Lesson Document',
-            pdfUrl: query['pdfUrl'] ?? '',
-            lessonId: query['lessonId'],
-            content: query['content'],
+            title: extraMap?['title'] as String? ??
+                query['title'] ??
+                'Lesson Document',
+            pdfUrl: extraMap?['pdfUrl'] as String? ?? query['pdfUrl'] ?? '',
+            lessonId:
+                extraMap?['lessonId'] as String? ?? query['lessonId'],
+            content:
+                extraMap?['content'] as String? ?? query['content'],
           );
         },
       ),
