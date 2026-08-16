@@ -362,7 +362,7 @@ class _MascotHeroCanvas extends StatelessWidget {
 }
 
 /// Curved Course Content Sheet matching image copy 5.png (Screen 3)
-class _CourseContentSheet extends StatelessWidget {
+class _CourseContentSheet extends StatefulWidget {
   const _CourseContentSheet({
     required this.detail,
     required this.hasAccess,
@@ -376,12 +376,35 @@ class _CourseContentSheet extends StatelessWidget {
   final ValueChanged<int> onTabChanged;
 
   @override
+  State<_CourseContentSheet> createState() => _CourseContentSheetState();
+}
+
+class _CourseContentSheetState extends State<_CourseContentSheet> {
+  late Set<int> _expandedSections;
+
+  @override
+  void initState() {
+    super.initState();
+    // Expand all sections initially so students can view content and tap to shrink
+    _expandedSections = Set<int>.from(
+      List.generate(widget.detail.sections.length, (index) => index),
+    );
+  }
+
+  void _toggleSection(int index) {
+    setState(() {
+      if (_expandedSections.contains(index)) {
+        _expandedSections.remove(index);
+      } else {
+        _expandedSections.add(index);
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final course = detail.course;
-    final allLessons = <LessonEntity>[];
-    for (final section in detail.sections) {
-      allLessons.addAll(section.lessons);
-    }
+    final course = widget.detail.course;
+    final totalLessons = widget.detail.lessonCount;
 
     return Container(
       width: double.infinity,
@@ -444,13 +467,13 @@ class _CourseContentSheet extends StatelessWidget {
               children: [
                 _TabButton(
                   label: 'Course Content',
-                  selected: selectedTab == 0,
-                  onTap: () => onTabChanged(0),
+                  selected: widget.selectedTab == 0,
+                  onTap: () => widget.onTabChanged(0),
                 ),
                 _TabButton(
                   label: 'Description',
-                  selected: selectedTab == 1,
-                  onTap: () => onTabChanged(1),
+                  selected: widget.selectedTab == 1,
+                  onTap: () => widget.onTabChanged(1),
                 ),
               ],
             ),
@@ -458,8 +481,8 @@ class _CourseContentSheet extends StatelessWidget {
           const SizedBox(height: 20),
 
           // Content Tab or Description Tab
-          if (selectedTab == 0) ...[
-            if (allLessons.isEmpty)
+          if (widget.selectedTab == 0) ...[
+            if (totalLessons == 0)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 32),
                 child: Center(
@@ -471,20 +494,7 @@ class _CourseContentSheet extends StatelessWidget {
                 ),
               )
             else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: allLessons.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final lesson = allLessons[index];
-                  return LessonTile(
-                    lesson: lesson,
-                    lessonNumber: index + 1,
-                    canOpen: course.isFree || hasAccess,
-                  );
-                },
-              ),
+              ..._buildSectionsList(course, widget.hasAccess),
           ] else ...[
             Container(
               width: double.infinity,
@@ -511,6 +521,125 @@ class _CourseContentSheet extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  List<Widget> _buildSectionsList(CourseEntity course, bool hasAccess) {
+    final widgets = <Widget>[];
+    int globalLessonNumber = 0;
+
+    for (int i = 0; i < widget.detail.sections.length; i++) {
+      final section = widget.detail.sections[i];
+      final isFirst = i == 0;
+      final isExpanded = _expandedSections.contains(i);
+
+      // Section Header (Tappable to expand and shrink)
+      widgets.add(
+        Padding(
+          padding: EdgeInsets.only(
+            top: isFirst ? 0 : 16,
+            bottom: 6,
+          ),
+          child: InkWell(
+            onTap: () => _toggleSection(i),
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          section.title.isNotEmpty
+                              ? section.title
+                              : 'Section ${i + 1}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        if (section.description.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            section.description,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    section.lessonCountLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Color(0xFF94A3B8),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  AnimatedRotation(
+                    turns: isExpanded ? 0.5 : 0.0,
+                    duration: const Duration(milliseconds: 180),
+                    child: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 20,
+                      color: Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      if (isExpanded) {
+        if (section.lessons.isEmpty) {
+          widgets.add(
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              child: Text(
+                'No lessons in this section yet.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              ),
+            ),
+          );
+        } else {
+          for (int j = 0; j < section.lessons.length; j++) {
+            final lesson = section.lessons[j];
+            globalLessonNumber++;
+            widgets.add(
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: LessonTile(
+                  lesson: lesson,
+                  lessonNumber: globalLessonNumber,
+                  canOpen: course.isFree || hasAccess,
+                ),
+              ),
+            );
+          }
+        }
+      } else {
+        // Increment global counter when collapsed to keep overall sequence intact
+        globalLessonNumber += section.lessons.length;
+      }
+    }
+
+    return widgets;
   }
 }
 
@@ -681,10 +810,13 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
       _showMessage('Lessons will appear here when this course is ready.');
       return;
     }
-    if (lesson.hasVideo) {
+    if (lesson.hasVideo || lesson.type == LessonType.video || (lesson.videoId != null && lesson.videoId!.isNotEmpty)) {
+      final effectiveVideoId = (lesson.videoId != null && lesson.videoId!.isNotEmpty)
+          ? lesson.videoId!
+          : lesson.id;
       context.push(
         AppRoutes.videoPlayerPath(
-          videoId: lesson.videoId!,
+          videoId: effectiveVideoId,
           lessonId: lesson.id,
           courseId: lesson.courseId,
           title: lesson.title,
@@ -692,27 +824,32 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
       );
       return;
     }
-    if (lesson.hasQuiz) {
+    if (lesson.hasQuiz && lesson.quizId != null && lesson.quizId!.isNotEmpty) {
       context.push(AppRoutes.quizDetailPath(lesson.quizId!));
       return;
     }
-    if (lesson.hasPdf || lesson.type == LessonType.note) {
-      context.push(
-        AppRoutes.pdfReaderPath(
-          title: lesson.title,
-          pdfUrl: lesson.pdfUrl ?? '',
-          lessonId: lesson.id,
-          content: lesson.content,
-        ),
-      );
-    }
+    final pdfName = lesson.pdfUrl ?? '';
+    context.push(
+      AppRoutes.pdfReaderPath(
+        title: lesson.title,
+        pdfUrl: pdfName,
+        lessonId: lesson.id,
+        content: lesson.content,
+      ),
+      extra: <String, dynamic>{
+        'title': lesson.title,
+        'pdfUrl': pdfName,
+        'lessonId': lesson.id,
+        'content': lesson.content,
+      },
+    );
   }
 
   LessonEntity? _firstPlayableLesson(CourseDetailEntity? detail) {
     if (detail == null) return null;
     for (final section in detail.sections) {
-      for (final lesson in section.lessons) {
-        if (lesson.hasVideo || lesson.hasQuiz || lesson.hasPdf) return lesson;
+      if (section.lessons.isNotEmpty) {
+        return section.lessons.first;
       }
     }
     return null;
