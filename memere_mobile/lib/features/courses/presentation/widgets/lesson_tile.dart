@@ -126,13 +126,16 @@ class _LessonTileState extends State<LessonTile> {
     if (lesson.hasVideo || lesson.type == LessonType.video) {
       return Icons.play_arrow_rounded;
     }
-    if (lesson.hasPdf || lesson.type == LessonType.note || lesson.hasContent) {
-      return Icons.description_rounded;
-    }
     if (lesson.hasQuiz || lesson.type == LessonType.quiz) {
       return Icons.quiz_outlined;
     }
-    return Icons.arrow_forward_rounded;
+    if (lesson.hasPdf) {
+      return Icons.picture_as_pdf_rounded;
+    }
+    if (lesson.hasContent || lesson.type == LessonType.note) {
+      return Icons.article_rounded;
+    }
+    return Icons.description_rounded;
   }
 
   void _handleTap(BuildContext context) {
@@ -143,11 +146,14 @@ class _LessonTileState extends State<LessonTile> {
       return;
     }
 
-    // 1. Video content
-    if (lesson.hasVideo) {
+    // 1. Playable Video content
+    if (lesson.hasVideo || lesson.type == LessonType.video || (lesson.videoId != null && lesson.videoId!.isNotEmpty)) {
+      final effectiveVideoId = (lesson.videoId != null && lesson.videoId!.isNotEmpty)
+          ? lesson.videoId!
+          : lesson.id;
       context.push(
         AppRoutes.videoPlayerPath(
-          videoId: lesson.videoId!,
+          videoId: effectiveVideoId,
           lessonId: lesson.id,
           courseId: lesson.courseId,
           title: lesson.title,
@@ -158,43 +164,36 @@ class _LessonTileState extends State<LessonTile> {
 
     // 2. Quiz content
     if (lesson.hasQuiz || lesson.type == LessonType.quiz) {
-      if (!lesson.hasQuiz) {
-        _showMessage(context, 'This quiz is coming soon.');
+      if (lesson.quizId != null && lesson.quizId!.isNotEmpty) {
+        context.push(AppRoutes.quizDetailPath(lesson.quizId!));
         return;
       }
-      context.push(AppRoutes.quizDetailPath(lesson.quizId!));
+      _showMessage(context, 'This quiz is coming soon.');
       return;
     }
 
-    // 3. Note, PDF, or text content -> Directly open Full-Screen In-App PDF Reader
-    if (lesson.type == LessonType.note ||
-        lesson.type == LessonType.mixed ||
-        lesson.hasContent ||
-        lesson.hasPdf) {
-      final pdfName = lesson.pdfUrl ?? '';
-      context.push(
-        AppRoutes.pdfReaderPath(
-          title: lesson.title,
-          pdfUrl: pdfName,
-          lessonId: lesson.id,
-          content: lesson.content,
-        ),
-      );
-      return;
-    }
-
-    // 4. Video lesson without video ID attached yet
-    if (lesson.type == LessonType.video) {
-      _showMessage(context, 'The video for this lesson is being processed by your instructor.');
-      return;
-    }
-
-    _showMessage(context, 'Lesson material will be available soon.');
+    // 3. Open Study Document / Notes Reader for all lessons
+    final pdfName = lesson.pdfUrl ?? '';
+    context.push(
+      AppRoutes.pdfReaderPath(
+        title: lesson.title,
+        pdfUrl: pdfName,
+        lessonId: lesson.id,
+        content: lesson.content,
+      ),
+      extra: <String, dynamic>{
+        'title': lesson.title,
+        'pdfUrl': pdfName,
+        'lessonId': lesson.id,
+        'content': lesson.content,
+      },
+    );
   }
 
   String _buildSubtitleText(LessonEntity lesson) {
-    if (lesson.hasPdf) return '${lesson.durationLabel} • PDF Notes';
-    if (lesson.hasContent) return '${lesson.durationLabel} • Study Note';
+    if (lesson.hasPdf && lesson.hasContent) return '${lesson.durationLabel} • Notes & PDF';
+    if (lesson.hasPdf) return '${lesson.durationLabel} • PDF Document';
+    if (lesson.hasContent || lesson.type == LessonType.note) return '${lesson.durationLabel} • Study Notes';
     if (lesson.hasQuiz || lesson.type == LessonType.quiz) return 'Practice Quiz';
     return '${lesson.durationLabel} • Video Lesson';
   }
