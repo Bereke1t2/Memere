@@ -25,7 +25,7 @@ class SecurePdfStorage {
 
   /// Gets local File reference for a given fileKey
   static Future<File> getPdfFile(String fileKey) async {
-    final dir = await getApplicationSupportDirectory();
+    final dir = await getApplicationDocumentsDirectory();
     final pdfDir = Directory('${dir.path}/pdfs');
     if (!await pdfDir.exists()) {
       await pdfDir.create(recursive: true);
