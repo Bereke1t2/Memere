@@ -151,16 +151,14 @@ Future<void> _toggleFavorite(
 }
 
 /// Top App Bar with back button and centered Title
-class _DetailTopBar extends ConsumerWidget {
+class _DetailTopBar extends StatelessWidget {
   const _DetailTopBar({required this.course});
 
   final CourseEntity course;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final topPadding = MediaQuery.paddingOf(context).top;
-    final saved = ref.watch(savedCoursesProvider).valueOrNull ?? const [];
-    final isSaved = saved.any((item) => item.id == course.id);
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
