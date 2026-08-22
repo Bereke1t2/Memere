@@ -228,3 +228,23 @@ func (h *QuizHandler) GetResult(c *gin.Context) {
 	resp := dto.NewAttemptResultResponse(result)
 	respondJSON(c, http.StatusOK, &resp)
 }
+
+// GetForDownload handles GET /quizzes/:id/download → 200. It returns the full
+// quiz WITH answer keys so a downloaded quiz can be graded on-device offline.
+// This is the sanctioned Non-Negotiable #1 exception (see dto/download.go): it is
+// gated exactly like taking the quiz (GetQuizForDownload → assertCourseAccess),
+// and the normal GET /quizzes/:id path stays answer-free.
+func (h *QuizHandler) GetForDownload(c *gin.Context) {
+	quizID, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	d, err := h.svc.GetQuizForDownload(c.Request.Context(), quizActor(c), quizID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	resp := dto.NewQuizDownloadResponse(d)
+	respondJSON(c, http.StatusOK, &resp)
+}
