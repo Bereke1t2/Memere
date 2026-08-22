@@ -39,6 +39,7 @@ type Lesson struct {
 	DurationSeconds int
 	IsPublished     bool
 	VideoID         *uuid.UUID
+	QuizID          *uuid.UUID
 	Content         *string
 	PdfURL          *string
 	CreatedAt       time.Time

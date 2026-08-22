@@ -100,6 +100,7 @@ func (r *LessonRepo) Update(ctx context.Context, l *entity.Lesson) error {
 	}
 	updated := lessonFromCoursesLesson(row)
 	updated.VideoID = l.VideoID
+	updated.QuizID = l.QuizID
 	*l = *updated
 	return nil
 }
@@ -161,6 +162,11 @@ func lessonFromGetRow(row sqlcgen.GetLessonByIDRow) *entity.Lesson {
 		id := fromPgUUID(row.VideoID)
 		videoID = &id
 	}
+	var quizID *uuid.UUID
+	if row.QuizID.Valid {
+		id := fromPgUUID(row.QuizID)
+		quizID = &id
+	}
 	return &entity.Lesson{
 		ID:              fromPgUUID(row.ID),
 		SectionID:       fromPgUUID(row.SectionID),
@@ -172,6 +178,7 @@ func lessonFromGetRow(row sqlcgen.GetLessonByIDRow) *entity.Lesson {
 		DurationSeconds: int(row.DurationSeconds),
 		IsPublished:     row.IsPublished,
 		VideoID:         videoID,
+		QuizID:          quizID,
 		Content:         row.Content,
 		PdfURL:          row.PdfUrl,
 		CreatedAt:       fromPgTimestamptzValue(row.CreatedAt),
@@ -186,6 +193,11 @@ func lessonFromSectionRow(row sqlcgen.ListLessonsBySectionRow) *entity.Lesson {
 		id := fromPgUUID(row.VideoID)
 		videoID = &id
 	}
+	var quizID *uuid.UUID
+	if row.QuizID.Valid {
+		id := fromPgUUID(row.QuizID)
+		quizID = &id
+	}
 	return &entity.Lesson{
 		ID:              fromPgUUID(row.ID),
 		SectionID:       fromPgUUID(row.SectionID),
@@ -197,6 +209,7 @@ func lessonFromSectionRow(row sqlcgen.ListLessonsBySectionRow) *entity.Lesson {
 		DurationSeconds: int(row.DurationSeconds),
 		IsPublished:     row.IsPublished,
 		VideoID:         videoID,
+		QuizID:          quizID,
 		Content:         row.Content,
 		PdfURL:          row.PdfUrl,
 		CreatedAt:       fromPgTimestamptzValue(row.CreatedAt),
@@ -211,6 +224,11 @@ func lessonFromCourseRow(row sqlcgen.ListLessonsByCourseRow) *entity.Lesson {
 		id := fromPgUUID(row.VideoID)
 		videoID = &id
 	}
+	var quizID *uuid.UUID
+	if row.QuizID.Valid {
+		id := fromPgUUID(row.QuizID)
+		quizID = &id
+	}
 	return &entity.Lesson{
 		ID:              fromPgUUID(row.ID),
 		SectionID:       fromPgUUID(row.SectionID),
@@ -222,6 +240,7 @@ func lessonFromCourseRow(row sqlcgen.ListLessonsByCourseRow) *entity.Lesson {
 		DurationSeconds: int(row.DurationSeconds),
 		IsPublished:     row.IsPublished,
 		VideoID:         videoID,
+		QuizID:          quizID,
 		Content:         row.Content,
 		PdfURL:          row.PdfUrl,
 		CreatedAt:       fromPgTimestamptzValue(row.CreatedAt),
