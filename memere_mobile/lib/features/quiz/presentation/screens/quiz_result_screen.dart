@@ -8,6 +8,7 @@ import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../courses/presentation/providers/completed_lessons_provider.dart';
 import '../providers/quiz_result_provider.dart';
 import '../widgets/question_feedback_tile.dart';
 import '../widgets/quiz_result_skeleton.dart';
@@ -24,6 +25,13 @@ class QuizResultScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen(quizResultProvider(attemptId), (prev, next) {
+      final quizId = next.valueOrNull?.quizId;
+      if (quizId != null && quizId.isNotEmpty) {
+        ref.read(completedLessonsProvider.notifier).markCompleted(quizId);
+      }
+    });
+
     final resultAsync = ref.watch(quizResultProvider(attemptId));
 
     return Scaffold(

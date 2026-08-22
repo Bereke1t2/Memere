@@ -14,6 +14,7 @@ import '../../domain/entities/video_status_entity.dart';
 import '../../domain/entities/video_stream_entity.dart';
 import '../../domain/usecases/save_video_progress_usecase.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
+import '../../../courses/presentation/providers/completed_lessons_provider.dart';
 import 'offline_video_provider.dart';
 import 'video_providers.dart';
 
@@ -261,6 +262,9 @@ class VideoPlayerControllerNotifier
 
   Future<void> markComplete() async {
     if (arg.lessonId.trim().isEmpty) return;
+    unawaited(
+      ref.read(completedLessonsProvider.notifier).markCompleted(arg.lessonId),
+    );
     if (_isSignedOut) {
       state = AsyncData(
         (state.valueOrNull ?? const VideoPlaybackState()).copyWith(
@@ -294,8 +298,16 @@ class VideoPlayerControllerNotifier
 
     final isPlaying = controller.value.isPlaying;
     final currentSeconds = controller.value.position.inSeconds;
+    final durationSeconds = controller.value.duration.inSeconds;
     final currentState = state.valueOrNull;
     final lastSavedSeconds = currentState?.lastSavedPositionSeconds ?? 0;
+
+    // Auto-mark video as completed when reaching the end of playback
+    if (durationSeconds > 0 && currentSeconds >= durationSeconds - 2) {
+      if (currentState != null && !currentState.isCompleted) {
+        unawaited(markComplete());
+      }
+    }
 
     if (_wasPlaying && !isPlaying && currentSeconds != lastSavedSeconds) {
       unawaited(_saveProgress(force: true));
