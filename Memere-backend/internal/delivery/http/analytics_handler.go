@@ -63,6 +63,18 @@ func (h *AnalyticsHandler) Trend(c *gin.Context) {
 	respondJSON(c, http.StatusOK, &resp)
 }
 
+// Points handles GET /me/points → 200. Returns the authenticated student's
+// cumulative quiz + exam points (best attempt per item).
+func (h *AnalyticsHandler) Points(c *gin.Context) {
+	p, err := h.svc.GetMyPoints(c.Request.Context(), analyticsActor(c))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	resp := dto.NewStudentPointsResponse(p)
+	respondJSON(c, http.StatusOK, &resp)
+}
+
 // ExamStats handles GET /exams/:id/stats → 200 (teacher/admin only).
 func (h *AnalyticsHandler) ExamStats(c *gin.Context) {
 	examID, err := parseUUIDParam(c, "id")

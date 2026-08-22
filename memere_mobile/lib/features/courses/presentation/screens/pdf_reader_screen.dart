@@ -732,16 +732,25 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
               ),
             ),
 
-          // Mark Completed Button
-          if (widget.lessonId != null && widget.lessonId!.trim().isNotEmpty) ...[
-            const SizedBox(width: 4),
+          // Mark Completed Action Button (overflow-safe compact button)
+          if (widget.lessonId != null && widget.lessonId!.trim().isNotEmpty)
             Builder(
               builder: (context) {
                 final completedIds =
                     ref.watch(completedLessonsProvider).valueOrNull ?? const {};
                 final isCompleted = completedIds.contains(widget.lessonId);
-                return InkWell(
-                  onTap: () {
+                return IconButton(
+                  icon: Icon(
+                    isCompleted
+                        ? Icons.check_circle_rounded
+                        : Icons.check_circle_outline_rounded,
+                    color: isCompleted
+                        ? AppColors.brandEmerald
+                        : mutedColor,
+                    size: 21,
+                  ),
+                  tooltip: isCompleted ? 'Completed ✓' : 'Mark as Completed',
+                  onPressed: () {
                     ref
                         .read(completedLessonsProvider.notifier)
                         .toggle(widget.lessonId!);
@@ -756,51 +765,9 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
                       ),
                     );
                   },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isCompleted
-                          ? AppColors.brandEmerald.withAlpha(40)
-                          : const Color(0xFF1E2433),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: isCompleted
-                            ? AppColors.brandEmerald
-                            : const Color(0xFF2A3449),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isCompleted
-                              ? Icons.check_circle_rounded
-                              : Icons.check_circle_outline_rounded,
-                          size: 14,
-                          color: isCompleted
-                              ? AppColors.brandEmerald
-                              : AppColors.textMuted,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          isCompleted ? 'Completed' : 'Complete',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: isCompleted
-                                ? AppColors.brandEmerald
-                                : AppColors.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 );
               },
             ),
-          ],
 
           // Night / Light Mode Toggle
           IconButton(

@@ -31,6 +31,7 @@ func (a *Actor) isTeacherOrAdmin() bool {
 type Service struct {
 	exams        repository.ExamRepository
 	examAttempts repository.ExamAttemptRepository
+	quizAttempts repository.QuizAttemptRepository
 	courses      repository.CourseRepository
 	ranking      repository.ScoreRanking
 }
@@ -41,8 +42,15 @@ func NewService(
 	examAttempts repository.ExamAttemptRepository,
 	courses repository.CourseRepository,
 	ranking repository.ScoreRanking,
+	quizAttempts repository.QuizAttemptRepository,
 ) *Service {
-	return &Service{exams: exams, examAttempts: examAttempts, courses: courses, ranking: ranking}
+	return &Service{
+		exams:        exams,
+		examAttempts: examAttempts,
+		quizAttempts: quizAttempts,
+		courses:      courses,
+		ranking:      ranking,
+	}
 }
 
 // SubjectScore is a per-subject (or per-topic) earned/possible tally.
@@ -143,6 +151,52 @@ func (s *Service) GetStudentTrend(ctx context.Context, actor *Actor, subject str
 		points = append(points, p)
 	}
 	return points, nil
+}
+
+// StudentPoints is a student's cumulative points across all graded quizzes and
+// exams — the best score per item, summed — with per-source subtotals, the
+// number of distinct quizzes/exams completed, and an overall average percentage.
+type StudentPoints struct {
+	TotalPoints   float64
+	QuizPoints    float64
+	ExamPoints    float64
+	AvgPercentage float64
+	QuizCount     int64
+	ExamCount     int64
+}
+
+// GetMyPoints returns the authenticated student's cumulative quiz + exam points
+// (§9.3), derived from their graded attempts — the best attempt per quiz/exam,
+// so retaking to improve a score raises the total by only the delta and never
+// double-counts. Guests/anonymous callers are rejected: points are an account
+// feature tied to a registered user.
+func (s *Service) GetMyPoints(ctx context.Context, actor *Actor) (*StudentPoints, error) {
+	if actor == nil {
+		return nil, apperror.Unauthorized("authentication required", nil)
+	}
+	quiz, err := s.quizAttempts.SumBestScores(ctx, actor.UserID)
+	if err != nil {
+		return nil, err
+	}
+	exam, err := s.examAttempts.SumBestScores(ctx, actor.UserID)
+	if err != nil {
+		return nil, err
+	}
+	out := &StudentPoints{
+		TotalPoints: quiz.Points + exam.Points,
+		QuizPoints:  quiz.Points,
+		ExamPoints:  exam.Points,
+		QuizCount:   quiz.Count,
+		ExamCount:   exam.Count,
+	}
+	// Count-weighted mean of the two source averages so the overall percentage
+	// reflects how many quizzes vs exams contributed. Guard divide-by-zero for a
+	// student who has completed nothing yet.
+	if total := quiz.Count + exam.Count; total > 0 {
+		out.AvgPercentage = (quiz.AvgPercentage*float64(quiz.Count) +
+			exam.AvgPercentage*float64(exam.Count)) / float64(total)
+	}
+	return out, nil
 }
 
 // GetExamStats returns aggregate stats for an exam, for the teacher who owns its

@@ -72,3 +72,21 @@ SET score = $2,
     status = 'graded'
 WHERE id = $1
 RETURNING *;
+
+-- name: GetStudentQuizPoints :one
+-- A student's cumulative quiz points (§9.3): the best graded score per quiz,
+-- summed, plus how many distinct quizzes they've completed and the average of
+-- those best percentages. Taking the best attempt per quiz means retakes raise
+-- the total only by the improvement — they never double-count.
+SELECT
+    COALESCE(SUM(best.best_score), 0)::float8      AS total_points,
+    COUNT(*)                                       AS quiz_count,
+    COALESCE(AVG(best.best_percentage), 0)::float8 AS avg_percentage
+FROM (
+    SELECT quiz_id,
+           MAX(score)      AS best_score,
+           MAX(percentage) AS best_percentage
+    FROM courses.quiz_attempts
+    WHERE student_id = $1 AND status = 'graded' AND score IS NOT NULL
+    GROUP BY quiz_id
+) best;

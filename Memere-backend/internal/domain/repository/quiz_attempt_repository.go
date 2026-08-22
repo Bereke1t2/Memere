@@ -36,4 +36,8 @@ type QuizAttemptRepository interface {
 	ClaimForGrading(ctx context.Context, a *entity.QuizAttempt) (claimed bool, err error)
 	// Grade persists the final score/percentage/passed and flips status to graded.
 	Grade(ctx context.Context, a *entity.QuizAttempt) error
+	// SumBestScores returns the student's cumulative quiz points: the best graded
+	// score per quiz, summed, with the distinct-quiz count and average of those
+	// best percentages. Best-per-quiz so retakes never double-count (§9.3).
+	SumBestScores(ctx context.Context, studentID uuid.UUID) (StudentScoreTotals, error)
 }
