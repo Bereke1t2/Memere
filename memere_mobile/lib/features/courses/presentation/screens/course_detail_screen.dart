@@ -383,7 +383,7 @@ class _MascotHeroCanvas extends StatelessWidget {
 }
 
 /// Curved Course Content Sheet matching image copy 5.png (Screen 3)
-class _CourseContentSheet extends StatefulWidget {
+class _CourseContentSheet extends ConsumerStatefulWidget {
   const _CourseContentSheet({
     required this.detail,
     required this.hasAccess,
@@ -397,10 +397,11 @@ class _CourseContentSheet extends StatefulWidget {
   final ValueChanged<int> onTabChanged;
 
   @override
-  State<_CourseContentSheet> createState() => _CourseContentSheetState();
+  ConsumerState<_CourseContentSheet> createState() =>
+      _CourseContentSheetState();
 }
 
-class _CourseContentSheetState extends State<_CourseContentSheet> {
+class _CourseContentSheetState extends ConsumerState<_CourseContentSheet> {
   late Set<int> _expandedSections;
 
   @override
