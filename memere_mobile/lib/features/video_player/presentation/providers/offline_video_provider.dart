@@ -24,6 +24,12 @@ final offlineDownloadsProvider =
   OfflineDownloadsNotifier.new,
 );
 
+/// Live progress (0.0–1.0) of in-flight offline downloads, keyed by videoId. A
+/// videoId is present only while its download is running; its absence means the
+/// download is idle or finished. Drives the determinate bar on DownloadButton.
+final offlineDownloadProgressProvider =
+    StateProvider<Map<String, double>>((ref) => const {});
+
 class OfflineDownloadsNotifier extends AsyncNotifier<List<OfflineVideoEntity>> {
   @override
   Future<List<OfflineVideoEntity>> build() async {
@@ -39,6 +45,9 @@ class OfflineDownloadsNotifier extends AsyncNotifier<List<OfflineVideoEntity>> {
     required String title,
   }) async {
     final current = state.valueOrNull ?? const [];
+    final progress = ref.read(offlineDownloadProgressProvider.notifier);
+    // Mark this download active at 0% so its button shows a determinate bar.
+    progress.state = {...progress.state, videoId: 0.0};
     state = const AsyncLoading<List<OfflineVideoEntity>>().copyWithPrevious(
       state,
     );
@@ -48,7 +57,16 @@ class OfflineDownloadsNotifier extends AsyncNotifier<List<OfflineVideoEntity>> {
           lessonId: lessonId,
           courseId: courseId,
           title: title,
+          onReceiveProgress: (received, total) {
+            if (total > 0) {
+              final value = (received / total).clamp(0.0, 1.0);
+              progress.state = {...progress.state, videoId: value};
+            }
+          },
         );
+
+    // Download settled (success or failure) — drop its live-progress entry.
+    progress.state = {...progress.state}..remove(videoId);
 
     state = result.fold(
       (failure) => AsyncError(failure, StackTrace.current),

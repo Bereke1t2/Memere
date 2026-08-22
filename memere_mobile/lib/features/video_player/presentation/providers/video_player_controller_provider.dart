@@ -13,6 +13,7 @@ import '../../../../core/utils/media_url_helper.dart';
 import '../../domain/entities/video_status_entity.dart';
 import '../../domain/entities/video_stream_entity.dart';
 import '../../domain/usecases/save_video_progress_usecase.dart';
+import '../../../auth/presentation/providers/auth_state_provider.dart';
 import 'offline_video_provider.dart';
 import 'video_providers.dart';
 
@@ -159,18 +160,25 @@ class VideoPlayerControllerNotifier
       stream = streamResult.fold((_) => null, (value) => value);
     } catch (_) {}
 
-    // 3. Resolve stream URL (HLS master .m3u8 or MP4)
-    String streamUrl = '';
-    if (stream != null && stream.masterUrl.trim().isNotEmpty) {
-      streamUrl = fixMediaUrl(stream.masterUrl);
-    }
+    // 3. Resolve the signed stream URL. The backend signs a single self-contained
+    //    MP4 that plays progressively over HTTP Range. We deliberately do NOT fall
+    //    back to any sample clip: a video with no playable URL must surface as a
+    //    real error (matching the offline-download behaviour), never silently play
+    //    unrelated footage — that fake fallback is exactly what produced the
+    //    misleading "check your internet" message when its host was unreachable.
+    final streamUrl = (stream != null && stream.masterUrl.trim().isNotEmpty)
+        ? fixMediaUrl(stream.masterUrl)
+        : '';
 
     if (streamUrl.isEmpty) {
-      streamUrl =
-          'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+      return VideoPlaybackState(
+        status: status,
+        stream: stream,
+        errorMessage: _streamUnavailableMessage(status),
+      );
     }
 
-    // 4. Initialize Network Stream Controller
+    // 4. Initialize the network player against the signed MP4.
     try {
       _videoController = VideoPlayerController.networkUrl(Uri.parse(streamUrl));
       await _videoController!.initialize();
@@ -185,32 +193,27 @@ class VideoPlayerControllerNotifier
         chewieController: _chewieController,
         isOffline: false,
       );
-    } catch (e) {
-      // 5. Fallback if primary stream fails: Try educational lesson fallback stream
-      try {
-        const fallbackUrl =
-            'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
-        _videoController = VideoPlayerController.networkUrl(Uri.parse(fallbackUrl));
-        await _videoController!.initialize();
-        _videoController!.addListener(_handlePlaybackTick);
-        _chewieController = _buildChewieController(_videoController!, isOffline: false);
-
-        return VideoPlaybackState(
-          status: status,
-          stream: stream,
-          videoController: _videoController,
-          chewieController: _chewieController,
-          isOffline: false,
-        );
-      } catch (_) {
-        return VideoPlaybackState(
-          status: status,
-          stream: stream,
-          errorMessage:
-              'Unable to load live video stream. Please check your internet or retry.',
-        );
-      }
+    } catch (_) {
+      // Report the real failure (no sample-clip fallback) so the user sees that
+      // THIS video failed and can retry, and so logs point at the real problem.
+      return VideoPlaybackState(
+        status: status,
+        stream: stream,
+        errorMessage: _streamUnavailableMessage(status),
+      );
     }
+  }
+
+  /// Human message for a stream that won't load. If the server says the video is
+  /// still processing (or failed), say so; otherwise it's a load/network error.
+  String _streamUnavailableMessage(VideoStatusEntity? status) {
+    if (status != null && status.isProcessing) {
+      return 'This video is still being processed. Please check back shortly.';
+    }
+    if (status != null && status.isFailed) {
+      return 'This video could not be processed. Please contact support.';
+    }
+    return 'Unable to load this video. Please check your connection and retry.';
   }
 
   ChewieController _buildChewieController(
@@ -251,8 +254,22 @@ class VideoPlayerControllerNotifier
 
   Future<void> saveProgressNow() => _saveProgress(force: true);
 
+  /// Guests have no server-side progress; writes would 401. Skip the network
+  /// call and keep completion state on-device instead.
+  bool get _isSignedOut =>
+      !(ref.read(authStateProvider).valueOrNull?.isAuthenticated ?? false);
+
   Future<void> markComplete() async {
     if (arg.lessonId.trim().isEmpty) return;
+    if (_isSignedOut) {
+      state = AsyncData(
+        (state.valueOrNull ?? const VideoPlaybackState()).copyWith(
+          isCompleted: true,
+          clearError: true,
+        ),
+      );
+      return;
+    }
     final result = await ref.read(markLessonCompleteUseCaseProvider)(
       arg.lessonId,
     );
@@ -294,6 +311,7 @@ class VideoPlayerControllerNotifier
   }
 
   Future<void> _saveProgress({bool force = false}) async {
+    if (_isSignedOut) return;
     final controller = _videoController;
     final currentState = state.valueOrNull;
     if (controller == null ||

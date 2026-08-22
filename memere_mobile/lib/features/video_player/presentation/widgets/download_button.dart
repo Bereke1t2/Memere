@@ -28,6 +28,12 @@ class DownloadButton extends ConsumerWidget {
         ?.where((item) => item.videoId == videoId)
         .firstOrNull;
 
+    // Live download progress for THIS video (0.0–1.0), or null when not running.
+    final activeProgress = ref.watch(offlineDownloadProgressProvider)[videoId];
+    final progressPct = activeProgress != null
+        ? (activeProgress * 100).clamp(0, 100).round()
+        : null;
+
     final isLoading = downloadsAsync.isLoading;
     final disabled = videoId.trim().isEmpty || isLoading;
     final status = download?.isExpired == true
@@ -40,13 +46,14 @@ class DownloadButton extends ConsumerWidget {
         onPressed: disabled
             ? null
             : () => _handlePressed(context, ref, download, status),
-        icon: _iconFor(status, isLoading),
+        icon: _iconFor(status, isLoading, activeProgress),
       );
     }
 
     // Full Action Button
     final isDownloaded = status == OfflineVideoStatus.downloaded;
-    final isDownloading = status == OfflineVideoStatus.downloading ||
+    final isDownloading = activeProgress != null ||
+        status == OfflineVideoStatus.downloading ||
         status == OfflineVideoStatus.queued ||
         isLoading;
 
@@ -69,11 +76,12 @@ class DownloadButton extends ConsumerWidget {
         ),
       ),
       icon: isDownloading
-          ? const SizedBox(
+          ? SizedBox(
               width: 14,
               height: 14,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
+                value: activeProgress, // null → indeterminate spinner
                 color: AppColors.brandEmerald,
               ),
             )
@@ -86,7 +94,9 @@ class DownloadButton extends ConsumerWidget {
             ),
       label: Text(
         isDownloading
-            ? 'Downloading Video...'
+            ? (progressPct != null
+                ? 'Downloading… $progressPct%'
+                : 'Downloading Video...')
             : (isDownloaded
                 ? 'Downloaded • Offline Ready'
                 : 'Download Video (Watch Offline)'),
@@ -181,15 +191,18 @@ class DownloadButton extends ConsumerWidget {
     }
   }
 
-  Widget _iconFor(OfflineVideoStatus? status, bool isLoading) {
-    if (isLoading ||
+  Widget _iconFor(OfflineVideoStatus? status, bool isLoading,
+      [double? activeProgress]) {
+    if (activeProgress != null ||
+        isLoading ||
         status == OfflineVideoStatus.queued ||
         status == OfflineVideoStatus.downloading) {
-      return const SizedBox(
+      return SizedBox(
         width: 18,
         height: 18,
         child: CircularProgressIndicator(
           strokeWidth: 2,
+          value: activeProgress, // null → indeterminate spinner
           color: AppColors.brandEmerald,
         ),
       );

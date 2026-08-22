@@ -28,10 +28,14 @@ class OfflineVideoRepositoryImpl implements OfflineVideoRepository {
     try {
       await _localDataSource.clearExpiredDownloads();
       final downloads = await _localDataSource.getDownloads();
-      // Filter out files that no longer exist on disk
+      // Filter out files that no longer exist on disk. Apply the same non-trivial
+      // size check getDownload() uses, so a stale/aborted or manifest-sized file
+      // (e.g. a saved .m3u8) is never surfaced as an available offline video.
       final validDownloads = <OfflineVideoModel>[];
       for (final download in downloads) {
-        if (download.localPath.isNotEmpty && File(download.localPath).existsSync()) {
+        if (download.localPath.isEmpty) continue;
+        final file = File(download.localPath);
+        if (file.existsSync() && file.lengthSync() > 1000) {
           validDownloads.add(download);
         }
       }
@@ -64,13 +68,18 @@ class OfflineVideoRepositoryImpl implements OfflineVideoRepository {
     required String lessonId,
     required String courseId,
     required String title,
+    void Function(int received, int total)? onReceiveProgress,
   }) async {
     if (videoId.trim().isEmpty) {
       return const Left(ValidationFailure('Video ID is required'));
     }
 
     try {
-      // 1. Resolve Target Video Download URL
+      // 1. Resolve the offline download URL. The backend serves a real,
+      //    self-contained MP4 here (not the HLS manifest), so it is safe to save
+      //    and play back offline. We deliberately do NOT fall back to the stream
+      //    master URL (an .m3u8 manifest is not a downloadable single file) nor to
+      //    any sample clip — a video that isn't ready must surface as an error.
       String? downloadUrl;
       final downloadUrlResult = await _videoRepository.getDownloadUrl(videoId);
       downloadUrlResult.fold(
@@ -82,26 +91,13 @@ class OfflineVideoRepositoryImpl implements OfflineVideoRepository {
         },
       );
 
-      // 2. Fallback to stream master URL if dedicated download URL is unavailable
       if (downloadUrl == null || downloadUrl!.isEmpty) {
-        final streamResult = await _videoRepository.getStream(videoId);
-        streamResult.fold(
-          (_) {},
-          (stream) {
-            if (stream.masterUrl.isNotEmpty) {
-              downloadUrl = fixMediaUrl(stream.masterUrl);
-            }
-          },
+        return const Left(
+          ServerFailure('This video is not ready for offline download yet.'),
         );
       }
 
-      // 3. Fallback to educational curriculum lecture demonstration stream if server stream is pending
-      if (downloadUrl == null || downloadUrl!.isEmpty) {
-        downloadUrl =
-            'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
-      }
-
-      // 4. Ensure destination storage directory exists
+      // 2. Ensure destination storage directory exists
       final appDir = await getApplicationDocumentsDirectory();
       final videosDir = Directory('${appDir.path}/offline_videos');
       if (!await videosDir.exists()) {
@@ -112,7 +108,7 @@ class OfflineVideoRepositoryImpl implements OfflineVideoRepository {
       final localFilePath = '${videosDir.path}/video_$safeVideoId.mp4';
       final file = File(localFilePath);
 
-      // 5. Download file using Dio with timeout and redirect handling
+      // 3. Download file using Dio with timeout and redirect handling
       final dio = Dio(
         BaseOptions(
           connectTimeout: const Duration(seconds: 30),
@@ -124,10 +120,26 @@ class OfflineVideoRepositoryImpl implements OfflineVideoRepository {
       await dio.download(
         downloadUrl!,
         localFilePath,
+        // Reports (bytesReceived, totalBytes) as the file streams in. total is
+        // -1 when the response carries no Content-Length; the caller guards on
+        // total > 0 before computing a percentage.
+        onReceiveProgress: onReceiveProgress,
         options: Options(
           validateStatus: (status) => status != null && status < 400,
         ),
       );
+
+      // 4. Validate the bytes are actually a video before recording the download.
+      //    Guards against silently saving an HLS manifest (.m3u8) or an HTML error
+      //    page under a .mp4 name — either would fail to play offline.
+      if (!await _looksLikeVideo(file)) {
+        if (await file.exists()) {
+          await file.delete();
+        }
+        return const Left(
+          CacheFailure('The downloaded file is not a playable video.'),
+        );
+      }
 
       final sizeBytes = await file.exists() ? await file.length() : 0;
       final now = DateTime.now();
@@ -149,6 +161,21 @@ class OfflineVideoRepositoryImpl implements OfflineVideoRepository {
     } catch (e) {
       return Left(CacheFailure('Failed to download video for offline viewing: $e'));
     }
+  }
+
+  /// Best-effort sniff that a downloaded file is a real media file, not an HLS
+  /// manifest or an HTML error page saved under a .mp4 name. Rejects trivially
+  /// small files and the two text signatures we actually see on failure.
+  Future<bool> _looksLikeVideo(File file) async {
+    if (!await file.exists()) return false;
+    if (await file.length() < 1024) return false;
+    final head = await file
+        .openRead(0, 16)
+        .fold<List<int>>(<int>[], (acc, chunk) => acc..addAll(chunk));
+    final text = String.fromCharCodes(head).trimLeft();
+    if (text.startsWith('#EXTM3U')) return false; // HLS manifest
+    if (text.startsWith('<')) return false; // HTML error page
+    return true;
   }
 
   @override
