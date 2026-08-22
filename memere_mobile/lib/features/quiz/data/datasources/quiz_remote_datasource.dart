@@ -1,4 +1,5 @@
 import '../../../../core/network/dio_client.dart';
+import '../../../../core/storage/hive/models/offline_quiz.dart';
 import '../../domain/entities/quiz_answer_payload.dart';
 import '../models/quiz_attempt_model.dart';
 import '../models/quiz_model.dart';
@@ -17,6 +18,11 @@ abstract class QuizRemoteDataSource {
     required QuizAnswerPayload answers,
   });
   Future<QuizResultModel> getResult(String attemptId);
+
+  /// Fetches the full quiz WITH answer keys for offline storage & on-device
+  /// grading (`GET /quizzes/:id/download`; guest-accessible for published/free
+  /// content via optionalAuth).
+  Future<OfflineQuiz> getForDownload(String quizId);
 }
 
 class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
@@ -49,7 +55,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     if (data == null) {
       throw const FormatException('Missing quiz response body');
     }
-    return QuizModel.fromJson(data);
+    return QuizModel.fromJson(_unwrapMap(data));
   }
 
   @override
@@ -61,7 +67,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     if (data == null) {
       throw const FormatException('Missing quiz attempt response body');
     }
-    return QuizAttemptModel.fromJson(data);
+    return QuizAttemptModel.fromJson(_unwrapMap(data));
   }
 
   @override
@@ -88,7 +94,7 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     if (data == null) {
       throw const FormatException('Missing quiz submit response body');
     }
-    return QuizResultModel.fromJson(data);
+    return QuizResultModel.fromJson(_unwrapMap(data));
   }
 
   @override
@@ -100,6 +106,25 @@ class QuizRemoteDataSourceImpl implements QuizRemoteDataSource {
     if (data == null) {
       throw const FormatException('Missing quiz result response body');
     }
-    return QuizResultModel.fromJson(data);
+    return QuizResultModel.fromJson(_unwrapMap(data));
   }
+
+  @override
+  Future<OfflineQuiz> getForDownload(String quizId) async {
+    final response = await _client.get<Map<String, dynamic>>(
+      '/quizzes/$quizId/download',
+    );
+    final data = response.data;
+    if (data == null) {
+      throw const FormatException('Missing quiz download response body');
+    }
+    return OfflineQuiz.fromJson(_unwrapMap(data));
+  }
+}
+
+Map<String, dynamic> _unwrapMap(Map<String, dynamic> raw) {
+  if (raw.containsKey('data') && raw['data'] is Map<String, dynamic>) {
+    return raw['data'] as Map<String, dynamic>;
+  }
+  return raw;
 }

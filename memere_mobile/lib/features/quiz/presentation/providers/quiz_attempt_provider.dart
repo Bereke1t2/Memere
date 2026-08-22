@@ -2,6 +2,13 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/errors/failures.dart';
+import '../../../../core/grading/offline_grader.dart';
+import '../../../../core/offline/offline_attempt_factory.dart';
+import '../../../../core/offline/offline_providers.dart';
+import '../../../../core/storage/hive/models/downloaded_item.dart';
+import '../../../../core/storage/hive/models/pending_submission.dart';
+import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../domain/entities/quiz_answer_payload.dart';
 import '../../domain/entities/quiz_attempt_entity.dart';
 import '../../domain/usecases/save_quiz_progress_usecase.dart';
@@ -91,13 +98,32 @@ class QuizAttemptNotifier
       unawaited(saveProgress(force: true));
     });
 
+    // Offline / guest path: a locally-minted attempt id means grade this attempt
+    // on-device from the downloaded copy. No network, and no server-side attempt
+    // is ever created (this also sidesteps the online double-start).
+    if (isLocalAttemptId(arg.attemptId)) {
+      final quiz = ref.read(downloadStoreProvider).getOfflineQuiz(arg.quizId);
+      if (quiz == null) {
+        throw const CacheFailure(
+          'This quiz is not downloaded. Download it first to take it offline.',
+        );
+      }
+      return QuizAttemptState(
+        attempt: buildLocalQuizAttempt(quiz, attemptId: arg.attemptId),
+      );
+    }
+
     final result = await ref.read(startQuizAttemptUseCaseProvider)(arg.quizId);
     final attempt = result.fold((failure) => throw failure, (value) => value);
     return QuizAttemptState(attempt: attempt);
   }
 
   void selectSingleAnswer(String questionId, String answerId) {
-    _updateAnswer(questionId, answerId);
+    // Store choice answers as a one-element list so the backend files them as
+    // "selected" option IDs (its bare-array shorthand). A bare String is reserved
+    // for short_answer text — sending it here made the grader treat the answer as
+    // free text, leaving Selected empty and scoring every choice question 0.
+    _updateAnswer(questionId, <String>[answerId]);
   }
 
   void toggleMultiAnswer(String questionId, String answerId) {
@@ -148,6 +174,19 @@ class QuizAttemptNotifier
     if (current == null || current.isSaving) return;
     if (!force && !current.hasUnsavedChanges) return;
 
+    // Local attempts keep their answers in memory until submit — there is no
+    // server progress endpoint for a `local-…` id, so just mark them saved.
+    if (isLocalAttemptId(current.attempt.attemptId)) {
+      state = AsyncData(
+        current.copyWith(
+          lastSavedAt: DateTime.now(),
+          hasUnsavedChanges: false,
+          clearSaveError: true,
+        ),
+      );
+      return;
+    }
+
     state = AsyncData(current.copyWith(isSaving: true, clearSaveError: true));
     final result = await ref.read(saveQuizProgressUseCaseProvider)(
       SaveQuizProgressParams(
@@ -189,6 +228,10 @@ class QuizAttemptNotifier
       latestBeforeSubmit.copyWith(isSubmitting: true, clearSaveError: true),
     );
 
+    if (isLocalAttemptId(latestBeforeSubmit.attempt.attemptId)) {
+      return _submitLocally(latestBeforeSubmit);
+    }
+
     final result = await ref.read(submitQuizAttemptUseCaseProvider)(
       SubmitQuizAttemptParams(
         attemptId: latestBeforeSubmit.attempt.attemptId,
@@ -197,7 +240,20 @@ class QuizAttemptNotifier
     );
     final latest = state.valueOrNull ?? latestBeforeSubmit;
     return result.fold(
-      (failure) {
+      (failure) async {
+        // Started on the server but the network dropped at submit time: grade
+        // the downloaded copy on-device now, and queue the answers to re-submit
+        // to the SAME server attempt on reconnect (no duplicate attempt).
+        if (isOfflineFailure(failure) &&
+            ref.read(downloadStoreProvider).isDownloaded(
+                  DownloadType.quiz,
+                  latestBeforeSubmit.attempt.quizId,
+                )) {
+          return _submitLocally(
+            latest,
+            serverAttemptId: latestBeforeSubmit.attempt.attemptId,
+          );
+        }
         state = AsyncData(
           latest.copyWith(
             isSubmitting: false,
@@ -206,7 +262,7 @@ class QuizAttemptNotifier
         );
         return null;
       },
-      (quizResult) {
+      (quizResult) async {
         state = AsyncData(
           latest.copyWith(
             isSubmitting: false,
@@ -217,6 +273,76 @@ class QuizAttemptNotifier
         return quizResult.attemptId;
       },
     );
+  }
+
+  /// Grades a downloaded quiz on-device, stores the provisional result under the
+  /// `local-…` id, and — for signed-in users only — enqueues a [PendingSubmission]
+  /// for authoritative server replay on reconnect. Guests never enqueue (no token
+  /// to submit with); their on-device score stands as final. Returns the local id
+  /// so the result screen resolves it from [OfflineAttemptStore].
+  ///
+  /// [serverAttemptId] distinguishes the two callers: `null` for the pure
+  /// offline/guest path (the attempt id is already a `local-…` id); non-null for
+  /// the submit-time fallback (an online attempt whose submit hit the network) —
+  /// then a fresh local id anchors the provisional record and the existing server
+  /// attempt id rides along so sync skips `start` and re-submits straight to it.
+  Future<String?> _submitLocally(
+    QuizAttemptState current, {
+    String? serverAttemptId,
+  }) async {
+    final localId = serverAttemptId == null
+        ? current.attempt.attemptId
+        : newLocalAttemptId();
+    final quiz =
+        ref.read(downloadStoreProvider).getOfflineQuiz(current.attempt.quizId);
+    if (quiz == null) {
+      final latest = state.valueOrNull ?? current;
+      state = AsyncData(
+        latest.copyWith(
+          isSubmitting: false,
+          saveError:
+              'This quiz is no longer downloaded. Reconnect or re-download to submit.',
+        ),
+      );
+      return null;
+    }
+
+    final rawAnswers = Map<String, dynamic>.from(current.answers);
+    final result = OfflineGrader.gradeQuiz(
+      quiz: quiz,
+      submission: offlineSubmissionFromRaw(quiz.questions, rawAnswers),
+      attemptId: localId,
+    );
+
+    final store = ref.read(offlineAttemptStoreProvider);
+    await store.saveResult(localId, result.toJson());
+
+    final isAuthed =
+        ref.read(authStateProvider).valueOrNull?.isAuthenticated ?? false;
+    if (isAuthed) {
+      await store.enqueue(
+        PendingSubmission(
+          localId: localId,
+          kind: SubmissionKind.quiz,
+          contentId: quiz.id,
+          rawAnswers: rawAnswers,
+          provisionalScore: result.score.round(),
+          provisionalPct: result.percentage,
+          takenAt: result.submittedAt ?? DateTime.now(),
+          serverAttemptId: serverAttemptId,
+        ),
+      );
+    }
+
+    final latest = state.valueOrNull ?? current;
+    state = AsyncData(
+      latest.copyWith(
+        isSubmitting: false,
+        hasUnsavedChanges: false,
+        clearSaveError: true,
+      ),
+    );
+    return localId;
   }
 
   void _updateAnswer(String questionId, Object value) {
