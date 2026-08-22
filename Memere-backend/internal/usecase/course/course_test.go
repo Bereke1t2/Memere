@@ -17,14 +17,18 @@ type harness struct {
 	courses  *fakeCourseRepo
 	sections *fakeSectionRepo
 	lessons  *fakeLessonRepo
+	videos   *fakeVideoRepo
+	store    *fakeStore
 }
 
 func newHarness() *harness {
 	sections := newFakeSectionRepo()
 	lessons := newFakeLessonRepo()
 	courses := newFakeCourseRepo(sections, lessons)
-	svc := NewService(courses, sections, lessons, fakeTxManager{})
-	return &harness{svc: svc, courses: courses, sections: sections, lessons: lessons}
+	videos := newFakeVideoRepo()
+	store := newFakeStore()
+	svc := NewService(courses, sections, lessons, videos, store, fakeTxManager{})
+	return &harness{svc: svc, courses: courses, sections: sections, lessons: lessons, videos: videos, store: store}
 }
 
 func teacher() *Actor { return &Actor{UserID: uuid.New(), Role: entity.RoleTeacher} }
@@ -170,7 +174,7 @@ func TestListCourses_AnonymousHidesUnpublished(t *testing.T) {
 	}
 }
 
-func TestGetCourse_NonOwnerStripsUnpublishedContent(t *testing.T) {
+func TestGetCourse_NonOwnerSeesAllPublishedCourseContent(t *testing.T) {
 	h := newHarness()
 	owner := teacher()
 	c, _ := h.svc.CreateCourse(context.Background(), owner, validCreateInput())
@@ -178,25 +182,31 @@ func TestGetCourse_NonOwnerStripsUnpublishedContent(t *testing.T) {
 		t.Fatalf("publish: %v", err)
 	}
 
-	pubSec, _ := h.svc.AddSection(context.Background(), owner, c.ID, SectionInput{Title: "Published", IsPublished: true})
-	_, _ = h.svc.AddSection(context.Background(), owner, c.ID, SectionInput{Title: "Hidden", IsPublished: false})
-	// One published and one hidden lesson within the published section.
-	_, _ = h.svc.AddLesson(context.Background(), owner, pubSec.ID, LessonInput{Title: "L1", Type: entity.LessonTypeNote, IsPublished: true})
-	_, _ = h.svc.AddLesson(context.Background(), owner, pubSec.ID, LessonInput{Title: "L2", Type: entity.LessonTypeNote, IsPublished: false})
+	// A published course exposes ALL of its content to students, regardless of the
+	// per-section/per-lesson publish flags (there is no student-facing gate on
+	// those — only the course publish flag gates student visibility).
+	secA, _ := h.svc.AddSection(context.Background(), owner, c.ID, SectionInput{Title: "A", IsPublished: true})
+	_, _ = h.svc.AddSection(context.Background(), owner, c.ID, SectionInput{Title: "B", IsPublished: false})
+	_, _ = h.svc.AddLesson(context.Background(), owner, secA.ID, LessonInput{Title: "L1", Type: entity.LessonTypeNote, IsPublished: true})
+	_, _ = h.svc.AddLesson(context.Background(), owner, secA.ID, LessonInput{Title: "L2", Type: entity.LessonTypeNote, IsPublished: false})
 
-	// A student (non-owner) sees only the published section and its published lesson.
+	// A student (non-owner) sees both sections and both lessons of section A.
 	view, err := h.svc.GetCourse(context.Background(), student(), c.ID)
 	if err != nil {
 		t.Fatalf("GetCourse: %v", err)
 	}
-	if len(view.Sections) != 1 {
-		t.Fatalf("sections = %d, want 1 (hidden stripped)", len(view.Sections))
+	if len(view.Sections) != 2 {
+		t.Fatalf("sections = %d, want 2 (published course shows all)", len(view.Sections))
 	}
-	if len(view.Sections[0].Lessons) != 1 {
-		t.Fatalf("lessons = %d, want 1 (hidden stripped)", len(view.Sections[0].Lessons))
+	totalLessons := 0
+	for _, sec := range view.Sections {
+		totalLessons += len(sec.Lessons)
+	}
+	if totalLessons != 2 {
+		t.Fatalf("lessons = %d, want 2 (published course shows all)", totalLessons)
 	}
 
-	// The owner sees everything.
+	// The owner also sees everything.
 	ownerView, err := h.svc.GetCourse(context.Background(), owner, c.ID)
 	if err != nil {
 		t.Fatalf("owner GetCourse: %v", err)
@@ -291,6 +301,52 @@ func TestDeleteLesson_IsSoftAndRecomputes(t *testing.T) {
 	got, _ := h.courses.FindByID(context.Background(), c.ID)
 	if got.TotalLessons != 0 {
 		t.Errorf("TotalLessons = %d, want 0 after delete", got.TotalLessons)
+	}
+}
+
+// TestDeleteLesson_PurgesVideoStorageAndPdf verifies that deleting a lesson
+// tombstones both the lesson and its video row (soft-delete) while permanently
+// purging the video's storage artifacts (scalar keys + hls/<id>/ and
+// thumbnails/<id>/ prefixes) and the notes PDF at its fixed key.
+func TestDeleteLesson_PurgesVideoStorageAndPdf(t *testing.T) {
+	h := newHarness()
+	owner := teacher()
+	c, _ := h.svc.CreateCourse(context.Background(), owner, validCreateInput())
+	sec, _ := h.svc.AddSection(context.Background(), owner, c.ID, SectionInput{Title: "S1", IsPublished: true})
+	l, _ := h.svc.AddLesson(context.Background(), owner, sec.ID, LessonInput{Title: "A", Type: entity.LessonTypeVideo, DurationSeconds: 30, IsPublished: true})
+
+	vidID := uuid.New()
+	orig := "originals/" + c.ID.String() + "/" + l.ID.String() + "/" + vidID.String() + "/source.mp4"
+	master := "hls/" + vidID.String() + "/master.m3u8"
+	thumb := "thumbnails/" + vidID.String() + "/thumb.jpg"
+	h.videos.seed(&entity.Video{
+		ID: vidID, LessonID: l.ID, CourseID: c.ID, Status: entity.VideoReady,
+		OriginalFileKey: &orig, HLSMasterKey: &master, ThumbnailKey: &thumb,
+	})
+
+	if err := h.svc.DeleteLesson(context.Background(), owner, l.ID); err != nil {
+		t.Fatalf("DeleteLesson: %v", err)
+	}
+
+	if h.lessons.byID[l.ID].DeletedAt == nil {
+		t.Error("lesson row not soft-deleted")
+	}
+	if h.videos.byID[vidID].DeletedAt == nil {
+		t.Error("video row not soft-deleted")
+	}
+	for _, k := range []string{orig, master, thumb} {
+		if !h.store.wasDeleted(k) {
+			t.Errorf("storage key %q was not deleted", k)
+		}
+	}
+	if !h.store.prefixDeleted("hls/" + vidID.String() + "/") {
+		t.Errorf("hls/ prefix for video %s was not purged", vidID)
+	}
+	if !h.store.prefixDeleted("thumbnails/" + vidID.String() + "/") {
+		t.Errorf("thumbnails/ prefix for video %s was not purged", vidID)
+	}
+	if !h.store.wasDeleted("lessons/" + l.ID.String() + "/notes.pdf") {
+		t.Error("notes PDF at the fixed key was not deleted")
 	}
 }
 

@@ -14,6 +14,10 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 )
 
+func init() {
+	access.DisableEnrollmentCheck = false
+}
+
 type harness struct {
 	svc      *Service
 	quizzes  *fakeQuizRepo

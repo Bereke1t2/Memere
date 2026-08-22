@@ -10,6 +10,7 @@ import (
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/service"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/pagination"
 )
@@ -382,3 +383,91 @@ type fakeTxManager struct{}
 func (fakeTxManager) WithinTx(ctx context.Context, fn func(ctx context.Context) error) error {
 	return fn(ctx)
 }
+
+// fakeVideoRepo is a minimal in-memory VideoRepository. The course usecase only
+// calls GetByLessonID (to find a lesson's video on delete) and SoftDelete; the
+// remaining methods are unused and would panic via the embedded nil interface,
+// surfacing an unexpected dependency.
+type fakeVideoRepo struct {
+	repository.VideoRepository
+	mu   sync.Mutex
+	byID map[uuid.UUID]*entity.Video
+}
+
+func newFakeVideoRepo() *fakeVideoRepo {
+	return &fakeVideoRepo{byID: map[uuid.UUID]*entity.Video{}}
+}
+
+func (f *fakeVideoRepo) seed(v *entity.Video) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if v.ID == uuid.Nil {
+		v.ID = uuid.New()
+	}
+	cp := *v
+	f.byID[v.ID] = &cp
+}
+
+func (f *fakeVideoRepo) GetByLessonID(_ context.Context, lessonID uuid.UUID) (*entity.Video, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, v := range f.byID {
+		if v.DeletedAt == nil && v.LessonID == lessonID {
+			cp := *v
+			return &cp, nil
+		}
+	}
+	return nil, apperror.NotFound("video not found", nil)
+}
+
+func (f *fakeVideoRepo) SoftDelete(_ context.Context, id uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if v, ok := f.byID[id]; ok {
+		now := time.Now()
+		v.DeletedAt = &now
+	}
+	return nil
+}
+
+// fakeStore is a minimal ObjectStore that records every Delete/DeletePrefix so a
+// test can assert which objects were purged. It implements PrefixDeleter so the
+// segment-sweep path is exercised.
+type fakeStore struct {
+	service.ObjectStore
+	mu       sync.Mutex
+	deleted  map[string]bool
+	prefixes map[string]bool
+}
+
+func newFakeStore() *fakeStore {
+	return &fakeStore{deleted: map[string]bool{}, prefixes: map[string]bool{}}
+}
+
+func (f *fakeStore) Delete(_ context.Context, key string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.deleted[key] = true
+	return nil
+}
+
+func (f *fakeStore) DeletePrefix(_ context.Context, prefix string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.prefixes[prefix] = true
+	return nil
+}
+
+func (f *fakeStore) wasDeleted(key string) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.deleted[key]
+}
+
+func (f *fakeStore) prefixDeleted(prefix string) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.prefixes[prefix]
+}
+
+var _ service.PrefixDeleter = (*fakeStore)(nil)

@@ -58,16 +58,25 @@ type AttemptClientView struct {
 	Questions        []QuestionClientView
 }
 
+// AnswerFeedback is one answer option revealed in post-submission review.
+type AnswerFeedback struct {
+	ID        uuid.UUID
+	Text      string
+	IsCorrect bool
+}
+
 // QuestionFeedback is the per-question outcome in a graded result. CorrectAnswerIDs
 // is populated only after grading (post-submission reveal per §4.2.5).
 type QuestionFeedback struct {
 	QuestionID       uuid.UUID
+	QuestionText     string
 	Correct          bool
 	PointsAwarded    int
 	PointsPossible   int
 	SelectedAnswers  []uuid.UUID
 	CorrectAnswerIDs []uuid.UUID
 	Explanation      *string
+	Answers          []AnswerFeedback
 }
 
 // AttemptResult is the post-submission result with feedback. Score/percentage

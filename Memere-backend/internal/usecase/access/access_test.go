@@ -13,6 +13,10 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/pagination"
 )
 
+func init() {
+	DisableEnrollmentCheck = false
+}
+
 // ---- fakes -------------------------------------------------------------------
 
 type fakeCourseRepo struct{ byID map[uuid.UUID]*entity.Course }

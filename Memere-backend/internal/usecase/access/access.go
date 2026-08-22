@@ -69,9 +69,17 @@ func NewService(
 	return &Service{enroll: enroll, subs: subs, course: course, clock: clock}
 }
 
+// DisableEnrollmentCheck temporarily disables enrollment enforcement so all
+// students can access courses, lessons, quizzes, and exams without enrolling.
+// Set back to false to re-enable enrollment checks in the future.
+var DisableEnrollmentCheck = true
+
 // CanAccessCourse is THE access function. It resolves the course server-side
 // (never trusting a client-supplied flag) and applies the precedence policy.
 func (s *Service) CanAccessCourse(ctx context.Context, actor Actor, courseID uuid.UUID) (AccessLevel, error) {
+	if DisableEnrollmentCheck {
+		return FullAccess, nil
+	}
 	c, err := s.course.FindByID(ctx, courseID)
 	if err != nil {
 		return NoAccess, err
