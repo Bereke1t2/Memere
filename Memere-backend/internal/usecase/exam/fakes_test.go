@@ -366,6 +366,10 @@ func (f *fakeExamAttemptRepo) Stats(context.Context, uuid.UUID) (repository.Exam
 	return repository.ExamAttemptStats{}, nil
 }
 
+func (f *fakeExamAttemptRepo) SumBestScores(context.Context, uuid.UUID) (repository.StudentScoreTotals, error) {
+	return repository.StudentScoreTotals{}, nil
+}
+
 func (f *fakeExamAttemptRepo) Grade(_ context.Context, a *entity.ExamAttempt) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
