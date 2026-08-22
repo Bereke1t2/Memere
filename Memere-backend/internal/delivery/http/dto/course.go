@@ -109,6 +109,7 @@ type LessonResponse struct {
 	DurationSeconds int       `json:"duration_seconds"`
 	IsPublished     bool      `json:"is_published"`
 	VideoID         *string   `json:"video_id,omitempty"`
+	QuizID          *string   `json:"quiz_id,omitempty"`
 	Content         *string   `json:"content,omitempty"`
 	PdfURL          *string   `json:"pdf_url,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
@@ -176,6 +177,11 @@ func NewLessonResponse(l *entity.Lesson) LessonResponse {
 		str := l.VideoID.String()
 		videoID = &str
 	}
+	var quizID *string
+	if l.QuizID != nil {
+		str := l.QuizID.String()
+		quizID = &str
+	}
 	return LessonResponse{
 		ID:              l.ID.String(),
 		SectionID:       l.SectionID.String(),
@@ -187,6 +193,7 @@ func NewLessonResponse(l *entity.Lesson) LessonResponse {
 		DurationSeconds: l.DurationSeconds,
 		IsPublished:     l.IsPublished,
 		VideoID:         videoID,
+		QuizID:          quizID,
 		Content:         l.Content,
 		PdfURL:          l.PdfURL,
 		CreatedAt:       l.CreatedAt,

@@ -218,17 +218,25 @@ func newQuizQuestionClientResponses(qs []quiz.QuestionClientView) []QuestionClie
 	return out
 }
 
+type AnswerOptionFeedbackResponse struct {
+	ID        uuid.UUID `json:"id"`
+	Text      string    `json:"text"`
+	IsCorrect bool      `json:"is_correct"`
+}
+
 // QuestionFeedbackResponse is the per-question outcome in a graded quiz result.
 // CorrectAnswerIDs and explanation are present here ONLY — this is the
 // post-submission reveal (§4.2.5).
 type QuestionFeedbackResponse struct {
-	QuestionID       uuid.UUID   `json:"question_id"`
-	Correct          bool        `json:"correct"`
-	PointsAwarded    int         `json:"points_awarded"`
-	PointsPossible   int         `json:"points_possible"`
-	SelectedAnswers  []uuid.UUID `json:"selected_answers"`
-	CorrectAnswerIDs []uuid.UUID `json:"correct_answer_ids"`
-	Explanation      *string     `json:"explanation"`
+	QuestionID       uuid.UUID                      `json:"question_id"`
+	QuestionText     string                         `json:"question_text"`
+	Correct          bool                           `json:"correct"`
+	PointsAwarded    int                            `json:"points_awarded"`
+	PointsPossible   int                            `json:"points_possible"`
+	SelectedAnswers  []uuid.UUID                    `json:"selected_answers"`
+	CorrectAnswerIDs []uuid.UUID                    `json:"correct_answer_ids"`
+	Explanation      *string                        `json:"explanation,omitempty"`
+	Answers          []AnswerOptionFeedbackResponse `json:"answers,omitempty"`
 }
 
 // SubjectScoreResponse is a per-subject earned/possible tally.
@@ -256,14 +264,24 @@ type AttemptResultResponse struct {
 func NewAttemptResultResponse(r *quiz.AttemptResult) AttemptResultResponse {
 	feedback := make([]QuestionFeedbackResponse, 0, len(r.Feedback))
 	for _, f := range r.Feedback {
+		answers := make([]AnswerOptionFeedbackResponse, 0, len(f.Answers))
+		for _, a := range f.Answers {
+			answers = append(answers, AnswerOptionFeedbackResponse{
+				ID:        a.ID,
+				Text:      a.Text,
+				IsCorrect: a.IsCorrect,
+			})
+		}
 		feedback = append(feedback, QuestionFeedbackResponse{
 			QuestionID:       f.QuestionID,
+			QuestionText:     f.QuestionText,
 			Correct:          f.Correct,
 			PointsAwarded:    f.PointsAwarded,
 			PointsPossible:   f.PointsPossible,
 			SelectedAnswers:  f.SelectedAnswers,
 			CorrectAnswerIDs: f.CorrectAnswerIDs,
 			Explanation:      f.Explanation,
+			Answers:          answers,
 		})
 	}
 	breakdown := make(map[string]SubjectScoreResponse, len(r.SubjectBreakdown))
