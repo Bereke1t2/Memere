@@ -29,17 +29,18 @@ class AppShell extends StatelessWidget {
       backgroundColor: AppColors.bgPrimary,
       extendBody: true,
       body: AnimatedSwitcher(
-        duration: AppMotion.base,
-        switchInCurve: AppMotion.standard,
-        switchOutCurve: AppMotion.exit,
+        duration: const Duration(milliseconds: 260),
+        switchInCurve: Curves.easeInOutCubic,
+        switchOutCurve: Curves.easeInOutCubic,
         transitionBuilder: (child, animation) {
+          final scaleAnimation = Tween<double>(
+            begin: 0.98,
+            end: 1.0,
+          ).animate(animation);
           return FadeTransition(
             opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0.02, 0),
-                end: Offset.zero,
-              ).animate(animation),
+            child: ScaleTransition(
+              scale: scaleAnimation,
               child: child,
             ),
           );
