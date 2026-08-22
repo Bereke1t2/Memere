@@ -56,8 +56,11 @@ abstract class AppTheme {
 
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
-          TargetPlatform.android: _SharedAxisFadeTransitionBuilder(),
-          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.android: _PremiumPageTransitionsBuilder(),
+          TargetPlatform.iOS: _PremiumPageTransitionsBuilder(),
+          TargetPlatform.linux: _PremiumPageTransitionsBuilder(),
+          TargetPlatform.macOS: _PremiumPageTransitionsBuilder(),
+          TargetPlatform.windows: _PremiumPageTransitionsBuilder(),
         },
       ),
 
@@ -277,8 +280,8 @@ abstract class AppTheme {
   }
 }
 
-class _SharedAxisFadeTransitionBuilder extends PageTransitionsBuilder {
-  const _SharedAxisFadeTransitionBuilder();
+class _PremiumPageTransitionsBuilder extends PageTransitionsBuilder {
+  const _PremiumPageTransitionsBuilder();
 
   @override
   Widget buildTransitions<T>(
@@ -288,22 +291,69 @@ class _SharedAxisFadeTransitionBuilder extends PageTransitionsBuilder {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    if (route.fullscreenDialog) return child;
-
-    final curvedAnimation = CurvedAnimation(
-      parent: animation,
-      curve: AppMotion.standard,
-      reverseCurve: AppMotion.exit,
-    );
-
-    return FadeTransition(
-      opacity: curvedAnimation,
-      child: SlideTransition(
+    if (route.fullscreenDialog) {
+      final curvedAnimation = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeInOutCubic,
+        reverseCurve: Curves.easeInOutCubic,
+      );
+      return SlideTransition(
         position: Tween<Offset>(
-          begin: const Offset(0.03, 0),
+          begin: const Offset(0, 0.06),
           end: Offset.zero,
         ).animate(curvedAnimation),
-        child: child,
+        child: FadeTransition(
+          opacity: curvedAnimation,
+          child: child,
+        ),
+      );
+    }
+
+    final primaryCurve = CurvedAnimation(
+      parent: animation,
+      curve: Curves.fastOutSlowIn,
+      reverseCurve: Curves.fastOutSlowIn,
+    );
+
+    final secondaryCurve = CurvedAnimation(
+      parent: secondaryAnimation,
+      curve: Curves.fastOutSlowIn,
+      reverseCurve: Curves.fastOutSlowIn,
+    );
+
+    // Incoming page: slides in smoothly from right + fades in
+    final slideIn = Tween<Offset>(
+      begin: const Offset(0.06, 0),
+      end: Offset.zero,
+    ).animate(primaryCurve);
+
+    final fadeIn = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(primaryCurve);
+
+    // Outgoing page behind it: slides slightly left + fades out slightly
+    final slideOut = Tween<Offset>(
+      begin: Offset.zero,
+      end: const Offset(-0.02, 0),
+    ).animate(secondaryCurve);
+
+    final fadeOut = Tween<double>(
+      begin: 1.0,
+      end: 0.85,
+    ).animate(secondaryCurve);
+
+    return SlideTransition(
+      position: slideOut,
+      child: FadeTransition(
+        opacity: fadeOut,
+        child: SlideTransition(
+          position: slideIn,
+          child: FadeTransition(
+            opacity: fadeIn,
+            child: child,
+          ),
+        ),
       ),
     );
   }
