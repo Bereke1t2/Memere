@@ -21,6 +21,7 @@ import '../../../exam/domain/entities/mock_exam_entity.dart';
 import '../../../exam/presentation/providers/exam_providers.dart';
 import '../../../quiz/presentation/providers/quiz_providers.dart';
 import '../../../saved/presentation/providers/saved_courses_provider.dart';
+import '../providers/completed_lessons_provider.dart';
 import '../providers/course_detail_provider.dart';
 import '../providers/course_download_provider.dart';
 import '../widgets/course_detail_skeleton.dart';
@@ -424,7 +425,15 @@ class _CourseContentSheetState extends State<_CourseContentSheet> {
   @override
   Widget build(BuildContext context) {
     final course = widget.detail.course;
-    final totalLessons = widget.detail.lessonCount;
+    final allLessons =
+        widget.detail.sections.expand((s) => s.lessons).toList();
+    final totalLessons = allLessons.length;
+    final completedIds =
+        ref.watch(completedLessonsProvider).valueOrNull ?? const {};
+    final completedCount =
+        allLessons.where((l) => completedIds.contains(l.id)).length;
+    final progressPercent =
+        totalLessons > 0 ? (completedCount / totalLessons) : 0.0;
 
     return Container(
       width: double.infinity,
@@ -473,6 +482,65 @@ class _CourseContentSheetState extends State<_CourseContentSheet> {
             ),
           ),
           const SizedBox(height: 16),
+
+          // Course Lesson Completion Progress Bar & Metric
+          if (totalLessons > 0) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.bgSecondary,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.borderStrong),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.task_alt_rounded,
+                            size: 16,
+                            color: AppColors.brandEmerald,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'Lesson Completion',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '$completedCount of $totalLessons completed (${(progressPercent * 100).round()}%)',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.brandEmerald,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: progressPercent,
+                      minHeight: 6,
+                      backgroundColor: AppColors.bgTertiary,
+                      color: AppColors.brandEmerald,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
 
           // Download the whole course for offline study — every video, PDF,
           // quiz and exam, all in one tap.
@@ -532,7 +600,7 @@ class _CourseContentSheetState extends State<_CourseContentSheet> {
                 ),
               )
             else
-              ..._buildSectionsList(course, widget.hasAccess),
+              ..._buildSectionsList(course, widget.hasAccess, completedIds),
           ] else if (widget.selectedTab == 1) ...[
             _CourseQuizzesTab(
               courseId: course.id,
@@ -573,7 +641,11 @@ class _CourseContentSheetState extends State<_CourseContentSheet> {
     );
   }
 
-  List<Widget> _buildSectionsList(CourseEntity course, bool hasAccess) {
+  List<Widget> _buildSectionsList(
+    CourseEntity course,
+    bool hasAccess,
+    Set<String> completedIds,
+  ) {
     final widgets = <Widget>[];
     int globalLessonNumber = 0;
 
@@ -678,6 +750,10 @@ class _CourseContentSheetState extends State<_CourseContentSheet> {
                   lesson: lesson,
                   lessonNumber: globalLessonNumber,
                   canOpen: course.isFree || hasAccess,
+                  isCompleted: completedIds.contains(lesson.id),
+                  onToggleCompleted: () => ref
+                      .read(completedLessonsProvider.notifier)
+                      .toggle(lesson.id),
                 ),
               ),
             );
