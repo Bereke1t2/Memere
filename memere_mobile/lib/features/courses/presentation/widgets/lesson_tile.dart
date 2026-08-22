@@ -57,35 +57,45 @@ class _LessonTileState extends State<LessonTile> {
         ),
         child: Row(
           children: [
-            // Left Indicator: Completion Checkmark Badge or Lesson Number
-            if (isCompleted)
-              InkWell(
-                onTap: widget.onToggleCompleted,
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  width: 26,
-                  height: 26,
-                  alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: AppColors.brandEmerald,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.check_rounded,
-                    size: 16,
-                    color: Colors.white,
-                  ),
-                ),
-              )
-            else
-              Text(
-                '$numStr.',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF94A3B8),
-                ),
-              ),
+            // Left Indicator: Tappable Completion Checkmark Badge or Unchecked Circle + Lesson Number
+            InkWell(
+              onTap: widget.onToggleCompleted,
+              borderRadius: BorderRadius.circular(12),
+              child: isCompleted
+                  ? Container(
+                      width: 26,
+                      height: 26,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: AppColors.brandEmerald,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check_rounded,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.radio_button_unchecked_rounded,
+                          size: 18,
+                          color: Color(0xFF64748B),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          '$numStr.',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
             const SizedBox(width: 12),
 
             // Middle Column: Title & Subtitle + Completed Mark Tag
