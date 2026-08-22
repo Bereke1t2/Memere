@@ -1,13 +1,29 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 import '../constants/env.dart';
 import '../storage/secure_storage_service.dart';
 import '../utils/media_url_helper.dart';
+
+/// No real remote PDF is attached, or the remote content is not a PDF
+/// (e.g. a note_url returning HTML/markdown). Reader shows Study Notes.
+class PdfNotAvailableException implements Exception {
+  PdfNotAvailableException([this.message = 'No PDF document is attached to this lesson.']);
+  final String message;
+  @override
+  String toString() => message;
+}
+
+/// A real PDF was expected but could not be downloaded (network/auth/timeout/
+/// server). Reader shows an error state with a retry button.
+class PdfDownloadException implements Exception {
+  PdfDownloadException(this.message);
+  final String message;
+  @override
+  String toString() => message;
+}
 
 /// Secure Local PDF Storage Service.
 /// Downloads, validates, and stores PDF files in app-private sandbox storage
@@ -17,10 +33,10 @@ class SecurePdfStorage {
   static String getFileKey(String url, {String? title}) {
     final cleanUrl = url.trim();
     if (cleanUrl.isNotEmpty && cleanUrl != 'sample.pdf') {
-      return 'pdf_${cleanUrl.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
+      return 'pdf_v2_${cleanUrl.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
     }
     final cleanTitle = (title ?? 'lesson').trim();
-    return 'pdf_note_${cleanTitle.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
+    return 'pdf_v2_note_${cleanTitle.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
   }
 
   /// Gets local File reference for a given fileKey
@@ -82,7 +98,7 @@ class SecurePdfStorage {
     // It's an S3 key like "lessons/xxx/notes.pdf" or a raw filename
     if (lessonId != null && lessonId.isNotEmpty) {
       final apiBase = fixMediaUrl(Env.baseUrl);
-      return '$apiBase/api/v1/lessons/$lessonId/pdf';
+      return '$apiBase/lessons/$lessonId/pdf';
     }
 
     // Legacy: try to resolve as a relative path
@@ -302,8 +318,6 @@ class SecurePdfStorage {
 
   /// Downloads a PDF from backend with live progress callback, validates PDF header,
   /// saves to app sandbox storage, and returns the local File.
-  /// If no remote PDF file is available or remote download fails, seamlessly compiles
-  /// the actual lesson content into a clean PDF document.
   static Future<File> downloadPdf({
     required String pdfUrl,
     required String fileKey,
@@ -314,58 +328,97 @@ class SecurePdfStorage {
   }) async {
     final file = await getPdfFile(fileKey);
     final resolvedUrl = _resolveDownloadUrl(pdfUrl, lessonId: lessonId);
-    final effectiveText = getEffectiveContent(title ?? 'Lesson Study Guide', content);
 
-    // 1. If a remote URL is available, attempt network download
-    if (resolvedUrl != null) {
-      try {
-        final token = await SecureStorageService().getAccessToken();
-        final options = Options(
-          headers: token != null && token.isNotEmpty ? {'Authorization': 'Bearer $token'} : null,
-          responseType: ResponseType.bytes,
-          receiveTimeout: const Duration(seconds: 25),
-          sendTimeout: const Duration(seconds: 15),
-          followRedirects: true,
-          maxRedirects: 5,
-        );
+    // No real remote PDF -> reader should show Study Notes, not a fabricated PDF.
+    if (resolvedUrl == null) {
+      throw PdfNotAvailableException();
+    }
 
-        final dio = Dio();
-        final response = await dio.get<List<int>>(
-          resolvedUrl,
-          options: options,
+    try {
+      final token = await SecureStorageService().getAccessToken();
+      final headers = (token != null && token.isNotEmpty)
+          ? {'Authorization': 'Bearer $token'}
+          : <String, String>{};
+
+      final dio = Dio();
+      var currentUrl = resolvedUrl;
+      Response<List<int>>? response;
+
+      // Follow redirects manually (max 5 hops) so localhost/emulator hosts get
+      // rewritten via fixMediaUrl at EVERY hop (MinIO/S3 presigned chains).
+      for (var hop = 0; hop < 5; hop++) {
+        response = await dio.get<List<int>>(
+          currentUrl,
+          options: Options(
+            headers: headers,
+            responseType: ResponseType.bytes,
+            receiveTimeout: const Duration(seconds: 25),
+            sendTimeout: const Duration(seconds: 15),
+            followRedirects: false,
+            validateStatus: (status) => status != null && status < 400,
+          ),
           onReceiveProgress: (received, total) {
             if (total > 0 && onProgress != null) {
-              onProgress(received / total);
+              onProgress((received / total).clamp(0.0, 1.0));
             }
           },
         );
 
-        if (response.statusCode == 200 && response.data != null && response.data!.length > 100) {
-          final bytes = Uint8List.fromList(response.data!);
-          if (_isValidPdfBytes(bytes)) {
-            await file.writeAsBytes(bytes, flush: true);
-            return file;
-          }
+        final code = response.statusCode ?? 0;
+        if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
+          final location = response.headers.value('location');
+          if (location == null || location.isEmpty) break;
+          currentUrl = fixMediaUrl(location);
+          continue;
         }
-      } catch (_) {
-        // Network download failed or returned non-PDF -> fallback to generated PDF
+        break;
       }
-    }
 
-    // 2. Compile rich lesson content into a valid, formatted PDF document
-    if (onProgress != null) {
-      onProgress(0.8);
-    }
-    final textPdfBytes = _generatePdfFromLessonContent(
-      title ?? 'Lesson Study Guide',
-      effectiveText,
-    );
+      if (response != null &&
+          response.statusCode == 200 &&
+          response.data != null &&
+          response.data!.length > 100) {
+        final bytes = Uint8List.fromList(response.data!);
+        if (_isValidPdfBytes(bytes)) {
+          await file.writeAsBytes(bytes, flush: true);
+          if (onProgress != null) onProgress(1.0);
+          return file;
+        }
+        // 200 but not a PDF -> most likely a note_url (HTML/markdown). Show notes.
+        throw PdfNotAvailableException('The attached file is not a valid PDF.');
+      }
 
-    await file.writeAsBytes(textPdfBytes, flush: true);
-    if (onProgress != null) {
-      onProgress(1.0);
+      throw PdfDownloadException(
+        'Could not download the PDF (status ${response?.statusCode ?? 'unknown'}).',
+      );
+    } on PdfNotAvailableException {
+      rethrow;
+    } on PdfDownloadException {
+      rethrow;
+    } on DioException catch (e) {
+      throw PdfDownloadException(_friendlyDioError(e));
+    } catch (_) {
+      throw PdfDownloadException('Unexpected error while opening the PDF. Please retry.');
     }
-    return file;
+  }
+
+  static String _friendlyDioError(DioException e) {
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.receiveTimeout:
+      case DioExceptionType.sendTimeout:
+        return 'The download timed out. Check your connection and retry.';
+      case DioExceptionType.badResponse:
+        final code = e.response?.statusCode;
+        if (code == 401 || code == 403) {
+          return 'Your session may have expired. Please sign in again and retry.';
+        }
+        return 'The server could not provide the PDF (status $code).';
+      case DioExceptionType.connectionError:
+        return 'No internet connection. Please retry when you are back online.';
+      default:
+        return 'Could not download the PDF. Please retry.';
+    }
   }
 
   /// Scans the binary bytes for `%PDF-` signature within the first 1024 bytes
@@ -382,117 +435,5 @@ class SecurePdfStorage {
       }
     }
     return false;
-  }
-
-  /// Sanitizes text to ensure all characters are supported by Syncfusion PdfStandardFont (WinAnsi / ASCII)
-  static String _sanitizeTextForPdfStandardFont(String text) {
-    if (text.isEmpty) return text;
-
-    var cleaned = text
-        .replaceAll('\u201C', '"')
-        .replaceAll('\u201D', '"')
-        .replaceAll('\u2018', "'")
-        .replaceAll('\u2019', "'")
-        .replaceAll('\u2014', '-')
-        .replaceAll('\u2013', '-')
-        .replaceAll('\u2022', '*')
-        .replaceAll('\u2026', '...')
-        .replaceAll('\u00A0', ' ')
-        .replaceAll('\u2264', '<=')
-        .replaceAll('\u2265', '>=')
-        .replaceAll('\u2260', '!=');
-
-    final buffer = StringBuffer();
-    for (final char in cleaned.runes) {
-      if ((char >= 32 && char <= 255) || char == 10 || char == 13 || char == 9) {
-        buffer.writeCharCode(char);
-      } else {
-        buffer.write(' ');
-      }
-    }
-
-    final result = buffer.toString().trim();
-    return result.isEmpty ? 'Study Notes Content' : result;
-  }
-
-  /// Generates a valid Syncfusion PDF document containing the actual lesson title and content
-  static Uint8List _generatePdfFromLessonContent(String title, String content) {
-    final safeTitle = _sanitizeTextForPdfStandardFont(title.isEmpty ? 'Lesson Study Guide' : title);
-    final safeContent = _sanitizeTextForPdfStandardFont(content);
-
-    try {
-      final document = PdfDocument();
-      // Set 40pt standard margins
-      document.pageSettings.margins.all = 40;
-
-      final page = document.pages.add();
-      final pageSize = page.getClientSize();
-
-      final titleFont = PdfStandardFont(PdfFontFamily.helvetica, 18, style: PdfFontStyle.bold);
-      final subtitleFont = PdfStandardFont(PdfFontFamily.helvetica, 10, style: PdfFontStyle.bold);
-      final bodyFont = PdfStandardFont(PdfFontFamily.helvetica, 11);
-
-      // 1. Header Pill: MEMERE • NATIONAL EXAM PREPARATION
-      page.graphics.drawString(
-        'MEMERE • GRADE 12 NATIONAL EXAM PREPARATION',
-        subtitleFont,
-        brush: PdfSolidBrush(PdfColor(16, 185, 129)),
-        bounds: Rect.fromLTWH(0, 0, pageSize.width, 16),
-      );
-
-      // 2. Title
-      page.graphics.drawString(
-        safeTitle,
-        titleFont,
-        brush: PdfSolidBrush(PdfColor(15, 23, 42)),
-        bounds: Rect.fromLTWH(0, 22, pageSize.width, 32),
-      );
-
-      // 3. Separator Line
-      page.graphics.drawLine(
-        PdfPen(PdfColor(226, 232, 240), width: 1.5),
-        const Offset(0, 58),
-        Offset(pageSize.width, 58),
-      );
-
-      // 4. Formatted Body Text (paginated automatically across pages)
-      final textElement = PdfTextElement(
-        text: safeContent,
-        font: bodyFont,
-        brush: PdfSolidBrush(PdfColor(51, 65, 85)),
-        format: PdfStringFormat(
-          lineSpacing: 3,
-          paragraphIndent: 0,
-        ),
-      );
-
-      final layoutFormat = PdfLayoutFormat(
-        layoutType: PdfLayoutType.paginate,
-        breakType: PdfLayoutBreakType.fitPage,
-      );
-
-      textElement.draw(
-        page: page,
-        bounds: Rect.fromLTWH(0, 72, pageSize.width, pageSize.height - 80),
-        format: layoutFormat,
-      );
-
-      final List<int> bytes = document.saveSync();
-      document.dispose();
-      return Uint8List.fromList(bytes);
-    } catch (_) {
-      // Reliable fallback if anything goes wrong
-      final document = PdfDocument();
-      final page = document.pages.add();
-      final font = PdfStandardFont(PdfFontFamily.helvetica, 12);
-      page.graphics.drawString(
-        '$safeTitle\n\n$safeContent',
-        font,
-        bounds: Rect.fromLTWH(0, 0, page.getClientSize().width, page.getClientSize().height),
-      );
-      final List<int> bytes = document.saveSync();
-      document.dispose();
-      return Uint8List.fromList(bytes);
-    }
   }
 }
