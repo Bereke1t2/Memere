@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Loader2, Video, FileText, FileCheck, Upload, RefreshCw, Edit3, File, CheckCircle2, Settings2, Sparkles } from "lucide-react";
+import { Plus, Loader2, Video, FileText, FileCheck, Upload, RefreshCw, Edit3, File, CheckCircle2, Settings2, Sparkles, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,12 +72,14 @@ function UploadProgressModal({
   fileType,
   progress,
   statusText,
+  indeterminate = false,
 }: {
   open: boolean;
   fileName: string;
   fileType: string;
   progress: number;
   statusText: string;
+  indeterminate?: boolean;
 }) {
   return (
     <Dialog open={open} onOpenChange={() => {}}>
@@ -90,14 +92,23 @@ function UploadProgressModal({
         <div className="flex flex-col gap-3 py-3">
           <div className="flex items-center justify-between text-xs">
             <span className="font-medium truncate max-w-[210px] text-foreground" title={fileName}>{fileName}</span>
-            <span className="font-bold tabular-nums text-primary text-sm">{progress}%</span>
+            <span className="font-bold tabular-nums text-primary text-sm">
+              {indeterminate ? "Finalizing…" : `${progress}%`}
+            </span>
           </div>
 
           <div className="w-full bg-muted h-3.5 rounded-full overflow-hidden p-0.5 border border-border">
-            <div
-              className="bg-primary h-full rounded-full transition-all duration-300 ease-out shadow-sm"
-              style={{ width: `${Math.max(4, progress)}%` }}
-            />
+            {indeterminate ? (
+              // The bytes have left the browser but the server is still storing
+              // them to object storage — a leg the browser cannot measure. Show
+              // an honest "working" shimmer rather than a frozen 100% bar.
+              <div className="bg-primary/80 h-full rounded-full w-full animate-pulse shadow-sm" />
+            ) : (
+              <div
+                className="bg-primary h-full rounded-full transition-all duration-300 ease-out shadow-sm"
+                style={{ width: `${Math.max(4, progress)}%` }}
+              />
+            )}
           </div>
 
           <p className="text-xs text-muted-foreground font-mono flex items-center gap-1.5 pt-1">
@@ -113,6 +124,7 @@ function UploadProgressModal({
 function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: string | null }) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [indeterminate, setIndeterminate] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [isAttached, setIsAttached] = useState(!!videoId);
   const [fileName, setFileName] = useState("");
@@ -141,6 +153,7 @@ function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: stri
     setFileName(file.name);
     setUploading(true);
     setProgress(5);
+    setIndeterminate(false);
     setStatus("Preparing upload…");
 
     try {
@@ -158,6 +171,12 @@ function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: stri
           const xhr = new XMLHttpRequest();
           xhr.upload.onprogress = (ev) => {
             if (ev.lengthComputable) setProgress(Math.round((ev.loaded / ev.total) * 100));
+          };
+          xhr.upload.onload = () => {
+            // All bytes reached B2; only its PUT response is outstanding now.
+            setProgress(100);
+            setIndeterminate(true);
+            setStatus("Finalizing upload…");
           };
           xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Status ${xhr.status}`)));
           xhr.onerror = () => reject(new Error("Direct upload network error"));
@@ -179,6 +198,14 @@ function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: stri
           const xhr = new XMLHttpRequest();
           xhr.upload.onprogress = (ev) => {
             if (ev.lengthComputable) setProgress(Math.round((ev.loaded / ev.total) * 100));
+          };
+          xhr.upload.onload = () => {
+            // Bytes are off the browser; the proxy is still streaming them to B2
+            // — a leg we can't measure — so switch to an honest "working" state
+            // instead of parking at a frozen 100%.
+            setProgress(100);
+            setIndeterminate(true);
+            setStatus("Uploading to storage…");
           };
           xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Server upload failed with status ${xhr.status}`)));
           xhr.onerror = () => reject(new Error("Server proxy upload error"));
@@ -259,6 +286,7 @@ function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: stri
         fileType="Video File"
         progress={progress}
         statusText={status ?? "Uploading video…"}
+        indeterminate={indeterminate}
       />
       <UploadSuccessDialog
         open={showSuccessDialog}
@@ -286,6 +314,7 @@ function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: stri
 function PdfUploader({ lesson, pdfUrl }: { lesson: Lesson; pdfUrl?: string | null }) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [indeterminate, setIndeterminate] = useState(false);
   const [statusText, setStatusText] = useState("Preparing upload…");
   const [fileName, setFileName] = useState("");
   const [currentPdf, setCurrentPdf] = useState<string | null>(pdfUrl ?? null);
@@ -301,14 +330,44 @@ function PdfUploader({ lesson, pdfUrl }: { lesson: Lesson; pdfUrl?: string | nul
     }
     setFileName(file.name);
     setUploading(true);
-    setProgress(20);
+    setProgress(5);
+    setIndeterminate(false);
     setStatusText("Uploading PDF document…");
 
     try {
-      // Save PDF link to lesson in PostgreSQL database
-      await clientAction(`/api/teacher/lessons/${lesson.id}`, {
-        pdf_url: file.name,
-        is_published: true,
+      // Upload the actual bytes to the backend (POST /lessons/:id/pdf). The
+      // backend validates the %PDF- header, stores the file in object storage
+      // (Backblaze B2) at lessons/<id>/notes.pdf, and sets the lesson's pdf_url
+      // to that storage key. Previously this only saved file.name to the DB and
+      // never uploaded the bytes — so nothing ever reached storage.
+      const bodyData = new FormData();
+      bodyData.append("file", file);
+
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.onprogress = (ev) => {
+          if (ev.lengthComputable) setProgress(Math.round((ev.loaded / ev.total) * 100));
+        };
+        xhr.upload.onload = () => {
+          // Bytes are off the browser; the server is still storing them to B2.
+          setProgress(100);
+          setIndeterminate(true);
+          setStatusText("Saving to storage…");
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) return resolve();
+          let msg = `Upload failed with status ${xhr.status}`;
+          try {
+            const j = JSON.parse(xhr.responseText);
+            if (j?.message) msg = j.message;
+          } catch {
+            /* non-JSON error body — keep the status message */
+          }
+          reject(new Error(msg));
+        };
+        xhr.onerror = () => reject(new Error("Network error while uploading the PDF."));
+        xhr.open("POST", `/api/teacher/lessons/${lesson.id}/pdf`);
+        xhr.send(bodyData);
       });
 
       setProgress(100);
@@ -316,7 +375,7 @@ function PdfUploader({ lesson, pdfUrl }: { lesson: Lesson; pdfUrl?: string | nul
       setCurrentPdf(file.name);
       setUploading(false);
       setShowSuccessDialog(true);
-      toast.success(`PDF note "${file.name}" saved to course database.`);
+      toast.success(`PDF "${file.name}" uploaded.`);
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "PDF upload failed.");
@@ -332,6 +391,7 @@ function PdfUploader({ lesson, pdfUrl }: { lesson: Lesson; pdfUrl?: string | nul
         fileType="PDF Document"
         progress={progress}
         statusText={statusText}
+        indeterminate={indeterminate}
       />
       <UploadSuccessDialog
         open={showSuccessDialog}
@@ -342,7 +402,7 @@ function PdfUploader({ lesson, pdfUrl }: { lesson: Lesson; pdfUrl?: string | nul
 
       {currentPdf && (
         <span className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium mr-1 max-w-[120px] truncate" title={currentPdf}>
-          <File className="h-3 w-3 shrink-0" /> {currentPdf}
+          <File className="h-3 w-3 shrink-0" /> {currentPdf.split("/").pop() || currentPdf}
         </span>
       )}
       <label className="cursor-pointer">
@@ -417,6 +477,60 @@ function TextNoteEditor({ lesson, onSave }: { lesson: Lesson; onSave?: (text: st
             <Button variant="outline" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
             <Button size="sm" onClick={handleSave} disabled={loading}>
               {loading ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />Saving…</> : "Save Note"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+function DeleteLessonButton({ lesson }: { lesson: Lesson }) {
+  const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const router = useRouter();
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await clientAction(`/api/teacher/lessons/${lesson.id}`, undefined, "DELETE");
+      toast.success(`Lesson "${lesson.title}" deleted.`);
+      setOpen(false);
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete lesson.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+        title="Delete Lesson"
+        onClick={() => setOpen(true)}
+      >
+        <Trash2 className="h-3.5 w-3.5" />
+      </Button>
+
+      <Dialog open={open} onOpenChange={(o) => !deleting && setOpen(o)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+              <Trash2 className="h-4 w-4 text-destructive" /> Delete lesson?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground py-1 leading-relaxed">
+            This removes <strong className="text-foreground">{lesson.title}</strong> and its attached
+            video/notes from the course, and students will no longer see it.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setOpen(false)} disabled={deleting}>Cancel</Button>
+            <Button variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
+              {deleting ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />Deleting…</> : "Delete lesson"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -596,6 +710,8 @@ export function LessonsList({ sectionId, lessons, canEdit = true }: LessonsListP
               >
                 <Settings2 className="h-3.5 w-3.5" />
               </Button>
+
+              <DeleteLessonButton lesson={lesson} />
             </div>
           )}
         </div>
