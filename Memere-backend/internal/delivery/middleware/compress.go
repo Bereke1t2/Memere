@@ -26,17 +26,34 @@ var gzipPool = sync.Pool{
 
 // gzipResponseWriter wraps gin.ResponseWriter and compresses the body when the
 // threshold is crossed. It buffers the first compressMinBytes in memory; once
-// exceeded it flushes through gzip.
+// exceeded it flushes through gzip. Responses whose Content-Type is already
+// compressed (images, video, audio, PDF, archives) are passed through untouched
+// so byte-range streaming and Content-Length survive.
 type gzipResponseWriter struct {
 	gin.ResponseWriter
-	gz     *gzip.Writer
-	buf    []byte
-	active bool
+	gz      *gzip.Writer
+	buf     []byte
+	active  bool
+	decided bool // whether the compress/passthrough choice has been made
+	skip    bool // true => never compress, write straight through
 }
 
 func (w *gzipResponseWriter) Write(b []byte) (int, error) {
+	if w.skip {
+		return w.ResponseWriter.Write(b)
+	}
 	if w.active {
 		return w.gz.Write(b)
+	}
+	// Decide once, on the first write, using the Content-Type the handler set.
+	// Precompressed/binary payloads (notably the /media video proxy) must not be
+	// gzipped: activate() deletes Content-Length, which would break HTTP Range.
+	if !w.decided {
+		w.decided = true
+		if isIncompressibleType(w.ResponseWriter.Header().Get("Content-Type")) {
+			w.skip = true
+			return w.ResponseWriter.Write(b)
+		}
 	}
 	w.buf = append(w.buf, b...)
 	if len(w.buf) >= compressMinBytes {
@@ -93,6 +110,36 @@ func Compress() gin.HandlerFunc {
 			_ = gz.Close()
 		}
 	}
+}
+
+// isIncompressibleType reports whether a Content-Type is already compressed (or
+// otherwise must not be gzipped). Gzipping these wastes CPU and — because the
+// gzip path deletes Content-Length — would break HTTP Range/seeking for the
+// media proxy. Parameters (e.g. "; charset=utf-8") are ignored.
+func isIncompressibleType(ct string) bool {
+	if ct == "" {
+		return false
+	}
+	ct = strings.ToLower(strings.TrimSpace(ct))
+	if i := strings.IndexByte(ct, ';'); i >= 0 {
+		ct = strings.TrimSpace(ct[:i])
+	}
+	if strings.HasPrefix(ct, "image/") ||
+		strings.HasPrefix(ct, "video/") ||
+		strings.HasPrefix(ct, "audio/") {
+		return true
+	}
+	switch ct {
+	case "application/pdf",
+		"application/zip",
+		"application/gzip",
+		"application/x-gzip",
+		"application/octet-stream",
+		"application/x-7z-compressed",
+		"application/x-rar-compressed":
+		return true
+	}
+	return false
 }
 
 // noopWriter satisfies the http.ResponseWriter interface for pool initialization.

@@ -26,14 +26,33 @@ func SecurityHeaders() gin.HandlerFunc {
 	}
 }
 
+// uploadBodyRoutes are the multipart upload routes that legitimately stream a
+// large binary body THROUGH the API to the object store (lesson PDFs, direct
+// video uploads, course thumbnails). This matters for the Google Drive backend,
+// where the bytes are proxied by the backend rather than PUT straight to S3.
+// These routes are exempt from the global JSON body limit; each handler enforces
+// its own, content-appropriate size cap. Keys are gin route patterns as returned
+// by c.FullPath().
+var uploadBodyRoutes = map[string]struct{}{
+	"/api/v1/lessons/:id/pdf":           {},
+	"/api/v1/lessons/:id/videos/upload": {},
+	"/api/v1/courses/:id/thumbnail":     {},
+}
+
 // BodyLimit rejects requests whose Content-Length exceeds maxBytes with 413.
 // It also wraps the body in http.MaxBytesReader so oversized chunked transfers
 // are caught during JSON binding, not just via the header.
-// Pre-signed upload routes bypass this via the S3 redirect — they never proxy
-// the binary body through the API server.
+//
+// The multipart upload routes in uploadBodyRoutes are exempt: they proxy large
+// binary bodies through the API on purpose and cap size themselves. (Pre-signed
+// S3 upload routes never reach the API with a body at all.)
 func BodyLimit(maxBytes int64) gin.HandlerFunc {
 	msg := fmt.Sprintf("request body must not exceed %d bytes", maxBytes)
 	return func(c *gin.Context) {
+		if _, exempt := uploadBodyRoutes[c.FullPath()]; exempt {
+			c.Next()
+			return
+		}
 		if c.Request.ContentLength > maxBytes {
 			c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, gin.H{
 				"code":    "REQUEST_TOO_LARGE",
