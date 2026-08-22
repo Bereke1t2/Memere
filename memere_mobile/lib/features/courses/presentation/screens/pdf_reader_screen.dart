@@ -1,6 +1,8 @@
-import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:go_router/go_router.dart';
 
@@ -43,6 +45,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   double _fontSize = 15.0;
   int _activeTab = 0; // 0: Study Notes, 1: PDF Document
   bool _isSwipeHorizontal = false;
+  bool _noPdfAvailable = false;
 
   PDFViewController? _pdfViewController;
   final List<String> _userNotes = [];
@@ -53,15 +56,17 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   String get _fileKey =>
       SecurePdfStorage.getFileKey(widget.pdfUrl, title: widget.title);
 
-  int get _progressPercent =>
-      _totalPages > 0 ? ((_currentPage / _totalPages) * 100).clamp(0, 100).toInt() : 0;
+  int get _progressPercent => _totalPages > 0
+      ? ((_currentPage / _totalPages) * 100).clamp(0, 100).toInt()
+      : 0;
 
   @override
   void initState() {
     super.initState();
 
     // Default to PDF Document if a specific PDF is attached, otherwise Study Notes
-    if (widget.pdfUrl.trim().isNotEmpty && widget.pdfUrl.trim() != 'sample.pdf') {
+    if (widget.pdfUrl.trim().isNotEmpty &&
+        widget.pdfUrl.trim() != 'sample.pdf') {
       _activeTab = 1;
     } else {
       _activeTab = 0;
@@ -104,6 +109,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
       _isDownloading = true;
       _downloadProgress = 0.15;
       _pdfRenderError = null;
+      _noPdfAvailable = false;
     });
 
     try {
@@ -128,6 +134,20 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
         _isSavedToDownloads = true;
         _localPdfPath = pdfFile.path;
         _showPdfCanvas = true;
+      });
+    } on PdfNotAvailableException {
+      if (!mounted) return;
+      setState(() {
+        _isDownloading = false;
+        _noPdfAvailable = true;
+        _activeTab = 0; // route to Study Notes
+      });
+    } on PdfDownloadException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isDownloading = false;
+        _pdfRenderError =
+            e.message; // shown by _buildErrorOrEmptyView with retry
       });
     } catch (e) {
       if (!mounted) return;
@@ -165,7 +185,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
       builder: (context) {
         return AlertDialog(
           backgroundColor: _isNightMode ? AppColors.bgSecondary : Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             'Jump to Page',
             style: TextStyle(
@@ -197,7 +218,9 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                 ),
                 decoration: InputDecoration(
                   filled: true,
-                  fillColor: _isNightMode ? const Color(0xFF141824) : const Color(0xFFF1F5F9),
+                  fillColor: _isNightMode
+                      ? const Color(0xFF141824)
+                      : const Color(0xFFF1F5F9),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
@@ -223,7 +246,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.brandEmerald,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
               child: const Text('Go'),
             ),
@@ -251,9 +275,12 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: cardColor,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(24)),
               border: Border.all(
-                color: _isNightMode ? AppColors.borderStrong : const Color(0xFFE2E8F0),
+                color: _isNightMode
+                    ? AppColors.borderStrong
+                    : const Color(0xFFE2E8F0),
               ),
             ),
             child: Column(
@@ -273,7 +300,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                 const SizedBox(height: 14),
                 Row(
                   children: [
-                    const Icon(Icons.edit_note_rounded, color: AppColors.brandEmerald, size: 22),
+                    const Icon(Icons.edit_note_rounded,
+                        color: AppColors.brandEmerald, size: 22),
                     const SizedBox(width: 8),
                     Text(
                       'Study Notes for ${widget.title}',
@@ -293,14 +321,20 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                   autofocus: true,
                   style: TextStyle(color: textColor, fontSize: 14),
                   decoration: InputDecoration(
-                    hintText: 'Jot down key formulas, insights, or questions...',
-                    hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 13),
+                    hintText:
+                        'Jot down key formulas, insights, or questions...',
+                    hintStyle: const TextStyle(
+                        color: AppColors.textMuted, fontSize: 13),
                     filled: true,
-                    fillColor: _isNightMode ? const Color(0xFF141824) : const Color(0xFFF8FAFC),
+                    fillColor: _isNightMode
+                        ? const Color(0xFF141824)
+                        : const Color(0xFFF8FAFC),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
-                        color: _isNightMode ? AppColors.borderStrong : const Color(0xFFE2E8F0),
+                        color: _isNightMode
+                            ? AppColors.borderStrong
+                            : const Color(0xFFE2E8F0),
                       ),
                     ),
                   ),
@@ -326,7 +360,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                     backgroundColor: AppColors.brandEmerald,
                     foregroundColor: Colors.white,
                     minimumSize: const Size(double.infinity, 44),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   icon: const Icon(Icons.check_rounded, size: 18),
                   label: const Text('Save Note'),
@@ -379,7 +414,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               const SizedBox(height: 14),
               Text(
                 'Studying "${widget.title}"...\nAsk questions, request step-by-step formula derivations, or solve entrance exam questions with AI!',
-                style: const TextStyle(fontSize: 13, color: AppColors.textMuted),
+                style:
+                    const TextStyle(fontSize: 13, color: AppColors.textMuted),
               ),
               const SizedBox(height: 20),
               ElevatedButton.icon(
@@ -404,11 +440,15 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = _isNightMode ? AppColors.bgPrimary : const Color(0xFFF8FAFC);
+    final bgColor =
+        _isNightMode ? AppColors.bgPrimary : const Color(0xFFF8FAFC);
     final cardColor = _isNightMode ? AppColors.bgSecondary : Colors.white;
-    final textColor = _isNightMode ? AppColors.textPrimary : const Color(0xFF0F172A);
-    final mutedColor = _isNightMode ? AppColors.textMuted : const Color(0xFF64748B);
-    final borderColor = _isNightMode ? AppColors.borderStrong : const Color(0xFFE2E8F0);
+    final textColor =
+        _isNightMode ? AppColors.textPrimary : const Color(0xFF0F172A);
+    final mutedColor =
+        _isNightMode ? AppColors.textMuted : const Color(0xFF64748B);
+    final borderColor =
+        _isNightMode ? AppColors.borderStrong : const Color(0xFFE2E8F0);
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -458,7 +498,9 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                         isNightMode: _isNightMode,
                         onTap: () {
                           setState(() => _activeTab = 1);
-                          if (_localPdfPath == null && !_isDownloading) {
+                          if (_localPdfPath == null &&
+                              !_isDownloading &&
+                              !_noPdfAvailable) {
                             _downloadPdf();
                           }
                         },
@@ -474,7 +516,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                   decoration: BoxDecoration(
                     color: cardColor,
                     borderRadius: BorderRadius.circular(10),
@@ -497,9 +540,12 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                             : null,
                         borderRadius: BorderRadius.circular(6),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: _isNightMode ? const Color(0xFF181820) : const Color(0xFFE2E8F0),
+                            color: _isNightMode
+                                ? const Color(0xFF181820)
+                                : const Color(0xFFE2E8F0),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -528,9 +574,12 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                             : null,
                         borderRadius: BorderRadius.circular(6),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: _isNightMode ? const Color(0xFF181820) : const Color(0xFFE2E8F0),
+                            color: _isNightMode
+                                ? const Color(0xFF181820)
+                                : const Color(0xFFE2E8F0),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -548,11 +597,13 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                         onTap: _copyNotesToClipboard,
                         borderRadius: BorderRadius.circular(6),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 4),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.copy_rounded, size: 14, color: mutedColor),
+                              Icon(Icons.copy_rounded,
+                                  size: 14, color: mutedColor),
                               const SizedBox(width: 4),
                               Text(
                                 'Copy Notes',
@@ -574,12 +625,16 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
             // 4. Main Body Content
             Expanded(
               child: _activeTab == 0
-                  ? _buildStudyNotesView(textColor, mutedColor, borderColor, cardColor)
+                  ? _buildStudyNotesView(
+                      textColor, mutedColor, borderColor, cardColor)
                   : (_isDownloading
-                      ? _buildLoadingView(cardColor, textColor, mutedColor, borderColor)
+                      ? _buildLoadingView(
+                          cardColor, textColor, mutedColor, borderColor)
                       : (_showPdfCanvas && _localPdfPath != null
-                          ? _buildPdfCanvasView(cardColor, textColor, mutedColor, borderColor)
-                          : _buildErrorOrEmptyView(cardColor, textColor, mutedColor, borderColor))),
+                          ? _buildPdfCanvasView(
+                              cardColor, textColor, mutedColor, borderColor)
+                          : _buildErrorOrEmptyView(
+                              cardColor, textColor, mutedColor, borderColor))),
             ),
           ],
         ),
@@ -608,7 +663,9 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: _isNightMode ? const Color(0xFF161B26) : const Color(0xFFF1F5F9),
+                color: _isNightMode
+                    ? const Color(0xFF161B26)
+                    : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -688,7 +745,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
             PopupMenuButton<String>(
               icon: Icon(Icons.more_vert_rounded, color: mutedColor, size: 20),
               color: cardColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               onSelected: (val) {
                 if (val == 'reload') {
                   _downloadPdf();
@@ -703,7 +761,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                     children: [
                       Icon(Icons.refresh_rounded, size: 16, color: textColor),
                       const SizedBox(width: 8),
-                      Text('Reload Document', style: TextStyle(color: textColor, fontSize: 13)),
+                      Text('Reload Document',
+                          style: TextStyle(color: textColor, fontSize: 13)),
                     ],
                   ),
                 ),
@@ -711,9 +770,12 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                   value: 'delete',
                   child: Row(
                     children: [
-                      Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFEF4444)),
+                      Icon(Icons.delete_outline_rounded,
+                          size: 16, color: Color(0xFFEF4444)),
                       SizedBox(width: 8),
-                      Text('Clear Cache', style: TextStyle(color: Color(0xFFEF4444), fontSize: 13)),
+                      Text('Clear Cache',
+                          style: TextStyle(
+                              color: Color(0xFFEF4444), fontSize: 13)),
                     ],
                   ),
                 ),
@@ -722,7 +784,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
 
           // AI Tutor Quick Button
           IconButton(
-            icon: const Icon(Icons.smart_toy_outlined, color: AppColors.brandEmerald, size: 20),
+            icon: const Icon(Icons.smart_toy_outlined,
+                color: AppColors.brandEmerald, size: 20),
             tooltip: 'AI Concept Tutor',
             onPressed: _openAiTutor,
           ),
@@ -807,7 +870,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
         const SizedBox(height: 16),
 
         // Formatted Note Paragraphs & Sections
-        ..._parseAndRenderNotes(noteContent, textColor, mutedColor, borderColor, cardColor),
+        ..._parseAndRenderNotes(
+            noteContent, textColor, mutedColor, borderColor, cardColor),
 
         // Personal User Notes Section (if any added)
         if (_userNotes.isNotEmpty) ...[
@@ -827,19 +891,22 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: _isNightMode ? const Color(0xFF141824) : const Color(0xFFF1F5F9),
+                color: _isNightMode
+                    ? const Color(0xFF141824)
+                    : const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: const Color(0x3510B981)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.bookmark_outline_rounded, size: 16, color: AppColors.brandEmerald),
+                  const Icon(Icons.bookmark_outline_rounded,
+                      size: 16, color: AppColors.brandEmerald),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
+                    child: _buildFormattedText(
                       n,
-                      style: TextStyle(fontSize: 13, color: textColor),
+                      baseStyle: TextStyle(fontSize: 13, color: textColor),
                     ),
                   ),
                 ],
@@ -905,7 +972,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     );
   }
 
-  /// Parses text lines into clean, formatted typographic blocks
+  /// Parses text lines into clean, formatted typographic blocks with full LaTeX math support
   List<Widget> _parseAndRenderNotes(
     String content,
     Color textColor,
@@ -915,22 +982,120 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
   ) {
     final widgets = <Widget>[];
     final lines = content.split('\n');
+    int i = 0;
 
-    for (int i = 0; i < lines.length; i++) {
-      final line = lines[i].trim();
+    while (i < lines.length) {
+      final rawLine = lines[i];
+      final line = rawLine.trim();
+
       if (line.isEmpty) {
         widgets.add(const SizedBox(height: 10));
+        i++;
         continue;
       }
 
-      // 1. Heading 1 (# Heading)
+      // 1. Multi-line Block Math ($$ ... $$, \[ ... \], or \begin{...} ... \end{...})
+      if (line == r'$$' ||
+          (line.startsWith(r'$$') && !line.substring(2).contains(r'$$')) ||
+          line == r'\[' ||
+          (line.startsWith(r'\[') && !line.substring(2).contains(r'\]')) ||
+          line.startsWith(r'\begin{')) {
+        final mathBuffer = StringBuffer();
+        if (line != r'$$' && line != r'\[') {
+          var startContent = line;
+          if (startContent.startsWith(r'$$')) {
+            startContent = startContent.substring(2);
+          }
+          if (startContent.startsWith(r'\[')) {
+            startContent = startContent.substring(2);
+          }
+          mathBuffer.writeln(startContent);
+        }
+
+        i++;
+        while (i < lines.length) {
+          final current = lines[i].trim();
+          if (current == r'$$' ||
+              current.endsWith(r'$$') ||
+              current == r'\]' ||
+              current.endsWith(r'\]') ||
+              current.startsWith(r'\end{')) {
+            var endContent = current;
+            if (endContent.endsWith(r'$$')) {
+              endContent = endContent.substring(0, endContent.length - 2);
+            }
+            if (endContent.endsWith(r'\]')) {
+              endContent = endContent.substring(0, endContent.length - 2);
+            }
+            if (endContent.isNotEmpty &&
+                endContent != r'$$' &&
+                endContent != r'\]') {
+              mathBuffer.writeln(endContent);
+            }
+            break;
+          }
+          mathBuffer.writeln(lines[i]);
+          i++;
+        }
+
+        final mathCode = mathBuffer.toString().trim();
+        if (mathCode.isNotEmpty) {
+          widgets.add(_buildDisplayMathCard(
+              mathCode, textColor, borderColor, cardColor));
+        }
+        i++;
+        continue;
+      }
+
+      // 2. Single-line Block Math ($$ equation $$ or \[ equation \])
+      if ((line.startsWith(r'$$') &&
+              line.endsWith(r'$$') &&
+              line.length >= 4) ||
+          (line.startsWith(r'\[') &&
+              line.endsWith(r'\]') &&
+              line.length >= 4)) {
+        final mathCode = line.startsWith(r'$$')
+            ? line.substring(2, line.length - 2).trim()
+            : line.substring(2, line.length - 2).trim();
+        if (mathCode.isNotEmpty) {
+          widgets.add(_buildDisplayMathCard(
+              mathCode, textColor, borderColor, cardColor));
+        }
+        i++;
+        continue;
+      }
+
+      // 3. Code Block (``` ... ```)
+      if (line.startsWith('```')) {
+        final isMathBlock = line.toLowerCase().contains('math') ||
+            line.toLowerCase().contains('latex') ||
+            line.toLowerCase().contains('tex');
+        final codeBuffer = StringBuffer();
+        i++;
+        while (i < lines.length && !lines[i].trim().startsWith('```')) {
+          codeBuffer.writeln(lines[i]);
+          i++;
+        }
+        final blockContent = codeBuffer.toString().trim();
+        if (isMathBlock) {
+          widgets.add(_buildDisplayMathCard(
+              blockContent, textColor, borderColor, cardColor));
+        } else {
+          widgets
+              .add(_buildCodeBlockCard(blockContent, textColor, borderColor));
+        }
+        i++;
+        continue;
+      }
+
+      // 4. Heading 1 (# Heading)
       if (line.startsWith('# ')) {
         widgets.add(
           Padding(
             padding: const EdgeInsets.only(top: 14, bottom: 8),
-            child: Text(
+            child: _buildFormattedText(
               line.substring(2).trim(),
-              style: TextStyle(
+              baseStyle: TextStyle(
                 fontFamily: 'Sora',
                 fontSize: _fontSize + 4,
                 fontWeight: FontWeight.w800,
@@ -941,14 +1106,14 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
           ),
         );
       }
-      // 2. Heading 2 (## Heading)
+      // 5. Heading 2 (## Heading)
       else if (line.startsWith('## ')) {
         widgets.add(
           Padding(
             padding: const EdgeInsets.only(top: 12, bottom: 6),
-            child: Text(
+            child: _buildFormattedText(
               line.substring(3).trim(),
-              style: TextStyle(
+              baseStyle: TextStyle(
                 fontFamily: 'Sora',
                 fontSize: _fontSize + 2,
                 fontWeight: FontWeight.w700,
@@ -959,14 +1124,14 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
           ),
         );
       }
-      // 3. Heading 3 (### Heading)
+      // 6. Heading 3 (### Heading)
       else if (line.startsWith('### ')) {
         widgets.add(
           Padding(
             padding: const EdgeInsets.only(top: 10, bottom: 4),
-            child: Text(
+            child: _buildFormattedText(
               line.substring(4).trim(),
-              style: TextStyle(
+              baseStyle: TextStyle(
                 fontSize: _fontSize + 1,
                 fontWeight: FontWeight.w600,
                 color: textColor,
@@ -975,8 +1140,10 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
           ),
         );
       }
-      // 4. Quote / Callout Block (> Note...)
-      else if (line.startsWith('> ') || line.startsWith('Important:') || line.startsWith('Note:')) {
+      // 7. Quote / Callout Block (> Note...)
+      else if (line.startsWith('> ') ||
+          line.startsWith('Important:') ||
+          line.startsWith('Note:')) {
         final text = line.startsWith('> ') ? line.substring(2) : line;
         widgets.add(
           Container(
@@ -988,15 +1155,16 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                   : const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(10),
               border: Border(
-                left: const BorderSide(color: AppColors.brandEmerald, width: 3.5),
+                left:
+                    const BorderSide(color: AppColors.brandEmerald, width: 3.5),
                 top: BorderSide(color: borderColor),
                 right: BorderSide(color: borderColor),
                 bottom: BorderSide(color: borderColor),
               ),
             ),
-            child: Text(
+            child: _buildFormattedText(
               text,
-              style: TextStyle(
+              baseStyle: TextStyle(
                 fontSize: _fontSize - 0.5,
                 fontWeight: FontWeight.w500,
                 color: textColor,
@@ -1006,8 +1174,10 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
           ),
         );
       }
-      // 5. Bullet List Items (- or * or •)
-      else if (line.startsWith('- ') || line.startsWith('* ') || line.startsWith('• ')) {
+      // 8. Bullet List Items (- or * or •)
+      else if (line.startsWith('- ') ||
+          line.startsWith('* ') ||
+          line.startsWith('• ')) {
         final bulletText = line.substring(2).trim();
         widgets.add(
           Padding(
@@ -1027,9 +1197,9 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                   ),
                 ),
                 Expanded(
-                  child: Text(
-                    _stripMarkdownMarkers(bulletText),
-                    style: TextStyle(
+                  child: _buildFormattedText(
+                    bulletText,
+                    baseStyle: TextStyle(
                       fontSize: _fontSize,
                       color: textColor,
                       height: 1.5,
@@ -1041,7 +1211,7 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
           ),
         );
       }
-      // 6. Numbered items (1. 2. etc.)
+      // 9. Numbered items (1. 2. etc.)
       else if (RegExp(r'^\d+\.\s+').hasMatch(line)) {
         final match = RegExp(r'^(\d+\.)\s+(.*)$').firstMatch(line);
         final numPrefix = match?.group(1) ?? '';
@@ -1064,9 +1234,9 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                   ),
                 ),
                 Expanded(
-                  child: Text(
-                    _stripMarkdownMarkers(bodyText),
-                    style: TextStyle(
+                  child: _buildFormattedText(
+                    bodyText,
+                    baseStyle: TextStyle(
                       fontSize: _fontSize,
                       color: textColor,
                       height: 1.5,
@@ -1078,33 +1248,281 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
           ),
         );
       }
-      // 7. Standard Paragraph Text
+      // 10. Standard Paragraph Text
       else {
         widgets.add(
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
-            child: SelectableText(
-              _stripMarkdownMarkers(line),
-              style: TextStyle(
+            child: _buildFormattedText(
+              line,
+              baseStyle: TextStyle(
                 fontSize: _fontSize,
                 color: textColor.withAlpha(240),
                 height: 1.6,
                 letterSpacing: 0.1,
               ),
+              isSelectable: true,
             ),
           ),
         );
       }
+
+      i++;
     }
 
     return widgets;
   }
 
-  String _stripMarkdownMarkers(String text) {
-    return text
-        .replaceAll('**', '')
-        .replaceAll('__', '')
-        .replaceAll('`', '');
+  /// Display Block Equation card with horizontal scrolling
+  Widget _buildDisplayMathCard(
+    String mathCode,
+    Color textColor,
+    Color borderColor,
+    Color cardColor,
+  ) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: _isNightMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor),
+      ),
+      child: Center(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          child: Math.tex(
+            mathCode,
+            mathStyle: MathStyle.display,
+            textStyle: TextStyle(
+              fontSize: _fontSize + 2,
+              color: textColor,
+            ),
+            onErrorFallback: (_) => SelectableText(
+              mathCode,
+              style: TextStyle(
+                fontFamily: 'monospace',
+                fontSize: _fontSize,
+                color: textColor,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Formatted Code block card
+  Widget _buildCodeBlockCard(
+    String code,
+    Color textColor,
+    Color borderColor,
+  ) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _isNightMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: borderColor),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: SelectableText(
+          code,
+          style: TextStyle(
+            fontFamily: 'monospace',
+            fontSize: _fontSize * 0.9,
+            color: textColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds a rich text widget parsing markdown formatting & LaTeX inline formulas
+  Widget _buildFormattedText(
+    String text, {
+    required TextStyle baseStyle,
+    Color? mathColor,
+    TextAlign textAlign = TextAlign.start,
+    bool isSelectable = false,
+  }) {
+    final spans = _parseInlineSpans(text, baseStyle, mathColor: mathColor);
+    if (isSelectable) {
+      return SelectableText.rich(
+        TextSpan(children: spans),
+        textAlign: textAlign,
+      );
+    }
+    return Text.rich(
+      TextSpan(children: spans),
+      textAlign: textAlign,
+    );
+  }
+
+  /// Parses string into list of text, markdown, and LaTeX Math spans
+  List<InlineSpan> _parseInlineSpans(
+    String text,
+    TextStyle baseStyle, {
+    Color? mathColor,
+  }) {
+    final spans = <InlineSpan>[];
+    if (text.isEmpty) return spans;
+
+    final regex = RegExp(
+      r'(\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\$[^$\n]+?\$|\\\([\s\S]+?\\\)|\*\*[^*]+?\*\*|__[^_]+?__|\*[^*\n]+?\*|_[^_\n]+?_|`[^`\n]+?`)',
+    );
+
+    int lastIndex = 0;
+    for (final match in regex.allMatches(text)) {
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(
+          text: text.substring(lastIndex, match.start),
+          style: baseStyle,
+        ));
+      }
+
+      final matchedText = match.group(0)!;
+
+      // 1. Display Math inside inline text: $$...$$ or \[...\]
+      if ((matchedText.startsWith(r'$$') && matchedText.endsWith(r'$$')) ||
+          (matchedText.startsWith(r'\[') && matchedText.endsWith(r'\]'))) {
+        final mathContent = matchedText.startsWith(r'$$')
+            ? matchedText.substring(2, matchedText.length - 2).trim()
+            : matchedText.substring(2, matchedText.length - 2).trim();
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Math.tex(
+                  mathContent,
+                  mathStyle: MathStyle.display,
+                  textStyle: baseStyle.copyWith(
+                    fontSize: (baseStyle.fontSize ?? _fontSize) + 1,
+                    color: mathColor ?? baseStyle.color,
+                  ),
+                  onErrorFallback: (_) => Text(
+                    matchedText,
+                    style: baseStyle.copyWith(
+                      fontFamily: 'monospace',
+                      color: AppColors.brandEmerald,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+      // 2. Inline Math: $...$ or \(...\)
+      else if ((matchedText.startsWith(r'$') &&
+              matchedText.endsWith(r'$') &&
+              matchedText.length > 2) ||
+          (matchedText.startsWith(r'\(') && matchedText.endsWith(r'\)'))) {
+        final mathContent = matchedText.startsWith(r'$')
+            ? matchedText.substring(1, matchedText.length - 1).trim()
+            : matchedText.substring(2, matchedText.length - 2).trim();
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: Math.tex(
+                mathContent,
+                mathStyle: MathStyle.text,
+                textStyle: baseStyle.copyWith(
+                  fontSize: baseStyle.fontSize ?? _fontSize,
+                  color: mathColor ?? baseStyle.color,
+                ),
+                onErrorFallback: (_) => Text(
+                  matchedText,
+                  style: baseStyle.copyWith(
+                    fontFamily: 'monospace',
+                    color: AppColors.brandEmerald,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+      // 3. Bold: **...** or __...__
+      else if ((matchedText.startsWith(r'**') && matchedText.endsWith(r'**')) ||
+          (matchedText.startsWith(r'__') && matchedText.endsWith(r'__'))) {
+        final boldContent = matchedText.substring(2, matchedText.length - 2);
+        if (boldContent.contains(r'$') || boldContent.contains(r'\(')) {
+          spans.addAll(_parseInlineSpans(
+            boldContent,
+            baseStyle.copyWith(fontWeight: FontWeight.bold),
+            mathColor: mathColor,
+          ));
+        } else {
+          spans.add(TextSpan(
+            text: boldContent,
+            style: baseStyle.copyWith(fontWeight: FontWeight.bold),
+          ));
+        }
+      }
+      // 4. Italic: *...* or _..._
+      else if ((matchedText.startsWith(r'*') && matchedText.endsWith(r'*')) ||
+          (matchedText.startsWith(r'_') && matchedText.endsWith(r'_'))) {
+        final italicContent = matchedText.substring(1, matchedText.length - 1);
+        spans.add(TextSpan(
+          text: italicContent,
+          style: baseStyle.copyWith(fontStyle: FontStyle.italic),
+        ));
+      }
+      // 5. Inline Code: `...`
+      else if (matchedText.startsWith(r'`') && matchedText.endsWith(r'`')) {
+        final codeContent = matchedText.substring(1, matchedText.length - 1);
+        spans.add(
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              decoration: BoxDecoration(
+                color: _isNightMode
+                    ? const Color(0xFF1E293B)
+                    : const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                codeContent,
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: (baseStyle.fontSize ?? _fontSize) * 0.9,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.brandEmerald,
+                ),
+              ),
+            ),
+          ),
+        );
+      } else {
+        spans.add(TextSpan(text: matchedText, style: baseStyle));
+      }
+
+      lastIndex = match.end;
+    }
+
+    if (lastIndex < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(lastIndex),
+        style: baseStyle,
+      ));
+    }
+
+    return spans;
   }
 
   /// Loading View for PDF
@@ -1117,12 +1535,15 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     final progressPct = (_downloadProgress * 100).clamp(0, 100).toInt();
 
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(28),
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const AiRobotMascot(size: 64, backgroundColor: AppColors.brandEmerald),
+            const AiRobotMascot(
+                size: 64, backgroundColor: AppColors.brandEmerald),
             const SizedBox(height: 20),
             Text(
               'Opening Study Document...',
@@ -1170,7 +1591,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               onPressed: () => setState(() => _activeTab = 0),
               icon: const Icon(Icons.article_outlined, size: 16),
               label: const Text('Read Study Notes instead'),
-              style: TextButton.styleFrom(foregroundColor: AppColors.brandEmerald),
+              style:
+                  TextButton.styleFrom(foregroundColor: AppColors.brandEmerald),
             ),
           ],
         ),
@@ -1190,8 +1612,10 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
         Expanded(
           child: _pdfRenderError != null
               ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 32),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -1216,8 +1640,11 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 20),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 12,
+                          runSpacing: 12,
                           children: [
                             ElevatedButton.icon(
                               onPressed: _downloadPdf,
@@ -1227,10 +1654,10 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                               icon: const Icon(Icons.refresh_rounded, size: 16),
                               label: const Text('Re-render Document'),
                             ),
-                            const SizedBox(width: 12),
                             OutlinedButton.icon(
                               onPressed: () => setState(() => _activeTab = 0),
-                              icon: const Icon(Icons.article_outlined, size: 16),
+                              icon:
+                                  const Icon(Icons.article_outlined, size: 16),
                               label: const Text('Read Notes'),
                             ),
                           ],
@@ -1240,9 +1667,6 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                   ),
                 )
               : PDFView(
-                  key: ValueKey(
-                    '${_localPdfPath}_${_isSwipeHorizontal}_${File(_localPdfPath!).existsSync() ? File(_localPdfPath!).lastModifiedSync().millisecondsSinceEpoch : 0}',
-                  ),
                   filePath: _localPdfPath!,
                   enableSwipe: true,
                   swipeHorizontal: _isSwipeHorizontal,
@@ -1251,6 +1675,11 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                   pageSnap: true,
                   fitPolicy: FitPolicy.BOTH,
                   preventLinkNavigation: false,
+                  gestureRecognizers: {
+                    Factory<OneSequenceGestureRecognizer>(
+                      () => EagerGestureRecognizer(),
+                    ),
+                  },
                   defaultPage: _currentPage > 0 ? _currentPage - 1 : 0,
                   onRender: (pages) {
                     if (mounted) {
@@ -1304,7 +1733,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               IconButton(
                 onPressed: _currentPage > 1
                     ? () {
-                        _pdfViewController?.setPage((_currentPage - 2).clamp(0, _totalPages - 1));
+                        _pdfViewController?.setPage(
+                            (_currentPage - 2).clamp(0, _totalPages - 1));
                       }
                     : null,
                 icon: const Icon(Icons.chevron_left_rounded),
@@ -1317,9 +1747,12 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                 onTap: _showJumpToPageDialog,
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
-                    color: _isNightMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                    color: _isNightMode
+                        ? const Color(0xFF0F172A)
+                        : const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: borderColor),
                   ),
@@ -1335,7 +1768,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(Icons.unfold_more_rounded, size: 14, color: mutedColor),
+                      Icon(Icons.unfold_more_rounded,
+                          size: 14, color: mutedColor),
                     ],
                   ),
                 ),
@@ -1345,7 +1779,8 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               IconButton(
                 onPressed: _currentPage < _totalPages
                     ? () {
-                        _pdfViewController?.setPage(_currentPage.clamp(0, _totalPages - 1));
+                        _pdfViewController
+                            ?.setPage(_currentPage.clamp(0, _totalPages - 1));
                       }
                     : null,
                 icon: const Icon(Icons.chevron_right_rounded),
@@ -1386,9 +1821,11 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
     Color borderColor,
   ) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(
@@ -1414,8 +1851,11 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 12,
               children: [
                 ElevatedButton.icon(
                   onPressed: _downloadPdf,
@@ -1429,7 +1869,6 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                   icon: const Icon(Icons.download_rounded, size: 18),
                   label: const Text('Load Document'),
                 ),
-                const SizedBox(width: 12),
                 OutlinedButton.icon(
                   onPressed: () => setState(() => _activeTab = 0),
                   icon: const Icon(Icons.article_outlined, size: 18),
@@ -1467,9 +1906,7 @@ class _ReaderTabItem extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.brandEmerald
-              : Colors.transparent,
+          color: isSelected ? AppColors.brandEmerald : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -1480,7 +1917,9 @@ class _ReaderTabItem extends StatelessWidget {
               size: 14,
               color: isSelected
                   ? Colors.white
-                  : (isNightMode ? AppColors.textMuted : const Color(0xFF64748B)),
+                  : (isNightMode
+                      ? AppColors.textMuted
+                      : const Color(0xFF64748B)),
             ),
             const SizedBox(width: 6),
             Text(
@@ -1490,7 +1929,9 @@ class _ReaderTabItem extends StatelessWidget {
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
                 color: isSelected
                     ? Colors.white
-                    : (isNightMode ? AppColors.textSecondary : const Color(0xFF334155)),
+                    : (isNightMode
+                        ? AppColors.textSecondary
+                        : const Color(0xFF334155)),
               ),
             ),
           ],
@@ -1499,5 +1940,3 @@ class _ReaderTabItem extends StatelessWidget {
     );
   }
 }
-
-

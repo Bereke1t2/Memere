@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/auth/account_gate.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/memere_mascot.dart';
@@ -16,6 +17,9 @@ import '../../../payment/presentation/widgets/payment_provider_sheet.dart';
 import '../../domain/entities/course_detail_entity.dart';
 import '../../domain/entities/course_entity.dart';
 import '../../domain/entities/lesson_entity.dart';
+import '../../../exam/domain/entities/mock_exam_entity.dart';
+import '../../../exam/presentation/providers/exam_providers.dart';
+import '../../../quiz/presentation/providers/quiz_providers.dart';
 import '../providers/course_detail_provider.dart';
 import '../widgets/course_detail_skeleton.dart';
 import '../widgets/course_empty_state.dart';
@@ -454,7 +458,7 @@ class _CourseContentSheetState extends State<_CourseContentSheet> {
           ),
           const SizedBox(height: 16),
 
-          // Tab Switcher (Course Content / Description)
+          // Tab Switcher (Lessons / Quizzes / Exams / About)
           Container(
             height: 42,
             padding: const EdgeInsets.all(3),
@@ -466,21 +470,31 @@ class _CourseContentSheetState extends State<_CourseContentSheet> {
             child: Row(
               children: [
                 _TabButton(
-                  label: 'Course Content',
+                  label: 'Lessons',
                   selected: widget.selectedTab == 0,
                   onTap: () => widget.onTabChanged(0),
                 ),
                 _TabButton(
-                  label: 'Description',
+                  label: 'Quizzes',
                   selected: widget.selectedTab == 1,
                   onTap: () => widget.onTabChanged(1),
+                ),
+                _TabButton(
+                  label: 'Exams',
+                  selected: widget.selectedTab == 2,
+                  onTap: () => widget.onTabChanged(2),
+                ),
+                _TabButton(
+                  label: 'About',
+                  selected: widget.selectedTab == 3,
+                  onTap: () => widget.onTabChanged(3),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 20),
 
-          // Content Tab or Description Tab
+          // Content Tabs
           if (widget.selectedTab == 0) ...[
             if (totalLessons == 0)
               const Padding(
@@ -495,6 +509,18 @@ class _CourseContentSheetState extends State<_CourseContentSheet> {
               )
             else
               ..._buildSectionsList(course, widget.hasAccess),
+          ] else if (widget.selectedTab == 1) ...[
+            _CourseQuizzesTab(
+              courseId: course.id,
+              hasAccess: widget.hasAccess,
+              isFree: course.isFree,
+            ),
+          ] else if (widget.selectedTab == 2) ...[
+            _CourseExamsTab(
+              courseId: course.id,
+              hasAccess: widget.hasAccess,
+              isFree: course.isFree,
+            ),
           ] else ...[
             Container(
               width: double.infinity,
@@ -856,6 +882,16 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
   }
 
   Future<void> _startFree() async {
+    if (!await requireAccount(
+      context,
+      ref,
+      title: 'Sign in to enroll',
+      message:
+          'Create a free account or sign in to enroll and track your progress. '
+          'Your downloads and saved items stay on this device either way.',
+    )) {
+      return;
+    }
     final ok = await _notifier.startFreeEnrollment();
     if (!mounted) return;
     if (ok) {
@@ -868,6 +904,17 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
   }
 
   Future<void> _startPaid() async {
+    if (!await requireAccount(
+      context,
+      ref,
+      title: 'Sign in to purchase',
+      message:
+          'Create a free account or sign in to buy this course. Your purchase '
+          'unlocks it across your devices.',
+    )) {
+      return;
+    }
+    if (!mounted) return;
     final provider = await PaymentProviderSheet.show(
       context,
       amountLabel: widget.course.priceLabel,
@@ -905,6 +952,351 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
   void _showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
+    );
+  }
+}
+
+class _CourseQuizzesTab extends ConsumerWidget {
+  const _CourseQuizzesTab({
+    required this.courseId,
+    required this.hasAccess,
+    required this.isFree,
+  });
+
+  final String courseId;
+  final bool hasAccess;
+  final bool isFree;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final quizzesAsync = ref.watch(courseQuizzesProvider(courseId));
+    final canOpen = isFree || hasAccess;
+
+    return quizzesAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: CircularProgressIndicator(
+            color: AppColors.brandEmerald,
+            strokeWidth: 2,
+          ),
+        ),
+      ),
+      error: (err, _) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Text(
+          'Could not load quizzes.',
+          style: TextStyle(color: Colors.red.shade300, fontSize: 13),
+        ),
+      ),
+      data: (quizzes) {
+        if (quizzes.isEmpty) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppColors.bgSecondary,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.borderStrong),
+            ),
+            child: const Column(
+              children: [
+                Icon(
+                  Icons.quiz_outlined,
+                  size: 36,
+                  color: Color(0xFF64748B),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'No standalone quizzes found for this course.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Practice quizzes may also be attached directly to individual video lessons in the Lessons tab.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF94A3B8),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          children: quizzes.map((quiz) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: InkWell(
+                onTap: () {
+                  if (!canOpen) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Enroll in this course to unlock quizzes.'),
+                      ),
+                    );
+                    return;
+                  }
+                  context.push(AppRoutes.quizDetailPath(quiz.id));
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgSecondary,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.borderStrong.withAlpha(90),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: const Color(0x2210B981),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0x5510B981)),
+                        ),
+                        child: const Icon(
+                          Icons.quiz_outlined,
+                          size: 18,
+                          color: Color(0xFF10B981),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              quiz.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              '${quiz.questionCount} Questions • ${quiz.passPercentage.toStringAsFixed(0)}% Pass Mark',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF64748B),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 14,
+                        color: Color(0xFF94A3B8),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+}
+
+class _CourseExamsTab extends ConsumerWidget {
+  const _CourseExamsTab({
+    required this.courseId,
+    required this.hasAccess,
+    required this.isFree,
+  });
+
+  final String courseId;
+  final bool hasAccess;
+  final bool isFree;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final examsAsync = ref.watch(courseExamsProvider(courseId));
+    final canOpen = isFree || hasAccess;
+
+    return examsAsync.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: CircularProgressIndicator(
+            color: AppColors.brandEmerald,
+            strokeWidth: 2,
+          ),
+        ),
+      ),
+      error: (err, _) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: Text(
+          'Could not load exams.',
+          style: TextStyle(color: Colors.red.shade300, fontSize: 13),
+        ),
+      ),
+      data: (exams) {
+        if (exams.isEmpty) {
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppColors.bgSecondary,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.borderStrong),
+            ),
+            child: const Column(
+              children: [
+                Icon(
+                  Icons.assignment_turned_in_outlined,
+                  size: 36,
+                  color: Color(0xFF64748B),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'No national practice exams found for this course.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Explore general entrance mock exams in the Exams tab on the main screen.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF94A3B8),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          children: exams.map((exam) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: InkWell(
+                onTap: () {
+                  if (!canOpen) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Enroll in this course to unlock exams.'),
+                      ),
+                    );
+                    return;
+                  }
+                  _startExam(context, ref, exam);
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgSecondary,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppColors.borderStrong.withAlpha(90),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 38,
+                        height: 38,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: const Color(0x2238BDF8),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0x5538BDF8)),
+                        ),
+                        child: const Icon(
+                          Icons.assignment_turned_in_rounded,
+                          size: 18,
+                          color: Color(0xFF38BDF8),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              exam.title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 14.5,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              'Grade ${exam.grade} • ${exam.durationMinutes} min • ${exam.totalMarks} Total Marks',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Color(0xFF64748B),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.play_arrow_rounded,
+                        size: 20,
+                        color: Color(0xFF38BDF8),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Future<void> _startExam(
+      BuildContext context, WidgetRef ref, MockExamEntity exam) async {
+    final useCase = ref.read(startExamUseCaseProvider);
+    final result = await useCase(exam.id);
+    result.fold(
+      (failure) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(failure.message)),
+        );
+      },
+      (attempt) {
+        context.push(
+          AppRoutes.examAttemptPath(
+            attemptId: attempt.attemptId,
+            examId: exam.id,
+          ),
+        );
+      },
     );
   }
 }

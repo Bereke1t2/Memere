@@ -23,7 +23,13 @@ class ProfileScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authStateProvider).valueOrNull?.user;
+    final authValue = ref.watch(authStateProvider).valueOrNull;
+    // Guests browse without an account — show a sign-in card instead of
+    // account-only sections (enrollments/purchases would 401).
+    if (!(authValue?.isAuthenticated ?? false)) {
+      return const _GuestProfileView();
+    }
+    final user = authValue?.user;
     final fullName = [
       user?.firstName.trim() ?? '',
       user?.lastName.trim() ?? '',
@@ -832,6 +838,178 @@ class _SettingsGroup extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// Profile tab as seen by a guest (no account). Browsing, downloads, saved
+/// items, and taking quizzes/exams all work signed-out; this card explains what
+/// an account adds and offers sign-in / sign-up without blocking the app.
+class _GuestProfileView extends StatelessWidget {
+  const _GuestProfileView();
+
+  @override
+  Widget build(BuildContext context) {
+    final topPadding = MediaQuery.paddingOf(context).top;
+    return Scaffold(
+      backgroundColor: AppColors.bgPrimary,
+      body: SafeArea(
+        top: false,
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            AppSizes.screenPaddingH,
+            topPadding + AppSizes.sm,
+            AppSizes.screenPaddingH,
+            AppSizes.xxl,
+          ),
+          children: [
+            const SizedBox(height: AppSizes.sm),
+            const Text(
+              'Profile & Account',
+              style: TextStyle(
+                fontFamily: 'Sora',
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+                letterSpacing: -0.5,
+              ),
+            ),
+            const SizedBox(height: AppSizes.lg),
+
+            // Guest hero card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppColors.bgSecondary,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.borderStrong),
+                boxShadow: AppShadows.sm,
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF181820),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.person_outline_rounded,
+                      size: 30,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.md),
+                  const Text(
+                    "You're browsing as a guest",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Sora',
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.xs),
+                  const Text(
+                    'Sign in to enroll in courses, sync your progress across '
+                    'devices, and keep your purchases. Your downloads and saved '
+                    'items stay on this device either way.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.45,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.lg),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.brandEmerald,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () => context.push(AppRoutes.login),
+                      child: const Text(
+                        'Sign in',
+                        style:
+                            TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppSizes.sm),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textPrimary,
+                        side: const BorderSide(color: AppColors.borderStrong),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () => context.push(AppRoutes.register),
+                      child: const Text(
+                        'Create account',
+                        style:
+                            TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSizes.xl),
+
+            // Browse actions available without an account
+            const _SectionHeader(title: 'Explore without an account'),
+            const SizedBox(height: AppSizes.xs),
+            _SettingsGroup(
+              items: [
+                _SettingsItemData(
+                  icon: Icons.menu_book_outlined,
+                  title: 'Browse Courses',
+                  subtitle: 'Explore the full curriculum catalog',
+                  onTap: () => context.go(AppRoutes.home),
+                ),
+                _SettingsItemData(
+                  icon: Icons.assignment_outlined,
+                  title: 'Mock Exams',
+                  subtitle: 'Take national entrance mock exams',
+                  onTap: () => context.go(AppRoutes.mockExams),
+                ),
+                _SettingsItemData(
+                  icon: Icons.bookmark_outline_rounded,
+                  title: 'Saved & Downloaded',
+                  subtitle: 'Study offline — no account needed',
+                  onTap: () => context.go(AppRoutes.saved),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSizes.xxl),
+            const Center(
+              child: Text(
+                'Memere • Ethiopian University Entrance Exam Prep',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMuted,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

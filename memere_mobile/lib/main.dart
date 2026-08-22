@@ -5,6 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'app.dart';
 import 'core/constants/app_colors.dart';
+import 'core/storage/hive/hive_boxes.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,6 +28,10 @@ void main() async {
 
   // Initialize Hive
   await Hive.initFlutter();
+
+  // Open the app's structured offline stores: downloads index, saved items,
+  // sync queue, offline results, and the encrypted answer-key boxes.
+  await openAppHiveBoxes();
 
   // Initialize Firebase only when platform configuration exists.
   try {
