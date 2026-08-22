@@ -7,6 +7,7 @@ import (
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/service"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/pagination"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/validator"
@@ -29,11 +30,15 @@ const (
 )
 
 // Service implements the course-domain usecases over the domain repository
-// interfaces plus a TxManager for grouping multi-write operations.
+// interfaces plus a TxManager for grouping multi-write operations. It also holds
+// the video repository and object store so deleting a lesson can purge the
+// lesson's video (row + storage) and its notes PDF.
 type Service struct {
 	courses  repository.CourseRepository
 	sections repository.SectionRepository
 	lessons  repository.LessonRepository
+	videos   repository.VideoRepository
+	store    service.ObjectStore
 	tx       repository.TxManager
 }
 
@@ -42,9 +47,11 @@ func NewService(
 	courses repository.CourseRepository,
 	sections repository.SectionRepository,
 	lessons repository.LessonRepository,
+	videos repository.VideoRepository,
+	store service.ObjectStore,
 	tx repository.TxManager,
 ) *Service {
-	return &Service{courses: courses, sections: sections, lessons: lessons, tx: tx}
+	return &Service{courses: courses, sections: sections, lessons: lessons, videos: videos, store: store, tx: tx}
 }
 
 // CreateCourseInput is the create request after transport decoding.
@@ -160,9 +167,8 @@ func (s *Service) ListCourses(ctx context.Context, actor *Actor, filter reposito
 }
 
 // GetCourse returns the nested course view (sections + lessons) if the actor may
-// see it. Unpublished courses are visible only to their owner/admin; for a
-// published course viewed by a non-owner, unpublished sections and lessons are
-// stripped.
+// see it. Unpublished courses are visible only to their owner/admin; a published
+// course exposes all of its sections and lessons to students.
 func (s *Service) GetCourse(ctx context.Context, actor *Actor, id uuid.UUID) (*repository.CourseWithContent, error) {
 	content, err := s.courses.GetCourseWithSectionsAndLessons(ctx, id)
 	if err != nil {
@@ -186,21 +192,19 @@ func (s *Service) GetCourseBySlug(ctx context.Context, actor *Actor, slug string
 
 // applyVisibility enforces the read rules on an assembled course view: it hides
 // an unpublished course from non-owners entirely (NotFound, so existence is not
-// revealed), and strips unpublished sections/lessons for non-owners.
+// revealed). For a published course, ALL of its sections and lessons are exposed
+// to students — the course-level publish flag is the single student-facing
+// visibility gate. Per-section/per-lesson `is_published` flags are authoring
+// hints only and are NOT used to hide content here: the admin exposes no
+// per-section/per-lesson publish workflow, so gating students on those flags
+// silently hid entire courses' lessons (a published course whose sections
+// happened to be unpublished showed zero lessons). Owners/admins additionally
+// see unpublished courses, handled by the guard above.
 func (s *Service) applyVisibility(actor *Actor, content *repository.CourseWithContent) (*repository.CourseWithContent, error) {
 	owner := actor.canSeeUnpublished(content.Course)
 	if !content.Course.IsPublished && !owner {
 		return nil, apperror.NotFound("course not found", nil)
 	}
-	if owner {
-		return content, nil
-	}
-	// Non-owner on a published course: include all sections and their lessons
-	visible := make([]repository.SectionWithLessons, 0, len(content.Sections))
-	for _, sec := range content.Sections {
-		visible = append(visible, sec)
-	}
-	content.Sections = visible
 	return content, nil
 }
 

@@ -13,6 +13,7 @@ abstract class OfflineVideoRepository {
     required String lessonId,
     required String courseId,
     required String title,
+    void Function(int received, int total)? onReceiveProgress,
   });
 
   Future<Either<Failure, void>> removeDownload(String videoId);

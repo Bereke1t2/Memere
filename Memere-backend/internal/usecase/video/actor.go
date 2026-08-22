@@ -14,12 +14,18 @@ import (
 )
 
 // Actor is the authenticated caller passed into every usecase method. A nil
-// *Actor is an anonymous request, which may not touch video at all (uploads are
-// teacher/admin; status reads require at least an authenticated user).
+// *Actor is an anonymous request. Uploads/mutations still reject anonymous
+// callers (teacher/admin only); reads (status/stream/download) now tolerate a
+// nil actor so unregistered guests can watch published/free content, with the
+// access check (assertCanWatch) doing the real gating.
 type Actor struct {
 	UserID uuid.UUID
 	Role   entity.Role
 }
+
+// GuestUserID is the system identifier bound to a download token issued to an
+// anonymous / unregistered caller. Mirrors quiz.GuestUserID and exam.GuestUserID.
+var GuestUserID = uuid.MustParse("00000000-0000-0000-0000-000000000001")
 
 func (a *Actor) isAdmin() bool {
 	return a != nil && a.Role == entity.RoleAdmin

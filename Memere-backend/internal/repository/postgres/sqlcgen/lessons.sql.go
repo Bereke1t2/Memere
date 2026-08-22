@@ -68,9 +68,10 @@ func (q *Queries) CreateLesson(ctx context.Context, arg CreateLessonParams) (Cou
 }
 
 const getLessonByID = `-- name: GetLessonByID :one
-SELECT l.id, l.section_id, l.course_id, l.title, l.type, l.order_index, l.is_free_preview, l.duration_seconds, l.is_published, l.content, l.pdf_url, l.created_at, l.updated_at, l.deleted_at, v.id AS video_id
+SELECT l.id, l.section_id, l.course_id, l.title, l.type, l.order_index, l.is_free_preview, l.duration_seconds, l.is_published, l.content, l.pdf_url, l.created_at, l.updated_at, l.deleted_at, v.id AS video_id, q.id AS quiz_id
 FROM courses.lessons l
 LEFT JOIN courses.videos v ON v.lesson_id = l.id AND v.deleted_at IS NULL
+LEFT JOIN courses.quizzes q ON q.lesson_id = l.id AND q.deleted_at IS NULL
 WHERE l.id = $1 AND l.deleted_at IS NULL
 `
 
@@ -90,6 +91,7 @@ type GetLessonByIDRow struct {
 	UpdatedAt       pgtype.Timestamptz
 	DeletedAt       pgtype.Timestamptz
 	VideoID         pgtype.UUID
+	QuizID          pgtype.UUID
 }
 
 func (q *Queries) GetLessonByID(ctx context.Context, id pgtype.UUID) (GetLessonByIDRow, error) {
@@ -111,14 +113,16 @@ func (q *Queries) GetLessonByID(ctx context.Context, id pgtype.UUID) (GetLessonB
 		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.VideoID,
+		&i.QuizID,
 	)
 	return i, err
 }
 
 const listLessonsByCourse = `-- name: ListLessonsByCourse :many
-SELECT l.id, l.section_id, l.course_id, l.title, l.type, l.order_index, l.is_free_preview, l.duration_seconds, l.is_published, l.content, l.pdf_url, l.created_at, l.updated_at, l.deleted_at, v.id AS video_id
+SELECT l.id, l.section_id, l.course_id, l.title, l.type, l.order_index, l.is_free_preview, l.duration_seconds, l.is_published, l.content, l.pdf_url, l.created_at, l.updated_at, l.deleted_at, v.id AS video_id, q.id AS quiz_id
 FROM courses.lessons l
 LEFT JOIN courses.videos v ON v.lesson_id = l.id AND v.deleted_at IS NULL
+LEFT JOIN courses.quizzes q ON q.lesson_id = l.id AND q.deleted_at IS NULL
 WHERE l.course_id = $1 AND l.deleted_at IS NULL
 ORDER BY l.order_index ASC, l.created_at ASC
 `
@@ -139,6 +143,7 @@ type ListLessonsByCourseRow struct {
 	UpdatedAt       pgtype.Timestamptz
 	DeletedAt       pgtype.Timestamptz
 	VideoID         pgtype.UUID
+	QuizID          pgtype.UUID
 }
 
 func (q *Queries) ListLessonsByCourse(ctx context.Context, courseID pgtype.UUID) ([]ListLessonsByCourseRow, error) {
@@ -166,6 +171,7 @@ func (q *Queries) ListLessonsByCourse(ctx context.Context, courseID pgtype.UUID)
 			&i.UpdatedAt,
 			&i.DeletedAt,
 			&i.VideoID,
+			&i.QuizID,
 		); err != nil {
 			return nil, err
 		}
@@ -178,9 +184,10 @@ func (q *Queries) ListLessonsByCourse(ctx context.Context, courseID pgtype.UUID)
 }
 
 const listLessonsBySection = `-- name: ListLessonsBySection :many
-SELECT l.id, l.section_id, l.course_id, l.title, l.type, l.order_index, l.is_free_preview, l.duration_seconds, l.is_published, l.content, l.pdf_url, l.created_at, l.updated_at, l.deleted_at, v.id AS video_id
+SELECT l.id, l.section_id, l.course_id, l.title, l.type, l.order_index, l.is_free_preview, l.duration_seconds, l.is_published, l.content, l.pdf_url, l.created_at, l.updated_at, l.deleted_at, v.id AS video_id, q.id AS quiz_id
 FROM courses.lessons l
 LEFT JOIN courses.videos v ON v.lesson_id = l.id AND v.deleted_at IS NULL
+LEFT JOIN courses.quizzes q ON q.lesson_id = l.id AND q.deleted_at IS NULL
 WHERE l.section_id = $1 AND l.deleted_at IS NULL
 ORDER BY l.order_index ASC, l.created_at ASC
 `
@@ -201,6 +208,7 @@ type ListLessonsBySectionRow struct {
 	UpdatedAt       pgtype.Timestamptz
 	DeletedAt       pgtype.Timestamptz
 	VideoID         pgtype.UUID
+	QuizID          pgtype.UUID
 }
 
 func (q *Queries) ListLessonsBySection(ctx context.Context, sectionID pgtype.UUID) ([]ListLessonsBySectionRow, error) {
@@ -228,6 +236,7 @@ func (q *Queries) ListLessonsBySection(ctx context.Context, sectionID pgtype.UUI
 			&i.UpdatedAt,
 			&i.DeletedAt,
 			&i.VideoID,
+			&i.QuizID,
 		); err != nil {
 			return nil, err
 		}

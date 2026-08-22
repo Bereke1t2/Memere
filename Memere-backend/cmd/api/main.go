@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -262,19 +263,76 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	// JWT manager.
 	jwtManager := jwt.NewManager(cfg.JWT.Secret, cfg.JWT.AccessTTL, cfg.JWT.RefreshTTL, cfg.JWT.Issuer)
 
-	// Object storage + CDN signer for the video pipeline. The store talks to
-	// S3/MinIO; the signer mints CloudFront-signed URLs in production and falls
-	// back to S3/MinIO pre-signed GET in dev.
-	store, err := storage.NewS3Store(ctx, storage.Config{
-		Endpoint:        cfg.Storage.Endpoint,
-		Region:          cfg.Storage.Region,
-		Bucket:          cfg.Storage.Bucket,
-		AccessKeyID:     cfg.Storage.AccessKeyID,
-		SecretAccessKey: cfg.Storage.SecretAccessKey,
-		UsePathStyle:    cfg.Storage.UsePathStyle,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("object store: %w", err)
+	// Object storage backend. STORAGE_PROVIDER selects S3/MinIO (default), the
+	// S3-compatible Backblaze B2 (b2), or the single admin-owned Google Drive
+	// account (gdrive). The CDN signer sits in front of whichever store is chosen;
+	// in dev (no CDN_DOMAIN) it delegates to the store's PresignGet — which for
+	// Drive returns a short-lived HMAC-signed /media proxy URL — so the video
+	// delivery path is reused unchanged.
+	var store service.ObjectStore
+	var driveStore *storage.GoogleDriveStore  // non-nil only in gdrive mode
+	var driveCreds *storage.PgCredentialStore // shared by the store and OAuth flow
+	if cfg.Storage.Provider == "gdrive" {
+		var err error
+		driveCreds, err = storage.NewPgCredentialStore(pool, cfg.JWT.Secret)
+		if err != nil {
+			return nil, fmt.Errorf("gdrive credential store: %w", err)
+		}
+		driveStore, err = storage.NewGoogleDriveStore(storage.GoogleDriveConfig{
+			ClientID:     cfg.GoogleDrive.ClientID,
+			ClientSecret: cfg.GoogleDrive.ClientSecret,
+			RootFolderID: cfg.GoogleDrive.RootFolderID,
+			RefreshToken: cfg.GoogleDrive.RefreshToken,
+			MediaBaseURL: strings.TrimRight(cfg.App.PublicURL, "/") + "/api/v1/media",
+			SignSecret:   cfg.JWT.Secret,
+		}, storage.NewPgObjectIndex(pool), driveCreds)
+		if err != nil {
+			return nil, fmt.Errorf("gdrive store: %w", err)
+		}
+		store = driveStore
+	} else {
+		// S3-compatible backends. AWS S3 and MinIO use the generic AWS_*/S3_* keys;
+		// Backblaze B2 (STORAGE_PROVIDER=b2) speaks the same S3 API but takes its
+		// own endpoint + application-key credentials, virtual-hosted addressing, and
+		// needs the SDK's default upload checksums turned off (B2 rejects them).
+		scfg := storage.Config{
+			Endpoint:        cfg.Storage.Endpoint,
+			Region:          cfg.Storage.Region,
+			Bucket:          cfg.Storage.Bucket,
+			AccessKeyID:     cfg.Storage.AccessKeyID,
+			SecretAccessKey: cfg.Storage.SecretAccessKey,
+			UsePathStyle:    cfg.Storage.UsePathStyle,
+		}
+		if cfg.Storage.Provider == "b2" {
+			scfg = storage.Config{
+				Endpoint:         cfg.Storage.B2EndpointURL(),
+				Region:           cfg.Storage.B2Region,
+				Bucket:           cfg.Storage.B2Bucket,
+				AccessKeyID:      cfg.Storage.B2KeyID,
+				SecretAccessKey:  cfg.Storage.B2AppKey,
+				UsePathStyle:     false, // B2 uses virtual-hosted-style addressing
+				DisableChecksums: true,  // B2 rejects the SDK's default CRC32 upload trailers
+			}
+		}
+		s3store, err := storage.NewS3Store(ctx, scfg)
+		if err != nil {
+			return nil, fmt.Errorf("object store: %w", err)
+		}
+		store = s3store
+	}
+	// Log the selected backend at boot (no secrets) so it is obvious where
+	// uploaded objects actually land — the usual cause of "I switched providers
+	// but nothing shows up" is the process still running with the old provider.
+	switch cfg.Storage.Provider {
+	case "gdrive":
+		slog.Info("object storage configured", "provider", "gdrive", "root_folder_id", cfg.GoogleDrive.RootFolderID)
+	case "b2":
+		slog.Info("object storage configured", "provider", "b2",
+			"endpoint", cfg.Storage.B2EndpointURL(), "region", cfg.Storage.B2Region, "bucket", cfg.Storage.B2Bucket)
+	default:
+		slog.Info("object storage configured", "provider", cfg.Storage.Provider,
+			"endpoint", cfg.Storage.Endpoint, "region", cfg.Storage.Region,
+			"bucket", cfg.Storage.Bucket, "path_style", cfg.Storage.UsePathStyle)
 	}
 	signer, err := storage.NewCDNSigner(storage.CDNConfig{
 		Domain:        cfg.Storage.CDNDomain,
@@ -302,7 +360,7 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 			MaxFailures: cfg.Security.LoginMaxFailures,
 			LockoutTTL:  cfg.Security.LoginLockoutTTL,
 		})
-	courseSvc := course.NewService(courseRepo, sectionRepo, lessonRepo, txManager)
+	courseSvc := course.NewService(courseRepo, sectionRepo, lessonRepo, videoRepo, store, txManager)
 	// access.Service is the single authority on "can this caller reach this
 	// course/lesson?" — quiz/exam taking and paid video all route through it.
 	accessSvc := access.NewService(enrollmentRepo, subscriptionRepo, courseRepo, nil)
@@ -390,6 +448,21 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	certSvc := certificate.NewService(certRepo, progressRepo, courseRepo, userRepo, store, signer,
 		pdfRenderer, hooks, certificate.Config{})
 
+	// Google Drive-only handlers: the signed /media proxy (fronted by an adapter
+	// that maps the store's types onto the delivery package's, keeping the HTTP
+	// layer free of the storage ring) and the one-time admin connect flow. Both
+	// stay nil under the S3/MinIO backend so their routes are never registered.
+	var mediaHandler *delivery_http.MediaHandler
+	var googleOAuthHandler *delivery_http.GoogleOAuthHandler
+	if driveStore != nil {
+		mediaHandler = delivery_http.NewMediaHandler(driveMediaAdapter{s: driveStore})
+		googleOAuthHandler = delivery_http.NewGoogleOAuthHandler(delivery_http.GoogleOAuthConfig{
+			ClientID:     cfg.GoogleDrive.ClientID,
+			ClientSecret: cfg.GoogleDrive.ClientSecret,
+			RedirectURI:  cfg.GoogleDrive.RedirectURI,
+		}, driveCreds, redisClient)
+	}
+
 	// Handlers + router.
 	router := delivery_http.NewRouter(delivery_http.Deps{
 		Config:    cfg,
@@ -398,7 +471,7 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 		JWT:       jwtManager,
 		Sessions:  sessionRepo,
 		Auth:      delivery_http.NewAuthHandler(authSvc, userRepo),
-		Courses:   delivery_http.NewCourseHandler(courseSvc, store),
+		Courses:   delivery_http.NewCourseHandler(courseSvc, cfg.App.PublicURL, store),
 		Quizzes:   delivery_http.NewQuizHandler(quizSvc),
 		Exams:     delivery_http.NewExamHandler(examSvc),
 		Analytics: delivery_http.NewAnalyticsHandler(analyticsSvc),
@@ -413,6 +486,9 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 		Notifications: delivery_http.NewNotificationHandler(notifSvc),
 		Certificates:  delivery_http.NewCertificateHandler(certSvc),
 		Admin:         delivery_http.NewAdminHandler(adminSvc),
+
+		Media:       mediaHandler,
+		GoogleOAuth: googleOAuthHandler,
 	})
 
 	// Background workers: the expiry sweeper drives both attempt engines off one
@@ -434,5 +510,33 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 		NotifWorker: notifWorker,
 		EngSweeper:  engSweeper,
 		VideoUC:     videoSvc,
+	}, nil
+}
+
+// driveMediaAdapter adapts *storage.GoogleDriveStore to delivery_http.MediaStore.
+// It maps the storage package's DriveContent/ErrObjectNotFound onto the delivery
+// package's MediaContent/ErrMediaNotFound, so the HTTP layer serves Drive objects
+// without importing the infrastructure ring (clean-architecture dependency rule).
+type driveMediaAdapter struct{ s *storage.GoogleDriveStore }
+
+func (a driveMediaAdapter) VerifyMediaURL(key string, exp int64, sig string) bool {
+	return a.s.VerifyMediaURL(key, exp, sig)
+}
+
+func (a driveMediaAdapter) Stream(ctx context.Context, key, rangeHeader string) (*delivery_http.MediaContent, error) {
+	dc, err := a.s.Stream(ctx, key, rangeHeader)
+	if err != nil {
+		if errors.Is(err, storage.ErrObjectNotFound) {
+			return nil, delivery_http.ErrMediaNotFound
+		}
+		return nil, err
+	}
+	return &delivery_http.MediaContent{
+		Body:          dc.Body,
+		StatusCode:    dc.StatusCode,
+		ContentType:   dc.ContentType,
+		ContentLength: dc.ContentLength,
+		ContentRange:  dc.ContentRange,
+		AcceptRanges:  dc.AcceptRanges,
 	}, nil
 }

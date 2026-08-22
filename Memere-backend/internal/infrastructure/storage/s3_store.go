@@ -1,7 +1,9 @@
 // Package storage holds object-store implementations of the domain ObjectStore
-// port. S3Store talks to AWS S3 in production and MinIO in local dev (custom
-// endpoint + path-style addressing). It is the only place the AWS SDK is
-// imported; usecases depend on service.ObjectStore, never on this package.
+// port. S3Store talks to AWS S3 in production, MinIO in local dev (custom
+// endpoint + path-style addressing), and Backblaze B2 (its S3-compatible API:
+// custom endpoint + application-key credentials, checksums disabled). It is the
+// only place the AWS SDK is imported; usecases depend on service.ObjectStore,
+// never on this package.
 package storage
 
 import (
@@ -21,16 +23,23 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/service"
 )
 
-// Config carries the S3/MinIO connection settings. main.go maps the typed
+// Config carries the S3/MinIO/B2 connection settings. main.go maps the typed
 // config.StorageConfig onto this so infrastructure stays free of the config
 // package.
 type Config struct {
-	Endpoint        string // empty for AWS; e.g. http://localhost:9000 for MinIO
+	Endpoint        string // empty for AWS; e.g. http://localhost:9000 (MinIO) or https://s3.us-west-004.backblazeb2.com (B2)
 	Region          string
 	Bucket          string
-	AccessKeyID     string
-	SecretAccessKey string
-	UsePathStyle    bool // true for MinIO
+	AccessKeyID     string // B2: the Application Key ID
+	SecretAccessKey string // B2: the Application Key
+	UsePathStyle    bool   // true for MinIO; false for AWS and B2 (virtual-hosted)
+
+	// DisableChecksums turns off the AWS SDK's default per-request integrity
+	// checksums (CRC32 upload trailers, added by default since aws-sdk-go-v2
+	// v1.32). Backblaze B2 — and some other S3-compatible stores — reject those
+	// headers/trailers, so uploads (and pre-signed PUTs) fail unless this is set.
+	// Leave false for AWS S3 and MinIO.
+	DisableChecksums bool
 }
 
 // S3Store implements service.ObjectStore over an S3-compatible API.
@@ -41,9 +50,10 @@ type S3Store struct {
 }
 
 var _ service.ObjectStore = (*S3Store)(nil)
+var _ service.PrefixDeleter = (*S3Store)(nil)
 
 // NewS3Store builds an S3Store. A bucket is required; static credentials are used
-// when supplied (MinIO / explicit AWS keys), otherwise the default AWS chain.
+// when supplied (MinIO / B2 / explicit AWS keys), otherwise the default AWS chain.
 func NewS3Store(ctx context.Context, cfg Config) (*S3Store, error) {
 	if cfg.Bucket == "" {
 		return nil, fmt.Errorf("storage: bucket is required")
@@ -61,10 +71,16 @@ func NewS3Store(ctx context.Context, cfg Config) (*S3Store, error) {
 	}
 
 	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
-		if cfg.Endpoint != "" { // MinIO / custom endpoint
+		if cfg.Endpoint != "" { // MinIO / B2 / custom endpoint
 			o.BaseEndpoint = aws.String(cfg.Endpoint)
 		}
 		o.UsePathStyle = cfg.UsePathStyle
+		if cfg.DisableChecksums {
+			// Only compute/validate a checksum when the operation requires one, so
+			// the SDK stops adding CRC32 upload trailers that Backblaze B2 rejects.
+			o.RequestChecksumCalculation = aws.RequestChecksumCalculationWhenRequired
+			o.ResponseChecksumValidation = aws.ResponseChecksumValidationWhenRequired
+		}
 	})
 	return &S3Store{
 		client:  client,
@@ -158,6 +174,37 @@ func (s *S3Store) Delete(ctx context.Context, key string) error {
 	})
 	if err != nil {
 		return fmt.Errorf("storage: delete %q: %w", key, err)
+	}
+	return nil
+}
+
+// DeletePrefix permanently deletes every object under prefix. It lists the keys
+// (paginated) and deletes them one-by-one with DeleteObject rather than the
+// batch DeleteObjects API: the batch call sends a Content-MD5/checksum the same
+// way uploads did, which Backblaze B2 rejects (the reason DisableChecksums
+// exists). A prefix with no objects is a no-op. Used to purge a video's HLS
+// segments (hls/<id>/) and thumbnails (thumbnails/<id>/) on replace/delete.
+func (s *S3Store) DeletePrefix(ctx context.Context, prefix string) error {
+	paginator := s3.NewListObjectsV2Paginator(s.client, &s3.ListObjectsV2Input{
+		Bucket: &s.bucket,
+		Prefix: &prefix,
+	})
+	for paginator.HasMorePages() {
+		page, err := paginator.NextPage(ctx)
+		if err != nil {
+			return fmt.Errorf("storage: list %q: %w", prefix, err)
+		}
+		for _, obj := range page.Contents {
+			if obj.Key == nil {
+				continue
+			}
+			if _, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+				Bucket: &s.bucket,
+				Key:    obj.Key,
+			}); err != nil {
+				return fmt.Errorf("storage: delete %q: %w", *obj.Key, err)
+			}
+		}
 	}
 	return nil
 }

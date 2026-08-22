@@ -4,14 +4,31 @@ import '../../../../core/network/dio_client.dart';
 import '../../data/datasources/exam_remote_datasource.dart';
 import '../../data/repositories/exam_repository_impl.dart';
 import '../../domain/entities/exam_attempt_history_entity.dart';
+import '../../domain/entities/mock_exam_entity.dart';
 import '../../domain/repositories/exam_repository.dart';
 import '../../domain/usecases/get_exam_analytics_usecase.dart';
 import '../../domain/usecases/get_exam_result_usecase.dart';
+import '../../domain/usecases/list_exams_by_course_usecase.dart';
 import '../../domain/usecases/list_mock_exams_usecase.dart';
 import '../../domain/usecases/list_my_exam_attempts_usecase.dart';
 import '../../domain/usecases/save_exam_progress_usecase.dart';
 import '../../domain/usecases/start_exam_usecase.dart';
 import '../../domain/usecases/submit_exam_usecase.dart';
+
+final listExamsByCourseUseCaseProvider =
+    Provider<ListExamsByCourseUseCase>((ref) {
+  return ListExamsByCourseUseCase(ref.watch(examRepositoryProvider));
+});
+
+final courseExamsProvider =
+    FutureProvider.family<List<MockExamEntity>, String>((ref, courseId) async {
+  final useCase = ref.watch(listExamsByCourseUseCaseProvider);
+  final result = await useCase(courseId);
+  return result.fold(
+    (failure) => <MockExamEntity>[],
+    (exams) => exams,
+  );
+});
 
 final examRemoteDataSourceProvider = Provider<ExamRemoteDataSource>((ref) {
   return ExamRemoteDataSourceImpl(ref.watch(dioClientProvider));

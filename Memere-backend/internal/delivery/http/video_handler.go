@@ -1,7 +1,10 @@
 package http
 
 import (
+	"mime"
 	"net/http"
+	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -32,6 +35,53 @@ func videoActor(c *gin.Context) *video.Actor {
 		return nil
 	}
 	return &video.Actor{UserID: a.UserID, Role: a.Role}
+}
+
+// UploadDirect handles POST /lessons/:id/videos/upload (teacher/admin). The
+// client streams the full, already-playable video (e.g. MP4) as
+// multipart/form-data under the field "file"; the backend stores it straight to
+// the object store and marks it ready WITHOUT transcoding. This is the delivery
+// path for stores that serve byte-range playback directly — Google Drive via the
+// /media proxy, or S3/MinIO natively. Size/type/ownership are validated in the
+// usecase. The global body limit is waived for this route (see middleware.BodyLimit);
+// the usecase enforces MaxUploadBytes.
+func (h *VideoHandler) UploadDirect(c *gin.Context) {
+	lessonID, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		respondError(c, apperror.BadRequest("missing 'file' form field", err))
+		return
+	}
+	defer file.Close()
+
+	// Prefer the multipart part's declared type; fall back to the file extension
+	// when the client sent a generic/empty type (common for octet-stream uploads).
+	contentType := header.Header.Get("Content-Type")
+	if contentType == "" || contentType == "application/octet-stream" {
+		if byExt := mime.TypeByExtension(strings.ToLower(filepath.Ext(header.Filename))); byExt != "" {
+			if i := strings.IndexByte(byExt, ';'); i >= 0 {
+				byExt = byExt[:i]
+			}
+			contentType = strings.TrimSpace(byExt)
+		}
+	}
+
+	view, err := h.svc.UploadVideoDirect(c.Request.Context(), videoActor(c), video.UploadVideoDirectInput{
+		LessonID:    lessonID,
+		FileName:    header.Filename,
+		ContentType: contentType,
+		SizeBytes:   header.Size,
+		Body:        file,
+	})
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	respondJSON(c, http.StatusCreated, dto.NewVideoStatusResponse(view))
 }
 
 // RequestUpload handles POST /lessons/:id/videos/upload-url (teacher/admin):
@@ -155,8 +205,10 @@ func (h *VideoHandler) DownloadURL(c *gin.Context) {
 
 // ConsumeDownload handles GET /videos/download/:token: consumes the single-use
 // token and 302-redirects to a freshly signed manifest URL. A second use (or an
-// unknown/expired token) yields 404. Auth is still required at the route so an
-// anonymous caller cannot probe tokens.
+// unknown/expired token) yields 404. The route is OptionalAuth: the 256-bit
+// random token is itself the credential (bound to the redeemer at issue time and
+// re-validated on redemption), so it can't be feasibly probed by an anonymous
+// caller, and guest downloads must be redeemable without a bearer.
 func (h *VideoHandler) ConsumeDownload(c *gin.Context) {
 	token := c.Param("token")
 	if token == "" {

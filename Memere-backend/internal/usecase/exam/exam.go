@@ -103,9 +103,7 @@ func (s *Service) StartExam(ctx context.Context, actor *Actor, examID uuid.UUID)
 	if actor != nil {
 		if existing, err := s.attempts.GetActive(ctx, actor.UserID, examID); err == nil {
 			if s.expired(exam, existing) {
-				if _, err := s.finalizeExpired(ctx, exam, existing); err != nil {
-					return nil, err
-				}
+				_, _ = s.finalizeExpired(ctx, exam, existing)
 			} else {
 				return s.attemptView(ctx, exam, existing)
 			}

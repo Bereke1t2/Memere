@@ -7,6 +7,7 @@ import '../../domain/entities/exam_attempt_analytics_entity.dart';
 import '../../domain/entities/exam_attempt_entity.dart';
 import '../../domain/entities/exam_attempt_history_entity.dart';
 import '../../domain/entities/exam_result_entity.dart';
+import '../../domain/entities/mock_exam_entity.dart';
 import '../../domain/entities/paginated_mock_exams_entity.dart';
 import '../../domain/repositories/exam_repository.dart';
 import '../datasources/exam_remote_datasource.dart';
@@ -14,6 +15,18 @@ import '../datasources/exam_remote_datasource.dart';
 class ExamRepositoryImpl implements ExamRepository {
   const ExamRepositoryImpl(this._remoteDataSource);
   final ExamRemoteDataSource _remoteDataSource;
+
+  @override
+  Future<Either<Failure, List<MockExamEntity>>> listExamsByCourse(String courseId) async {
+    try {
+      final exams = await _remoteDataSource.listExamsByCourse(courseId);
+      return Right(exams);
+    } on DioException catch (e) {
+      return Left(ServerFailure.fromDioError(e));
+    } catch (e) {
+      return Left(UnknownFailure(e.toString()));
+    }
+  }
 
   @override
   Future<Either<Failure, PaginatedMockExamsEntity>> listMockExams({

@@ -53,14 +53,13 @@ class QuizAttemptScreen extends ConsumerWidget {
             },
             icon: const Icon(Icons.close_rounded),
           ),
-          title: const Text('Quiz attempt'),
+          title: const Text('Practice Quiz Session'),
         ),
         body: SafeArea(
-          top: false,
           child: attemptAsync.when(
             loading: () => const Center(
               child: CircularProgressIndicator(
-                color: AppColors.accentPrimary,
+                color: Color(0xFF10B981),
                 strokeWidth: 2,
               ),
             ),
@@ -95,19 +94,26 @@ class QuizAttemptScreen extends ConsumerWidget {
                       Expanded(
                         child: Text(
                           'Question ${state.currentIndex + 1} of ${state.questionCount}',
-                          style: AppTextStyles.titleMedium,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                       QuizTimerBadge(seconds: seconds),
                     ],
                   ),
                   const SizedBox(height: AppSizes.sm),
-                  LinearProgressIndicator(
-                    minHeight: 6,
-                    value: (state.currentIndex + 1) / state.questionCount,
-                    backgroundColor: AppColors.bgTertiary,
-                    valueColor: const AlwaysStoppedAnimation(
-                      AppColors.accentPrimary,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      minHeight: 7,
+                      value: (state.currentIndex + 1) / state.questionCount,
+                      backgroundColor: AppColors.bgTertiary,
+                      valueColor: const AlwaysStoppedAnimation(
+                        Color(0xFF10B981),
+                      ),
                     ),
                   ),
                   const SizedBox(height: AppSizes.lg),

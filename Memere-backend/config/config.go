@@ -23,6 +23,7 @@ type Config struct {
 	SubSweeper       SubscriptionSweeperConfig
 	EngagementSweep  EngagementSweeperConfig
 	Storage    StorageConfig
+	GoogleDrive GoogleDriveConfig
 	Video      VideoConfig
 	Payment    PaymentConfig
 	Observability ObservabilityConfig
@@ -40,6 +41,11 @@ type Config struct {
 type AppConfig struct {
 	Env  string `envconfig:"APP_ENV" default:"development"`
 	Port string `envconfig:"APP_PORT" default:"8080"`
+	// PublicURL is the externally reachable base URL of this API (scheme+host+
+	// port, no trailing slash). It is used only to build absolute media-proxy
+	// URLs when STORAGE_PROVIDER=gdrive (e.g. <PublicURL>/api/v1/media?...), so
+	// the mobile client can stream Drive-backed objects through the backend.
+	PublicURL string `envconfig:"APP_PUBLIC_URL" default:"http://localhost:8080"`
 }
 
 func (a AppConfig) IsProduction() bool { return a.Env == "production" }
@@ -159,18 +165,32 @@ type PaymentConfig struct {
 }
 
 // StorageConfig groups object-storage settings for the Phase 3 video pipeline
-// (spec §3.3, §8). The same shape serves AWS S3 in production and MinIO in local
-// dev (Endpoint + UsePathStyle set). Bucket is intentionally NOT required so the
-// API still boots when video is unconfigured; the S3 store validates it at
-// construction and the upload usecase fails clearly if it is empty.
+// (spec §3.3, §8). The same shape serves AWS S3 in production, MinIO in local
+// dev (Endpoint + UsePathStyle set), and Backblaze B2 (STORAGE_PROVIDER=b2) —
+// B2 speaks the S3 API, so it reuses the S3 store with its own endpoint and
+// application-key credentials (the B2* fields below). Bucket is intentionally
+// NOT required so the API still boots when video is unconfigured; the S3 store
+// validates it at construction and the upload usecase fails clearly if empty.
 type StorageConfig struct {
-	Provider        string `envconfig:"STORAGE_PROVIDER" default:"s3"` // s3 | minio
+	Provider        string `envconfig:"STORAGE_PROVIDER" default:"s3"` // s3 | minio | b2 | gdrive
 	Endpoint        string `envconfig:"S3_ENDPOINT"`                   // empty for AWS; set for MinIO
 	Region          string `envconfig:"AWS_REGION" default:"af-south-1"`
 	Bucket          string `envconfig:"AWS_S3_BUCKET" default:"memere-media"`
 	AccessKeyID     string `envconfig:"AWS_ACCESS_KEY_ID"`
 	SecretAccessKey string `envconfig:"AWS_SECRET_ACCESS_KEY"`
 	UsePathStyle    bool   `envconfig:"S3_USE_PATH_STYLE" default:"false"` // true for MinIO
+
+	// Backblaze B2 (S3-compatible API), used when STORAGE_PROVIDER=b2. B2's S3
+	// endpoint takes the Application Key ID as the access key and the Application
+	// Key as the secret. Endpoint + region come from the bucket's details in the
+	// B2 console, e.g. Endpoint "s3.us-west-004.backblazeb2.com" -> region
+	// "us-west-004". The scheme is optional; the wiring prepends https:// if
+	// omitted. Only the backend ever holds these values (never sent to a client).
+	B2KeyID    string `envconfig:"B2_APPLICATION_KEY_ID"`
+	B2AppKey   string `envconfig:"B2_APPLICATION_KEY"`
+	B2Endpoint string `envconfig:"B2_ENDPOINT"`
+	B2Region   string `envconfig:"B2_REGION"`
+	B2Bucket   string `envconfig:"B2_BUCKET"`
 
 	UploadURLTTL   time.Duration `envconfig:"UPLOAD_URL_TTL" default:"15m"`
 	StreamURLTTL   time.Duration `envconfig:"STREAM_URL_TTL" default:"2h"` // spec §8.3: 2h
@@ -179,6 +199,36 @@ type StorageConfig struct {
 	CDNDomain        string `envconfig:"CDN_DOMAIN"`          // e.g. dxxxx.cloudfront.net
 	CDNKeyPairID     string `envconfig:"CDN_KEY_PAIR_ID"`     // CloudFront signing
 	CDNPrivateKeyPEM string `envconfig:"CDN_PRIVATE_KEY_PEM"` // PEM contents (or path)
+}
+
+// B2EndpointURL returns the Backblaze B2 S3 endpoint as an absolute URL. B2's
+// console shows the endpoint without a scheme (e.g. s3.us-west-004.backblazeb2.com);
+// the AWS SDK needs a full URL, so we default a missing scheme to https. An empty
+// B2_ENDPOINT is returned unchanged (the store then errors clearly).
+func (s StorageConfig) B2EndpointURL() string {
+	if s.B2Endpoint == "" || strings.Contains(s.B2Endpoint, "://") {
+		return s.B2Endpoint
+	}
+	return "https://" + s.B2Endpoint
+}
+
+// GoogleDriveConfig groups the settings for the single admin-owned Google Drive
+// account that backs object storage when STORAGE_PROVIDER=gdrive. ONLY the
+// backend ever holds these values — they are never sent to a client, never
+// logged, and never committed (spec: students/teachers must not authenticate
+// with Google; one admin account owns the Drive).
+//
+// The refresh token is normally obtained ONCE through the admin connect page
+// (GET /api/v1/admin/google/connect) and stored server-side (encrypted in the
+// storage.google_credentials table). GOOGLE_REFRESH_TOKEN is an alternative for
+// deployments that inject it from a secret manager; the store prefers the DB
+// value and falls back to this env var.
+type GoogleDriveConfig struct {
+	ClientID     string `envconfig:"GOOGLE_CLIENT_ID"`
+	ClientSecret string `envconfig:"GOOGLE_CLIENT_SECRET"`
+	RedirectURI  string `envconfig:"GOOGLE_REDIRECT_URI" default:"http://localhost:8080/api/v1/admin/google/callback"`
+	RefreshToken string `envconfig:"GOOGLE_REFRESH_TOKEN"`
+	RootFolderID string `envconfig:"GOOGLE_DRIVE_ROOT_FOLDER_ID"`
 }
 
 // VideoConfig tunes the upload + transcode pipeline (Phase 3 §8.1). MaxUpload
@@ -284,6 +334,28 @@ func (c *Config) ValidateProduction() error {
 	}
 	if c.Stripe.SecretKey != "" && c.Stripe.WebhookSecret == "" {
 		errs = append(errs, "STRIPE_WEBHOOK_SECRET required when STRIPE_SECRET_KEY is set")
+	}
+	if c.Storage.Provider == "gdrive" {
+		if c.GoogleDrive.ClientID == "" || c.GoogleDrive.ClientSecret == "" {
+			errs = append(errs, "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required when STORAGE_PROVIDER=gdrive")
+		}
+		if c.GoogleDrive.RootFolderID == "" {
+			errs = append(errs, "GOOGLE_DRIVE_ROOT_FOLDER_ID is required when STORAGE_PROVIDER=gdrive")
+		}
+	}
+	if c.Storage.Provider == "b2" {
+		if c.Storage.B2KeyID == "" || c.Storage.B2AppKey == "" {
+			errs = append(errs, "B2_APPLICATION_KEY_ID and B2_APPLICATION_KEY are required when STORAGE_PROVIDER=b2")
+		}
+		if c.Storage.B2Bucket == "" {
+			errs = append(errs, "B2_BUCKET is required when STORAGE_PROVIDER=b2")
+		}
+		if c.Storage.B2Endpoint == "" {
+			errs = append(errs, "B2_ENDPOINT is required when STORAGE_PROVIDER=b2 (e.g. s3.us-west-004.backblazeb2.com)")
+		}
+		if c.Storage.B2Region == "" {
+			errs = append(errs, "B2_REGION is required when STORAGE_PROVIDER=b2 (e.g. us-west-004)")
+		}
 	}
 	if len(errs) > 0 {
 		return fmt.Errorf("production config invalid:\n  - %s", joinErrs(errs))

@@ -29,7 +29,8 @@ class QuizResultScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       appBar: AppBar(
-        title: const Text('Quiz result'),
+        title: const Text('Quiz Performance Result'),
+        centerTitle: true,
         leading: IconButton(
           tooltip: 'Close',
           onPressed: () => context.go(AppRoutes.home),
@@ -37,7 +38,6 @@ class QuizResultScreen extends ConsumerWidget {
         ),
       ),
       body: SafeArea(
-        top: false,
         child: resultAsync.when(
           loading: () => const QuizResultSkeleton(),
           error: (error, _) => _ResultErrorState(
@@ -47,47 +47,68 @@ class QuizResultScreen extends ConsumerWidget {
             onRetry: () => ref.invalidate(quizResultProvider(attemptId)),
           ),
           data: (result) => ListView(
-            padding: const EdgeInsets.all(AppSizes.screenPaddingH),
+            padding: const EdgeInsets.all(20),
             children: [
               QuizScoreSummary(result: result),
-              const SizedBox(height: AppSizes.md),
+              const SizedBox(height: 16),
               Container(
-                padding: const EdgeInsets.all(AppSizes.md),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: AppColors.bgSecondary,
-                  borderRadius: BorderRadius.circular(AppSizes.radiusMd),
-                  border: Border.all(color: AppColors.border),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: AppColors.borderStrong.withAlpha(90),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _ResultMeta(
-                      label: 'Attempt',
-                      value: result.attemptNumber.toString(),
+                      label: 'Attempt Number',
+                      value: 'Attempt #${result.attemptNumber}',
                     ),
                     _ResultMeta(
-                      label: 'Submitted',
+                      label: 'Submitted Date',
                       value: _formatSubmittedAt(result.submittedAt),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: AppSizes.md),
-              SubjectBreakdownCard(
-                subjectBreakdown: result.subjectBreakdown,
+              if (result.subjectBreakdown.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                SubjectBreakdownCard(
+                  subjectBreakdown: result.subjectBreakdown,
+                ),
+              ],
+              const SizedBox(height: 24),
+              const Row(
+                children: [
+                  Icon(
+                    Icons.assignment_outlined,
+                    size: 20,
+                    color: Color(0xFF10B981),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Detailed Question Review',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: AppSizes.lg),
-              const Text('Review', style: AppTextStyles.headlineSmall),
-              const SizedBox(height: AppSizes.md),
+              const SizedBox(height: 14),
               ...result.feedback.asMap().entries.map(
                     (entry) => QuestionFeedbackTile(
                       feedback: entry.value,
                       index: entry.key,
                     ),
                   ),
-              const SizedBox(height: AppSizes.lg),
+              const SizedBox(height: 20),
               AppButton(
-                label: 'Back to courses',
+                label: 'Back to Courses',
                 onPressed: () => context.go(AppRoutes.home),
                 variant: AppButtonVariant.secondary,
               ),

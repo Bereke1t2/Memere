@@ -54,3 +54,11 @@ class ValidationFailure extends Failure {
   const ValidationFailure(super.message, {this.field});
   final String? field;
 }
+
+/// True when a [Failure] means the device could not reach the server (no
+/// connectivity or a timeout) — the signal to fall back to on-device grading of
+/// downloaded content. Both cases surface as a [ServerFailure] with a null
+/// `statusCode` and one of these codes (see [ServerFailure.fromDioError]).
+bool isOfflineFailure(Failure failure) =>
+    failure is ServerFailure &&
+    (failure.code == 'NO_INTERNET' || failure.code == 'TIMEOUT');

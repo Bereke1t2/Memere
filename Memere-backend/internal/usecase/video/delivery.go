@@ -17,6 +17,9 @@ import (
 // only short-lived signed URLs — never a raw storage key. ThumbnailURL is
 // omitted when the video has no thumbnail yet.
 type StreamResult struct {
+	// MasterURL is a short-lived signed URL to a progressive MP4 the client plays
+	// over HTTP Range. The json name stays master_url for wire compatibility with
+	// existing clients; it is no longer an HLS .m3u8 manifest (see GetStreamURL).
 	MasterURL    string `json:"master_url"`
 	ExpiresIn    int    `json:"expires_in"` // seconds until the signed URL expires
 	DurationSec  int    `json:"duration_seconds"`
@@ -32,11 +35,19 @@ type DownloadResult struct {
 	ExpiresIn   int    `json:"expires_in"`
 }
 
-// GetStreamURL issues a signed URL for a ready video's HLS master manifest. The
-// video must be ready with a master key, and the caller must pass assertCanWatch
-// (owner/admin, or a student with free/preview access). No storage key is ever
-// returned. Streaming is not single-use: HLS fetches many segments within the
-// window, so no token is minted here.
+// GetStreamURL issues a short-lived signed URL for a ready video the caller may
+// watch (owner/admin, or a student with free/preview/enrolled/subscribed
+// access). It signs a single self-contained MP4 (see downloadKey) that the
+// client plays progressively over HTTP Range — NOT the HLS master manifest.
+//
+// Why not the HLS manifest: the object store (Backblaze B2 / S3) presigns
+// exactly ONE object key per URL. A signed master.m3u8 loads, but the player
+// then fetches its variant playlists and .ts segments by relative path with no
+// signature, so the store rejects every segment (403) and playback dies. A
+// single presigned MP4 needs just one signature and streams fine with Range
+// requests. Restoring adaptive-bitrate HLS would need a manifest-rewriting
+// segment proxy (future work). No storage key is ever returned, and streaming
+// is not single-use, so no token is minted here.
 func (s *Service) GetStreamURL(ctx context.Context, actor *Actor, videoID uuid.UUID) (*StreamResult, error) {
 	v, err := s.requireReady(ctx, videoID)
 	if err != nil {
@@ -49,7 +60,7 @@ func (s *Service) GetStreamURL(ctx context.Context, actor *Actor, videoID uuid.U
 		return nil, apperror.Internal(fmt.Errorf("video: URL signer not configured"))
 	}
 
-	master, err := s.signer.SignGet(ctx, *v.HLSMasterKey, s.cfg.StreamURLTTL)
+	master, err := s.signer.SignGet(ctx, downloadKey(v), s.cfg.StreamURLTTL)
 	if err != nil {
 		return nil, apperror.Internal(err)
 	}
@@ -68,9 +79,9 @@ func (s *Service) GetStreamURL(ctx context.Context, actor *Actor, videoID uuid.U
 }
 
 // GetDownloadURL mints a single-use download token for a ready video the caller
-// may watch, alongside a signed URL for the master manifest. The token (not the
-// URL) is the one-shot credential: the client redeems it once via
-// ConsumeDownloadToken before downloading. The server only bounds the signed
+// may watch, alongside a signed URL for the downloadable MP4 (see downloadKey).
+// The token (not the URL) is the one-shot credential: the client redeems it once
+// via ConsumeDownloadToken before downloading. The server only bounds the signed
 // window to DownloadURLTTL (~2h); the 30-day offline re-download rule (spec §8.3
 // step 7) is enforced client-side.
 func (s *Service) GetDownloadURL(ctx context.Context, actor *Actor, videoID uuid.UUID) (*DownloadResult, error) {
@@ -85,7 +96,7 @@ func (s *Service) GetDownloadURL(ctx context.Context, actor *Actor, videoID uuid
 		return nil, apperror.Internal(fmt.Errorf("video: download not configured"))
 	}
 
-	signed, err := s.signer.SignGet(ctx, *v.HLSMasterKey, s.cfg.DownloadURLTTL)
+	signed, err := s.signer.SignGet(ctx, downloadKey(v), s.cfg.DownloadURLTTL)
 	if err != nil {
 		return nil, apperror.Internal(err)
 	}
@@ -93,7 +104,14 @@ func (s *Service) GetDownloadURL(ctx context.Context, actor *Actor, videoID uuid
 	if err != nil {
 		return nil, apperror.Internal(err)
 	}
-	if err := s.tokens.Issue(ctx, token, v.ID.String(), actor.UserID.String(), s.cfg.DownloadURLTTL); err != nil {
+	// Bind the token to the caller so ConsumeDownloadToken can re-validate access.
+	// A guest (nil actor) is bound to GuestUserID; the offline download stays gated
+	// by assertCanWatch above, so this only issues tokens the caller already earned.
+	redeemerID := GuestUserID
+	if actor != nil {
+		redeemerID = actor.UserID
+	}
+	if err := s.tokens.Issue(ctx, token, v.ID.String(), redeemerID.String(), s.cfg.DownloadURLTTL); err != nil {
 		return nil, err
 	}
 	return &DownloadResult{
@@ -105,9 +123,9 @@ func (s *Service) GetDownloadURL(ctx context.Context, actor *Actor, videoID uuid
 
 // ConsumeDownloadToken redeems a single-use download token: it atomically
 // consumes the token, re-validates that the bound video is still ready and that
-// the bound user still has access, then returns a freshly signed manifest URL. A
-// second redemption (or an unknown/expired token) returns NotFound — the token
-// is already gone from the store.
+// the bound user still has access, then returns a freshly signed download URL (the
+// downloadable MP4, see downloadKey). A second redemption (or an unknown/expired
+// token) returns NotFound — the token is already gone from the store.
 func (s *Service) ConsumeDownloadToken(ctx context.Context, token string) (string, error) {
 	if s.tokens == nil || s.signer == nil {
 		return "", apperror.Internal(fmt.Errorf("video: download not configured"))
@@ -140,11 +158,24 @@ func (s *Service) ConsumeDownloadToken(ctx context.Context, token string) (strin
 	if err := s.assertCanWatch(ctx, actor, v); err != nil {
 		return "", err
 	}
-	signed, err := s.signer.SignGet(ctx, *v.HLSMasterKey, s.cfg.DownloadURLTTL)
+	signed, err := s.signer.SignGet(ctx, downloadKey(v), s.cfg.DownloadURLTTL)
 	if err != nil {
 		return "", apperror.Internal(err)
 	}
 	return signed, nil
+}
+
+// downloadKey returns the object key to serve for an OFFLINE download: the
+// self-contained source MP4 (OriginalFileKey) when present, else the HLS master
+// key (direct-upload videos store the playable MP4 there). The HLS master
+// *manifest* (.m3u8) is not a single downloadable file, so a transcoded video
+// must serve its original for offline single-file playback — signing the
+// manifest would leave the client with an unplayable text file offline.
+func downloadKey(v *entity.Video) string {
+	if v.OriginalFileKey != nil && *v.OriginalFileKey != "" {
+		return *v.OriginalFileKey
+	}
+	return *v.HLSMasterKey
 }
 
 // requireReady loads a video and asserts it is ready with an HLS master key,

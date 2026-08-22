@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/auth/account_gate.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/errors/failures.dart';
+import '../../../../core/network/connectivity_service.dart';
+import '../../../../core/offline/offline_attempt_factory.dart';
+import '../../../../core/offline/offline_providers.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/storage/hive/models/downloaded_item.dart';
 import '../../../../shared/widgets/ai_robot_mascot.dart';
 import '../../domain/entities/mock_exam_entity.dart';
 import '../providers/exam_attempt_provider.dart';
 import '../providers/exam_providers.dart';
 import 'exam_attempt_history_sheet.dart';
+import 'exam_download_button.dart';
 
 /// Rich Vibrant Gradient 2-Column Exam Card with attempt tracking and history drawer.
 class MockExamCard extends ConsumerStatefulWidget {
@@ -500,6 +507,11 @@ class _MockExamCardState extends ConsumerState<MockExamCard> {
                   ],
                 ),
               ),
+              const SizedBox(height: 14),
+              ExamDownloadButton(
+                examId: widget.exam.id,
+                title: widget.exam.title,
+              ),
               const SizedBox(height: 22),
 
               Row(
@@ -559,12 +571,45 @@ class _MockExamCardState extends ConsumerState<MockExamCard> {
 
   Future<void> _startExam(BuildContext context) async {
     setState(() => _isStarting = true);
-    final result = await ref.read(startExamUseCaseProvider)(widget.exam.id);
-    if (!mounted) return;
+
+    final examId = widget.exam.id;
+    final downloaded =
+        ref.read(downloadStoreProvider).isDownloaded(DownloadType.exam, examId);
+    final online = await ref.read(connectivityServiceProvider).isOnline();
+    // Guests are always graded on-device; so is anyone currently offline. Only
+    // an online, signed-in user takes the authoritative server path.
+    final wantLocal = isGuest(ref) || !online;
+
+    if (wantLocal) {
+      if (!context.mounted) return;
+      setState(() => _isStarting = false);
+      if (!downloaded) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              online
+                  ? 'Download this exam first to take it as a guest.'
+                  : "You're offline. Download this exam first to take it.",
+            ),
+          ),
+        );
+        return;
+      }
+      _goToLocalExam(context);
+      return;
+    }
+
+    final result = await ref.read(startExamUseCaseProvider)(examId);
+    if (!context.mounted) return;
     setState(() => _isStarting = false);
 
     result.fold(
       (failure) {
+        // Started online but the network dropped — grade the downloaded copy.
+        if (isOfflineFailure(failure) && downloaded) {
+          _goToLocalExam(context);
+          return;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(failure.message)),
         );
@@ -572,7 +617,7 @@ class _MockExamCardState extends ConsumerState<MockExamCard> {
       (attempt) {
         ref.read(pendingExamAttemptProvider.notifier).state = attempt;
         ref.invalidate(myAllExamAttemptsProvider);
-        ref.invalidate(examAttemptsByExamProvider(widget.exam.id));
+        ref.invalidate(examAttemptsByExamProvider(examId));
         context.push(
           AppRoutes.examAttemptPath(
             attemptId: attempt.attemptId,
@@ -580,6 +625,25 @@ class _MockExamCardState extends ConsumerState<MockExamCard> {
           ),
         );
       },
+    );
+  }
+
+  /// Offline / guest branch: synthesize the attempt from the downloaded copy and
+  /// hand it to the notifier's adopt-path via [pendingExamAttemptProvider] — the
+  /// same seam the server flow uses — then navigate with the `local-…` id.
+  void _goToLocalExam(BuildContext context) {
+    final exam = ref.read(downloadStoreProvider).getOfflineExam(widget.exam.id);
+    if (exam == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This exam is not downloaded.')),
+      );
+      return;
+    }
+    final localId = newLocalAttemptId();
+    ref.read(pendingExamAttemptProvider.notifier).state =
+        buildLocalExamAttempt(exam, attemptId: localId);
+    context.push(
+      AppRoutes.examAttemptPath(attemptId: localId, examId: widget.exam.id),
     );
   }
 }

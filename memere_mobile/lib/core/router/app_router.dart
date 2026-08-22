@@ -151,21 +151,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final onRegister = location == AppRoutes.register;
       final onAuthPage = onLogin || onRegister || onOnboarding || onSplash;
 
+      // Hold on the splash while the persisted auth state hydrates.
       if (authState.isLoading && onSplash) {
         return null;
       }
 
-      if (!isLoggedIn) {
-        if (!hasSeenOnboarding && !onAuthPage) return AppRoutes.onboarding;
-        if (hasSeenOnboarding && (onOnboarding || !onAuthPage)) {
-          return AppRoutes.login;
-        }
+      // First run only: force the one-time onboarding before anything else.
+      if (!hasSeenOnboarding && !onAuthPage) {
+        return AppRoutes.onboarding;
       }
 
-      if (isLoggedIn && onAuthPage) {
+      if (isLoggedIn) {
+        // Signed-in users never sit on the splash/onboarding/login pages.
+        if (onAuthPage) return AppRoutes.home;
+        return null;
+      }
+
+      // ── Guest (logged-out) browsing ──
+      // Land guests inside the app instead of at the login wall.
+      if (onSplash || (onOnboarding && hasSeenOnboarding)) {
         return AppRoutes.home;
       }
-
+      // Keep login/register reachable so a guest can upgrade to an account.
+      if (onLogin || onRegister) return null;
+      // Everything else is open to guests EXCEPT account-only destinations.
+      if (_isAccountOnly(location)) return AppRoutes.login;
       return null;
     },
     routes: [
@@ -339,3 +349,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// Routes a guest may NOT view — they need a real account and would otherwise
+/// 401 or show nothing useful. Everything else (courses, lessons, quizzes,
+/// exams, videos, PDFs, saved, mock-exams, profile) is browsable signed-out;
+/// the profile tab renders its own guest state rather than redirecting.
+bool _isAccountOnly(String location) {
+  return location == AppRoutes.subscriptionPlans ||
+      location.startsWith('/payments');
+}

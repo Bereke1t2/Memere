@@ -27,15 +27,20 @@ import (
 type CourseHandler struct {
 	svc   *course.Service
 	store service.ObjectStore
+	// publicURL is the API's externally reachable base URL (config APP_PUBLIC_URL).
+	// It builds the absolute, backend-served thumbnail URL persisted on the course
+	// so a Drive/S3-backed image is fetched via GET /courses/:id/thumbnail.
+	publicURL string
 }
 
-// NewCourseHandler builds a CourseHandler.
-func NewCourseHandler(svc *course.Service, store ...service.ObjectStore) *CourseHandler {
+// NewCourseHandler builds a CourseHandler. publicURL is the API base URL used to
+// construct thumbnail URLs; store is optional (nil disables file endpoints).
+func NewCourseHandler(svc *course.Service, publicURL string, store ...service.ObjectStore) *CourseHandler {
 	var s service.ObjectStore
 	if len(store) > 0 {
 		s = store[0]
 	}
-	return &CourseHandler{svc: svc, store: s}
+	return &CourseHandler{svc: svc, store: s, publicURL: publicURL}
 }
 
 // actor pulls the authenticated caller from context (nil for anonymous).
@@ -428,22 +433,128 @@ func (h *CourseHandler) DownloadLessonPDF(c *gin.Context) {
 	}
 
 	if h.store != nil {
-		presigned, err := h.store.PresignGet(c.Request.Context(), pdfPath, 1*time.Hour)
-		if err == nil && presigned != "" {
-			c.Redirect(http.StatusFound, presigned)
-			return
-		}
-
+		// Stream the PDF bytes with an explicit Content-Length header via c.Data.
+		// io.Copy uses chunked transfer encoding (no Content-Length), causing mobile Dio client to hang at ~100%.
 		rc, err := h.store.Get(c.Request.Context(), pdfPath)
 		if err == nil {
 			defer rc.Close()
-			c.Header("Content-Type", "application/pdf")
-			c.Header("Content-Disposition", fmt.Sprintf("inline; filename=%q", filepath.Base(pdfPath)))
-			io.Copy(c.Writer, rc)
+			data, rerr := io.ReadAll(rc)
+			if rerr == nil && len(data) > 0 {
+				c.Header("Content-Disposition", fmt.Sprintf("inline; filename=%q", filepath.Base(pdfPath)))
+				c.Data(http.StatusOK, "application/pdf", data)
+				return
+			}
+		}
+
+		// Fallback: hand back a presigned URL (works in prod where the CDN/S3
+		// host is publicly reachable).
+		if presigned, perr := h.store.PresignGet(c.Request.Context(), pdfPath, 1*time.Hour); perr == nil && presigned != "" {
+			c.Redirect(http.StatusFound, presigned)
 			return
 		}
 	}
 
 	respondError(c, apperror.NotFound("PDF document not found in storage", nil))
+}
+
+// UploadCourseThumbnail handles POST /courses/:id/thumbnail (teacher/admin). The
+// image is sent as multipart/form-data under "file". Ownership is enforced by
+// UpdateCourse (called first, so an object is only written for a course the actor
+// owns); the bytes are then stored under a fixed, extension-less key so re-uploads
+// overwrite cleanly and the public serve endpoint needs no key bookkeeping. Works
+// with the S3/MinIO and Google Drive backends alike. The global body limit is
+// waived for this route (see middleware.BodyLimit); this handler caps at 5 MiB.
+func (h *CourseHandler) UploadCourseThumbnail(c *gin.Context) {
+	id, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	if h.store == nil {
+		respondError(c, apperror.New(http.StatusServiceUnavailable, "STORAGE_UNAVAILABLE", "object storage is not configured", nil))
+		return
+	}
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		respondError(c, apperror.BadRequest("missing 'file' form field", err))
+		return
+	}
+	defer file.Close()
+
+	const maxThumb = 5 * 1024 * 1024
+	if header.Size > maxThumb {
+		respondError(c, apperror.BadRequest("thumbnail exceeds the maximum 5MB limit", nil))
+		return
+	}
+	// Read with a +1 guard so a lying Content-Length can't slip past the cap.
+	data, err := io.ReadAll(io.LimitReader(file, maxThumb+1))
+	if err != nil {
+		respondError(c, apperror.Internal(err))
+		return
+	}
+	if len(data) > maxThumb {
+		respondError(c, apperror.BadRequest("thumbnail exceeds the maximum 5MB limit", nil))
+		return
+	}
+	// Sniff the real type from the bytes (never trust the client's declared type).
+	contentType := http.DetectContentType(data)
+	if !strings.HasPrefix(contentType, "image/") {
+		respondError(c, apperror.BadRequest("uploaded file is not an image", nil))
+		return
+	}
+
+	// Authorize + persist the URL FIRST: UpdateCourse asserts owner/admin, so the
+	// object write below only happens for a course the caller may edit (prevents
+	// overwriting another teacher's thumbnail object at the shared key).
+	thumbURL := strings.TrimRight(h.publicURL, "/") + "/api/v1/courses/" + id.String() + "/thumbnail"
+	updated, err := h.svc.UpdateCourse(c.Request.Context(), actor(c), id, course.UpdateCourseInput{ThumbnailURL: &thumbURL})
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	key := fmt.Sprintf("courses/%s/thumbnail", id.String())
+	if err := h.store.Put(c.Request.Context(), key, contentType, bytes.NewReader(data)); err != nil {
+		respondError(c, apperror.Internal(err))
+		return
+	}
+
+	resp := dto.NewCourseResponse(updated)
+	respondJSON(c, http.StatusOK, &resp)
+}
+
+// ServeCourseThumbnail handles GET /courses/:id/thumbnail — PUBLIC. A course
+// thumbnail is marketing content, so it is served cacheable and unsigned. The
+// bytes are streamed through the backend from the object store (so the Google
+// Drive backend is never exposed publicly); the type is sniffed from the bytes.
+func (h *CourseHandler) ServeCourseThumbnail(c *gin.Context) {
+	id, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	if h.store == nil {
+		respondError(c, apperror.NotFound("thumbnail not found", nil))
+		return
+	}
+	key := fmt.Sprintf("courses/%s/thumbnail", id.String())
+	rc, err := h.store.Get(c.Request.Context(), key)
+	if err != nil {
+		// Missing object (or an upstream fault) — a placeholder client shows its own
+		// fallback, so report a clean 404 rather than leaking backend detail.
+		respondError(c, apperror.NotFound("thumbnail not found", nil))
+		return
+	}
+	defer rc.Close()
+
+	const maxThumb = 5 * 1024 * 1024
+	data, err := io.ReadAll(io.LimitReader(rc, maxThumb+1))
+	if err != nil {
+		respondError(c, apperror.Internal(err))
+		return
+	}
+	c.Header("Cache-Control", "public, max-age=86400")
+	c.Data(http.StatusOK, http.DetectContentType(data), data)
 }
 

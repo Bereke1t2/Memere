@@ -230,6 +230,27 @@ func (h *ExamHandler) GetResult(c *gin.Context) {
 	respondJSON(c, http.StatusOK, &resp)
 }
 
+// GetForDownload handles GET /mock-exams/:id/download → 200. It returns the full
+// exam WITH answer keys so a downloaded exam can be taken and graded on-device
+// offline. This is the sanctioned Non-Negotiable #1 exception (see
+// dto/download.go): it is gated exactly like starting the exam
+// (GetExamForDownload → assertExamAccess), and the normal sitting path stays
+// answer-free and server-graded.
+func (h *ExamHandler) GetForDownload(c *gin.Context) {
+	examID, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	d, err := h.svc.GetExamForDownload(c.Request.Context(), examActor(c), examID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	resp := dto.NewExamDownloadResponse(d)
+	respondJSON(c, http.StatusOK, &resp)
+}
+
 // ListMyAttempts handles GET /mock-exams/:id/attempts or GET /exam-attempts/my → 200.
 func (h *ExamHandler) ListMyAttempts(c *gin.Context) {
 	examIDStr := c.Param("id")

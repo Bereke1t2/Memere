@@ -28,6 +28,7 @@ func gradeQuiz(
 	for i, qa := range questions {
 		gradable[i] = grading.GradableQuestion{
 			ID:          qa.Question.ID,
+			Text:        qa.Question.Text,
 			Marks:       qa.Question.Points,
 			Type:        qa.Question.Type,
 			Subject:     qa.Question.Subject,
@@ -49,14 +50,20 @@ func gradeQuiz(
 		SubjectBreakdown: toSubjectScores(core.SubjectBreakdown),
 	}
 	for _, o := range core.Outcomes {
+		answers := make([]AnswerFeedback, 0, len(o.Answers))
+		for _, a := range o.Answers {
+			answers = append(answers, AnswerFeedback{ID: a.ID, Text: a.Text, IsCorrect: a.IsCorrect})
+		}
 		result.Feedback = append(result.Feedback, QuestionFeedback{
 			QuestionID:       o.QuestionID,
+			QuestionText:     o.QuestionText,
 			Correct:          o.Correct,
 			PointsAwarded:    o.MarksAwarded,
 			PointsPossible:   o.MarksPossible,
 			SelectedAnswers:  o.SelectedAnswers,
 			CorrectAnswerIDs: o.CorrectAnswerIDs,
 			Explanation:      o.Explanation,
+			Answers:          answers,
 		})
 	}
 	return result

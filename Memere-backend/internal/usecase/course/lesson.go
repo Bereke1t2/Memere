@@ -2,10 +2,12 @@ package course
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/media"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/validator"
 )
@@ -153,19 +155,50 @@ func (s *Service) UpdateLesson(ctx context.Context, actor *Actor, lessonID uuid.
 	return l, nil
 }
 
-// DeleteLesson soft-deletes a lesson and recomputes the course counters in one
-// transaction.
+// DeleteLesson soft-deletes a lesson (and its video row) and recomputes the
+// course counters in one transaction, then permanently purges the lesson's media
+// from object storage: the video's renditions/segments/thumbnail/original and the
+// notes PDF. The DB rows are tombstoned (deleted_at) per the soft-delete rule;
+// only the storage bytes are hard-deleted so the bucket doesn't accumulate
+// orphans. Storage cleanup runs after the commit and is best-effort — a failed
+// delete leaves an orphan object but never fails the request.
 func (s *Service) DeleteLesson(ctx context.Context, actor *Actor, lessonID uuid.UUID) error {
 	l, err := s.loadOwnedLesson(ctx, actor, lessonID)
 	if err != nil {
 		return err
 	}
-	return s.tx.WithinTx(ctx, func(ctx context.Context) error {
+
+	// Resolve the lesson's live video up-front (NotFound simply means there is
+	// none) so we can both soft-delete its row in the tx and purge its storage
+	// after the commit.
+	var vid *entity.Video
+	if v, verr := s.videos.GetByLessonID(ctx, lessonID); verr == nil {
+		vid = v
+	}
+
+	if err := s.tx.WithinTx(ctx, func(ctx context.Context) error {
 		if err := s.lessons.SoftDelete(ctx, lessonID); err != nil {
 			return err
 		}
+		if vid != nil {
+			if err := s.videos.SoftDelete(ctx, vid.ID); err != nil {
+				return err
+			}
+		}
 		return s.courses.RecomputeCounters(ctx, l.CourseID)
-	})
+	}); err != nil {
+		return err
+	}
+
+	if vid != nil {
+		media.PurgeVideo(ctx, s.store, vid)
+	}
+	if s.store != nil {
+		// Notes PDF lives at the fixed key written by UploadLessonPDF; Delete is
+		// idempotent, so a lesson with no PDF is a no-op.
+		_ = s.store.Delete(ctx, fmt.Sprintf("lessons/%s/notes.pdf", lessonID))
+	}
+	return nil
 }
 
 // loadOwnedLesson fetches a lesson and asserts the actor owns its course.

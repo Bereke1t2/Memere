@@ -9,6 +9,7 @@ import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_surface.dart';
+import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../../payment/presentation/providers/purchase_history_provider.dart';
 import '../../../payment/presentation/widgets/enrollment_tile.dart';
 import '../../../payment/presentation/widgets/payment_empty_state.dart';
@@ -19,6 +20,30 @@ class MyLearningScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isAuthenticated =
+        ref.watch(authStateProvider).valueOrNull?.isAuthenticated ?? false;
+    // Enrollments are an account feature (the endpoint requires auth). Guests
+    // get a sign-in prompt; their downloads live under Saved ▸ Downloaded.
+    if (!isAuthenticated) {
+      return Scaffold(
+        backgroundColor: AppColors.bgPrimary,
+        body: AppPageBackground(
+          child: SafeArea(
+            child: PaymentEmptyState(
+              icon: Icons.school_outlined,
+              title: 'Track your courses',
+              body:
+                  'Sign in to enroll and pick up where you left off across '
+                  'devices. You can still browse and download courses to study '
+                  'offline without an account.',
+              buttonLabel: 'Browse courses',
+              onPressed: () => context.go(AppRoutes.home),
+            ),
+          ),
+        ),
+      );
+    }
+
     final async = ref.watch(enrollmentListProvider);
 
     return Scaffold(
