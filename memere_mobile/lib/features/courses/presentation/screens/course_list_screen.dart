@@ -15,12 +15,18 @@ import '../widgets/course_card.dart';
 import '../widgets/course_empty_state.dart';
 import '../widgets/course_list_skeleton.dart';
 
+/// Grade shown as "Freshman" in the UI. There is no backend content for it yet
+/// (the API serves grades 9–12), so selecting it short-circuits to a
+/// coming-soon state instead of querying grade 13.
+const _kAllGrade = 0;
+const _kFreshmanGrade = 13;
+
 /// Clean, professional Home Screen for Memere.
 ///
 /// Features:
 /// - Minimalist App Bar: 'Memere' on left, Profile avatar on right (navigates to Account)
 /// - Overflow-Safe Hero Featured Banner with animated MemereMascot
-/// - Horizontal Subject Category Filter Chips
+/// - Grade-level filter chips (All, Freshman, Grade 12–9) + Subject chooser navigation underneath
 /// - Unique, non-video Course Cards with optional thumbnail support
 class CourseListScreen extends ConsumerStatefulWidget {
   const CourseListScreen({super.key});
@@ -32,7 +38,11 @@ class CourseListScreen extends ConsumerStatefulWidget {
 class _CourseListScreenState extends ConsumerState<CourseListScreen> {
   late final ScrollController _scrollController;
   bool _dismissedAnnouncement = false;
-  int _selectedCategoryIndex = 0;
+
+  /// The grade chip the student has selected. Held locally (not derived from
+  /// the provider) so "Freshman" can stay highlighted while we short-circuit
+  /// its fetch. Defaults to 0 (All), matching [CourseListState.selectedGrade].
+  int _selectedGrade = _kAllGrade;
 
   @override
   void initState() {
@@ -56,6 +66,25 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen> {
     }
   }
 
+  void _onSelectGrade(int grade) {
+    setState(() => _selectedGrade = grade);
+    // Freshman has no backend content yet — don't query grade 13; the content
+    // area renders a coming-soon state while this chip is active.
+    if (grade == _kFreshmanGrade) return;
+    ref
+        .read(courseListProvider.notifier)
+        .setGrade(grade == _kAllGrade ? null : grade);
+  }
+
+  void _onSelectSubject(String? subject) {
+    ref.read(courseListProvider.notifier).setSubject(subject);
+  }
+
+  void _resetFilters() {
+    setState(() => _selectedGrade = _kAllGrade);
+    ref.read(courseListProvider.notifier).clearFilters();
+  }
+
   @override
   Widget build(BuildContext context) {
     final coursesAsync = ref.watch(courseListProvider);
@@ -71,11 +100,10 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen> {
               return _CourseListContent(
                 controller: _scrollController,
                 state: previous,
-                selectedCategoryIndex: _selectedCategoryIndex,
-                onSelectCategory: (index, subject) {
-                  setState(() => _selectedCategoryIndex = index);
-                  ref.read(courseListProvider.notifier).setSubject(subject);
-                },
+                selectedGrade: _selectedGrade,
+                onSelectGrade: _onSelectGrade,
+                onSelectSubject: _onSelectSubject,
+                onResetFilters: _resetFilters,
                 dismissedAnnouncement: _dismissedAnnouncement,
                 onDismissAnnouncement: () =>
                     setState(() => _dismissedAnnouncement = true),
@@ -108,11 +136,10 @@ class _CourseListScreenState extends ConsumerState<CourseListScreen> {
           data: (state) => _CourseListContent(
             controller: _scrollController,
             state: state,
-            selectedCategoryIndex: _selectedCategoryIndex,
-            onSelectCategory: (index, subject) {
-              setState(() => _selectedCategoryIndex = index);
-              ref.read(courseListProvider.notifier).setSubject(subject);
-            },
+            selectedGrade: _selectedGrade,
+            onSelectGrade: _onSelectGrade,
+            onSelectSubject: _onSelectSubject,
+            onResetFilters: _resetFilters,
             dismissedAnnouncement: _dismissedAnnouncement,
             onDismissAnnouncement: () =>
                 setState(() => _dismissedAnnouncement = true),
@@ -127,16 +154,20 @@ class _CourseListContent extends ConsumerWidget {
   const _CourseListContent({
     required this.controller,
     required this.state,
-    required this.selectedCategoryIndex,
-    required this.onSelectCategory,
+    required this.selectedGrade,
+    required this.onSelectGrade,
+    required this.onSelectSubject,
+    required this.onResetFilters,
     required this.dismissedAnnouncement,
     required this.onDismissAnnouncement,
   });
 
   final ScrollController controller;
   final CourseListState state;
-  final int selectedCategoryIndex;
-  final void Function(int index, String? subject) onSelectCategory;
+  final int selectedGrade;
+  final void Function(int grade) onSelectGrade;
+  final void Function(String? subject) onSelectSubject;
+  final VoidCallback onResetFilters;
   final bool dismissedAnnouncement;
   final VoidCallback onDismissAnnouncement;
 
@@ -201,18 +232,28 @@ class _CourseListContent extends ConsumerWidget {
               ),
             ),
 
-          // 4. Horizontal Category Filter Chips
+          // 4. Grade-level filter chips & Subject chooser dropdown directly underneath
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.only(top: AppSizes.md),
-              child: _CategoryFilterRow(
-                selectedIndex: selectedCategoryIndex,
-                onSelect: onSelectCategory,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _GradeFilterRow(
+                    selectedGrade: selectedGrade,
+                    onSelect: onSelectGrade,
+                  ),
+                  const SizedBox(height: AppSizes.sm),
+                  _SubjectDropdownSelector(
+                    selectedSubject: state.selectedSubject,
+                    onSelect: onSelectSubject,
+                  ),
+                ],
               ),
             ),
           ),
 
-          // 5. Section Header: Exam Prep Courses
+          // 5. Section Header: Courses
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(
@@ -225,7 +266,7 @@ class _CourseListContent extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Entrance Exam Courses',
+                    'Courses',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -233,7 +274,8 @@ class _CourseListContent extends ConsumerWidget {
                       letterSpacing: -0.3,
                     ),
                   ),
-                  if (state.filteredCourses.isNotEmpty)
+                  if (selectedGrade != _kFreshmanGrade &&
+                      state.filteredCourses.isNotEmpty)
                     Text(
                       '${state.filteredCourses.length} available',
                       style: const TextStyle(
@@ -248,20 +290,28 @@ class _CourseListContent extends ConsumerWidget {
           ),
 
           // 6. Course Content List or Empty State
-          if (state.filteredCourses.isEmpty)
+          if (selectedGrade == _kFreshmanGrade)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: CourseEmptyState(
+                icon: Icons.auto_awesome_rounded,
+                title: 'Freshman courses are coming soon',
+                body:
+                    'We’re preparing freshman-year lessons and practice. For '
+                    'now, explore our Grade 9–12 courses.',
+                buttonLabel: 'Browse Grade 12',
+                onPressed: () => onSelectGrade(12),
+              ),
+            )
+          else if (state.filteredCourses.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
               child: CourseEmptyState(
                 icon: Icons.search_off_rounded,
                 title: 'No courses found',
-                body: 'Try selecting another subject.',
+                body: 'Try another grade or subject.',
                 buttonLabel: state.hasActiveFilters ? 'Clear filters' : null,
-                onPressed: state.hasActiveFilters
-                    ? () {
-                        onSelectCategory(0, null);
-                        ref.read(courseListProvider.notifier).clearFilters();
-                      }
-                    : null,
+                onPressed: state.hasActiveFilters ? onResetFilters : null,
               ),
             )
           else
@@ -435,7 +485,7 @@ class _HeroFeatureCard extends StatelessWidget {
                                   size: 12, color: Color(0xFF4ADE80)),
                               SizedBox(width: 4),
                               Text(
-                                'National Entrance Prep',
+                                'Featured Courses',
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
@@ -450,7 +500,7 @@ class _HeroFeatureCard extends StatelessWidget {
 
                         // Title
                         const Text(
-                          'Master Your Exams',
+                          'Master Your Courses',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
@@ -463,7 +513,7 @@ class _HeroFeatureCard extends StatelessWidget {
 
                         // Subtitle
                         Text(
-                          'Grade 12 video lessons, short notes, and practice exams.',
+                          'Video lessons, short notes, and practice quizzes across grades.',
                           style: TextStyle(
                             fontSize: 11.5,
                             color: Colors.white.withAlpha(200),
@@ -489,7 +539,7 @@ class _HeroFeatureCard extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  'Explore Mock Exams',
+                                  'Explore Practice Exams',
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
@@ -527,25 +577,37 @@ class _HeroFeatureCard extends StatelessWidget {
   }
 }
 
-/// Category Filter Chips Row
-class _CategoryFilterRow extends StatelessWidget {
-  const _CategoryFilterRow({
-    required this.selectedIndex,
+const Map<String, IconData> _subjectIcons = {
+  'Mathematics': Icons.calculate_outlined,
+  'Physics': Icons.science_outlined,
+  'Chemistry': Icons.biotech_outlined,
+  'Biology': Icons.eco_outlined,
+  'English': Icons.menu_book_outlined,
+  'Civics': Icons.gavel_outlined,
+  'History': Icons.auto_stories_outlined,
+  'Geography': Icons.public_outlined,
+  'Economics': Icons.trending_up_outlined,
+};
+
+/// Horizontal grade-level filter chips (All [with 4-dot icon], Freshman, Grade 12 → Grade 9).
+class _GradeFilterRow extends StatelessWidget {
+  const _GradeFilterRow({
+    required this.selectedGrade,
     required this.onSelect,
   });
 
-  final int selectedIndex;
-  final void Function(int index, String? subject) onSelect;
+  final int selectedGrade;
+  final void Function(int grade) onSelect;
 
   @override
   Widget build(BuildContext context) {
-    final categories = [
-      ('All', Icons.grid_view_rounded, null),
-      ('Math', Icons.calculate_outlined, 'Mathematics'),
-      ('Physics', Icons.science_outlined, 'Physics'),
-      ('Chemistry', Icons.biotech_outlined, 'Chemistry'),
-      ('Biology', Icons.eco_outlined, 'Biology'),
-      ('English', Icons.menu_book_outlined, 'English'),
+    const grades = <(String, int, IconData?)>[
+      ('All', _kAllGrade, Icons.grid_view_rounded),
+      ('Freshman', _kFreshmanGrade, null),
+      ('Grade 12', 12, null),
+      ('Grade 11', 11, null),
+      ('Grade 10', 10, null),
+      ('Grade 9', 9, null),
     ];
 
     return SizedBox(
@@ -553,21 +615,21 @@ class _CategoryFilterRow extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: AppSizes.screenPaddingH),
-        itemCount: categories.length,
+        itemCount: grades.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
-          final cat = categories[index];
-          final isSelected = selectedIndex == index;
+          final (label, grade, icon) = grades[index];
+          final isSelected = selectedGrade == grade;
 
           return InkWell(
-            onTap: () => onSelect(index, cat.$3),
+            onTap: () => onSelect(grade),
             borderRadius: BorderRadius.circular(12),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: isSelected
-                    ? AppColors.brandEmerald
-                    : AppColors.bgSecondary,
+                color:
+                    isSelected ? AppColors.brandEmerald : AppColors.bgSecondary,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: isSelected
@@ -576,21 +638,22 @@ class _CategoryFilterRow extends StatelessWidget {
                 ),
               ),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    cat.$2,
-                    size: 14,
-                    color: isSelected ? Colors.white : AppColors.textSecondary,
-                  ),
-                  const SizedBox(width: 6),
+                  if (icon != null) ...[
+                    Icon(
+                      icon,
+                      size: 14,
+                      color: isSelected ? Colors.white : AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 5),
+                  ],
                   Text(
-                    cat.$1,
+                    label,
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.w600,
-                      color:
-                          isSelected ? Colors.white : AppColors.textSecondary,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                      color: isSelected ? Colors.white : AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -599,6 +662,191 @@ class _CategoryFilterRow extends StatelessWidget {
           );
         },
       ),
+    );
+  }
+}
+
+/// Subject chooser dropdown button positioned directly UNDER the grade navigation bar.
+class _SubjectDropdownSelector extends StatelessWidget {
+  const _SubjectDropdownSelector({
+    required this.selectedSubject,
+    required this.onSelect,
+  });
+
+  final String? selectedSubject;
+  final void Function(String? subject) onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasSubject = selectedSubject != null;
+    final displaySubject = selectedSubject ?? 'All Subjects';
+    final icon = hasSubject
+        ? (_subjectIcons[selectedSubject] ?? Icons.book_outlined)
+        : Icons.grid_view_rounded;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSizes.screenPaddingH),
+      child: InkWell(
+        onTap: () => _openSubjectSheet(context),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: hasSubject
+                ? AppColors.brandEmerald.withAlpha(20)
+                : AppColors.bgSecondary,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: hasSubject
+                  ? AppColors.brandEmerald
+                  : AppColors.borderStrong,
+              width: hasSubject ? 1.5 : 1.0,
+            ),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: hasSubject
+                    ? AppColors.brandEmerald
+                    : AppColors.textSecondary,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Subject:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMuted,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  displaySubject,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: hasSubject
+                        ? AppColors.brandEmerald
+                        : AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 20,
+                color: hasSubject
+                    ? AppColors.brandEmerald
+                    : AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openSubjectSheet(BuildContext context) async {
+    const options = <String?>[null, ...phase2Subjects];
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.bgSecondary,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: AppSizes.sm),
+              Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.borderStrong,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppSizes.screenPaddingH,
+                  AppSizes.md,
+                  AppSizes.screenPaddingH,
+                  AppSizes.xs,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Filter by subject',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.only(bottom: AppSizes.sm),
+                  itemCount: options.length,
+                  itemBuilder: (context, index) {
+                    final subject = options[index];
+                    final isAll = subject == null;
+                    final label = isAll ? 'All Subjects' : subject;
+                    final icon = isAll
+                        ? Icons.grid_view_rounded
+                        : (_subjectIcons[subject] ?? Icons.book_outlined);
+                    final isSelected = isAll
+                        ? selectedSubject == null
+                        : selectedSubject == subject;
+
+                    return ListTile(
+                      leading: Icon(
+                        icon,
+                        size: 20,
+                        color: isSelected
+                            ? AppColors.brandEmerald
+                            : AppColors.textSecondary,
+                      ),
+                      title: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isSelected
+                              ? AppColors.brandEmerald
+                              : AppColors.textPrimary,
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.w500,
+                        ),
+                      ),
+                      trailing: isSelected
+                          ? const Icon(
+                              Icons.check_rounded,
+                              color: AppColors.brandEmerald,
+                              size: 20,
+                            )
+                          : null,
+                      onTap: () {
+                        Navigator.of(sheetContext).pop();
+                        onSelect(subject);
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

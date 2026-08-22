@@ -80,9 +80,9 @@ class AppShell extends StatelessWidget {
                     onTap: () => _onDestinationSelected(0),
                   ),
                   _NavItem(
-                    label: 'Lessons',
-                    icon: Icons.play_circle_outline_rounded,
-                    selectedIcon: Icons.play_circle_rounded,
+                    label: 'My Courses',
+                    icon: Icons.school_outlined,
+                    selectedIcon: Icons.school_rounded,
                     selected: navigationShell.currentIndex == 1,
                     onTap: () => _onDestinationSelected(1),
                   ),

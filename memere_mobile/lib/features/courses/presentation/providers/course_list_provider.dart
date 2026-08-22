@@ -24,7 +24,7 @@ class CourseListState {
     this.filteredCourses = const [],
     this.nextCursor,
     this.selectedSubject,
-    this.selectedGrade = 12,
+    this.selectedGrade = 0,
     this.searchQuery = '',
     this.isLoadingMore = false,
     this.loadMoreError,
@@ -43,7 +43,7 @@ class CourseListState {
   bool get hasActiveFilters =>
       searchQuery.trim().isNotEmpty ||
       selectedSubject != null ||
-      selectedGrade != 12;
+      (selectedGrade != null && selectedGrade != 0);
 
   CourseListState copyWith({
     List<CourseEntity>? courses,
@@ -84,7 +84,7 @@ class CourseListNotifier extends AsyncNotifier<CourseListState> {
   Future<CourseListState> build() async {
     return _fetchCourses(
       subject: null,
-      grade: 12,
+      grade: null,
       searchQuery: '',
     );
   }
@@ -110,12 +110,16 @@ class CourseListNotifier extends AsyncNotifier<CourseListState> {
     );
 
     final useCase = ref.read(listCoursesUseCaseProvider);
+    final effectiveGrade =
+        (current.selectedGrade == null || current.selectedGrade == 0)
+            ? null
+            : current.selectedGrade;
     final result = await useCase(
       ListCoursesParams(
         limit: AppConstants.defaultPageLimit,
         after: current.nextCursor,
         subject: current.selectedSubject,
-        grade: current.selectedGrade,
+        grade: effectiveGrade,
       ),
     );
 
@@ -184,7 +188,7 @@ class CourseListNotifier extends AsyncNotifier<CourseListState> {
     state = await AsyncValue.guard(
       () => _fetchCourses(
         subject: null,
-        grade: 12,
+        grade: null,
         searchQuery: '',
       ),
     );
@@ -196,11 +200,12 @@ class CourseListNotifier extends AsyncNotifier<CourseListState> {
     required String searchQuery,
   }) async {
     final useCase = ref.read(listCoursesUseCaseProvider);
+    final effectiveGrade = (grade == null || grade == 0) ? null : grade;
     final result = await useCase(
       ListCoursesParams(
         limit: AppConstants.defaultPageLimit,
         subject: subject,
-        grade: grade,
+        grade: effectiveGrade,
         searchQuery: searchQuery,
       ),
     );
@@ -213,7 +218,7 @@ class CourseListNotifier extends AsyncNotifier<CourseListState> {
           filteredCourses: _applySearch(page.courses, searchQuery),
           nextCursor: page.nextCursor,
           selectedSubject: subject,
-          selectedGrade: grade,
+          selectedGrade: grade ?? 0,
           searchQuery: searchQuery,
         );
       },
