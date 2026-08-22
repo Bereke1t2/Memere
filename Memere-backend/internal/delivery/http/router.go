@@ -42,6 +42,13 @@ type Deps struct {
 	Notifications *NotificationHandler
 	Certificates  *CertificateHandler
 	Admin         *AdminHandler
+
+	// Google Drive object-storage backend (STORAGE_PROVIDER=gdrive). Both are nil
+	// for the S3/MinIO backend, leaving their routes unregistered.
+	//   Media       — the signed /media proxy that streams Drive objects (public).
+	//   GoogleOAuth — the one-time admin connect/callback flow for the Drive account.
+	Media       *MediaHandler
+	GoogleOAuth *GoogleOAuthHandler
 }
 
 // NewRouter assembles the Gin engine: the global middleware stack (in order),
@@ -106,12 +113,15 @@ func NewRouter(deps Deps) *gin.Engine {
 		courses.GET("", optionalAuth, deps.Courses.List)
 		courses.GET("/:id", optionalAuth, deps.Courses.Get)
 		courses.GET("/:id/sections", optionalAuth, deps.Courses.ListSections)
+		// Public thumbnail bytes (marketing content; served cacheable + unsigned).
+		courses.GET("/:id/thumbnail", deps.Courses.ServeCourseThumbnail)
 
 		courses.POST("", requireAuth, teacherOrAdmin, deps.Courses.Create)
 		courses.PUT("/:id", requireAuth, teacherOrAdmin, deps.Courses.Update)
 		courses.DELETE("/:id", requireAuth, teacherOrAdmin, deps.Courses.Delete)
 		courses.POST("/:id/publish", requireAuth, teacherOrAdmin, deps.Courses.Publish)
 		courses.POST("/:id/sections", requireAuth, teacherOrAdmin, deps.Courses.AddSection)
+		courses.POST("/:id/thumbnail", requireAuth, teacherOrAdmin, deps.Courses.UploadCourseThumbnail)
 	}
 
 	// Section-scoped lesson routes.
@@ -130,26 +140,31 @@ func NewRouter(deps Deps) *gin.Engine {
 		lessons.GET("/:id/pdf", optionalAuth, deps.Courses.DownloadLessonPDF)
 	}
 
-	// Quiz/exam authoring nested under a course (teacher/admin).
-	courses.GET("/:id/quizzes", requireAuth, teacherOrAdmin, deps.Quizzes.ListByCourse)
+	// Quiz/exam authoring nested under a course.
+	courses.GET("/:id/quizzes", optionalAuth, deps.Quizzes.ListByCourse)
 	courses.POST("/:id/quizzes", requireAuth, teacherOrAdmin, deps.Quizzes.CreateQuiz)
-	courses.GET("/:id/exams", requireAuth, teacherOrAdmin, deps.Exams.ListByCourse)
+	courses.GET("/:id/exams", optionalAuth, deps.Exams.ListByCourse)
 	courses.POST("/:id/exams", requireAuth, teacherOrAdmin, deps.Exams.CreateExam)
 
-	// Quiz authoring + taking. Authoring is teacher/admin; taking requires auth,
-	// with ownership enforced in the usecase (not middleware).
+	// Quiz authoring + taking. Authoring is teacher/admin; taking is open to
+	// guests (optionalAuth) so unregistered users can attempt quizzes, with
+	// ownership enforced in the usecase via the shared GuestUserID (not middleware).
 	quizzes := v1.Group("/quizzes")
 	{
 		quizzes.POST("/:id/questions", requireAuth, teacherOrAdmin, deps.Quizzes.AddQuestion)
 		quizzes.PUT("/:id", requireAuth, teacherOrAdmin, deps.Quizzes.UpdateQuiz)
-		quizzes.GET("/:id", requireAuth, deps.Quizzes.GetQuiz)
-		quizzes.POST("/:id/attempts", requireAuth, deps.Quizzes.StartAttempt)
+		quizzes.GET("/:id", optionalAuth, deps.Quizzes.GetQuiz)
+		quizzes.POST("/:id/attempts", optionalAuth, deps.Quizzes.StartAttempt)
+		// Offline download: full quiz WITH answer keys, for on-device grading. The
+		// sanctioned Non-Negotiable #1 exception — gated exactly like taking the
+		// quiz, so re-enabling the paywall auto-restricts keys too (see dto/download.go).
+		quizzes.GET("/:id/download", optionalAuth, deps.Quizzes.GetForDownload)
 	}
 	quizAttempts := v1.Group("/quiz-attempts")
 	{
-		quizAttempts.PATCH("/:id", requireAuth, deps.Quizzes.SaveProgress)
-		quizAttempts.POST("/:id/submit", requireAuth, deps.Quizzes.Submit)
-		quizAttempts.GET("/:id/result", requireAuth, deps.Quizzes.GetResult)
+		quizAttempts.PATCH("/:id", optionalAuth, deps.Quizzes.SaveProgress)
+		quizAttempts.POST("/:id/submit", optionalAuth, deps.Quizzes.Submit)
+		quizAttempts.GET("/:id/result", optionalAuth, deps.Quizzes.GetResult)
 	}
 
 	// Exam authoring + analytics stats (teacher/admin) and the mock-exam catalog.
@@ -166,6 +181,10 @@ func NewRouter(deps Deps) *gin.Engine {
 		mockExams.GET("", optionalAuth, deps.Exams.ListMockExams)
 		mockExams.POST("/:id/start", optionalAuth, deps.Exams.Start)
 		mockExams.GET("/:id/attempts", optionalAuth, deps.Exams.ListMyAttempts)
+		// Offline download: full exam WITH answer keys + duration, for on-device
+		// grading. The sanctioned Non-Negotiable #1 exception — gated exactly like
+		// starting the exam (unpublished exams withhold keys). See dto/download.go.
+		mockExams.GET("/:id/download", optionalAuth, deps.Exams.GetForDownload)
 	}
 	examAttempts := v1.Group("/exam-attempts")
 	{
@@ -179,22 +198,27 @@ func NewRouter(deps Deps) *gin.Engine {
 	// Student self-analytics.
 	v1.GET("/me/trend", requireAuth, deps.Analytics.Trend)
 
-	// Video pipeline (Phase 3). Reads (status/stream/download) require an
-	// authenticated caller; access control (owner/admin or free/preview student)
-	// is enforced in the usecase. Mutations are gated to teacher/admin by role,
-	// with course ownership checked in the usecase.
+	// Video pipeline (Phase 3). Reads (status/stream/download) use OptionalAuth so
+	// unregistered guests can watch/download published & free content; access
+	// control (owner/admin or free/preview/enrolled/subscribed) is enforced in the
+	// usecase, and download tokens are unguessable + bound to the redeemer.
+	// Mutations are gated to teacher/admin by role, with course ownership checked
+	// in the usecase.
 	if deps.Video != nil {
 		videos := v1.Group("/videos")
 		{
-			videos.GET("/:id/status", requireAuth, deps.Video.Status)
-			videos.GET("/:id/stream", requireAuth, deps.Video.Stream)
-			videos.GET("/:id/download-url", requireAuth, deps.Video.DownloadURL)
-			videos.GET("/download/:token", requireAuth, deps.Video.ConsumeDownload)
+			videos.GET("/:id/status", optionalAuth, deps.Video.Status)
+			videos.GET("/:id/stream", optionalAuth, deps.Video.Stream)
+			videos.GET("/:id/download-url", optionalAuth, deps.Video.DownloadURL)
+			videos.GET("/download/:token", optionalAuth, deps.Video.ConsumeDownload)
 
 			videos.POST("/:id/confirm", requireAuth, teacherOrAdmin, deps.Video.Confirm)
 			videos.POST("/:id/retry", requireAuth, teacherOrAdmin, deps.Video.Retry)
 		}
 		v1.POST("/lessons/:id/videos/upload-url", requireAuth, teacherOrAdmin, deps.Video.RequestUpload)
+		// Direct proxied upload: the client streams the full MP4 through the backend
+		// (used by the Google Drive backend, which has no client-side presigned PUT).
+		v1.POST("/lessons/:id/videos/upload", requireAuth, teacherOrAdmin, deps.Video.UploadDirect)
 	}
 
 	// Phase 4 — payments, enrollments, subscriptions, revenue. Registered as a
@@ -285,6 +309,22 @@ func NewRouter(deps Deps) *gin.Engine {
 			adminGroup.GET("/analytics/revenue", deps.Admin.RevenueBreakdown)
 			adminGroup.GET("/analytics/engagement", deps.Admin.GetEngagementStats)
 		}
+	}
+
+	// Google Drive backend (STORAGE_PROVIDER=gdrive). The media proxy is PUBLIC but
+	// every URL is HMAC-signed with a short expiry (minted only after the video
+	// usecase's access check), so Drive is never exposed publicly and no Google
+	// credential ever reaches a client.
+	if deps.Media != nil {
+		v1.GET("/media", deps.Media.Serve)
+	}
+	// One-time admin flow to connect the single admin-owned Drive account. Connect/
+	// Status require an admin bearer; Callback is PUBLIC because Google redirects the
+	// admin's browser to it with no bearer (CSRF is enforced by a one-time state).
+	if deps.GoogleOAuth != nil {
+		v1.GET("/admin/google/connect", requireAuth, adminOnly, deps.GoogleOAuth.Connect)
+		v1.GET("/admin/google/status", requireAuth, adminOnly, deps.GoogleOAuth.Status)
+		v1.GET("/admin/google/callback", deps.GoogleOAuth.Callback)
 	}
 
 	return r
