@@ -39,6 +39,10 @@ type ExamAttemptRepository interface {
 	// Stats returns aggregate analytics for an exam (§9.3): graded attempt count,
 	// average percentage, and pass count (score >= the exam's pass_marks).
 	Stats(ctx context.Context, examID uuid.UUID) (ExamAttemptStats, error)
+	// SumBestScores returns the student's cumulative exam points: the best graded
+	// score per exam, summed, with the distinct-exam count and average of those
+	// best percentages. Best-per-exam so retakes never double-count (§9.3).
+	SumBestScores(ctx context.Context, studentID uuid.UUID) (StudentScoreTotals, error)
 }
 
 // ExamAttemptStats is the aggregate result behind GetExamStats (§9.3).
@@ -46,4 +50,14 @@ type ExamAttemptStats struct {
 	TotalAttempts int
 	AvgPercentage float64
 	PassedCount   int
+}
+
+// StudentScoreTotals is a student's cumulative points across quizzes or exams:
+// the best graded score per item, summed, plus the number of distinct items
+// completed and the average of those best percentages (§9.3). Shared by the
+// quiz and exam attempt repositories.
+type StudentScoreTotals struct {
+	Points        float64
+	Count         int64
+	AvgPercentage float64
 }

@@ -366,7 +366,7 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	accessSvc := access.NewService(enrollmentRepo, subscriptionRepo, courseRepo, nil)
 	quizSvc := quiz.NewService(quizRepo, questionRepo, quizAttemptRepo, courseRepo, attemptStateRepo, txManager, accessSvc)
 	examSvc := exam.NewService(examRepo, examAttemptRepo, courseRepo, attemptStateRepo, scoreRankingRepo, txManager, accessSvc, hooks)
-	analyticsSvc := analytics.NewService(examRepo, examAttemptRepo, courseRepo, scoreRankingRepo)
+	analyticsSvc := analytics.NewService(examRepo, examAttemptRepo, courseRepo, scoreRankingRepo, quizAttemptRepo)
 	videoSvc := video.NewService(videoRepo, lessonRepo, courseRepo, store, queue, signer, downloadTokens, accessSvc, video.Config{
 		UploadURLTTL:   cfg.Storage.UploadURLTTL,
 		MaxUploadBytes: cfg.Video.MaxUploadBytes,

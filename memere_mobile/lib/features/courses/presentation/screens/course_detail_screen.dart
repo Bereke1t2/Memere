@@ -216,31 +216,8 @@ class _DetailTopBar extends ConsumerWidget {
           ),
           const SizedBox(width: 12),
 
-          // Action / Bookmark Button — toggles the course in My Courses
-          InkWell(
-            onTap: () => _toggleFavorite(context, ref, course),
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              width: 38,
-              height: 38,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.bgSecondary,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color:
-                      isSaved ? AppColors.brandEmerald : AppColors.borderStrong,
-                ),
-              ),
-              child: Icon(
-                isSaved
-                    ? Icons.bookmark_rounded
-                    : Icons.bookmark_border_rounded,
-                color: isSaved ? AppColors.brandEmerald : AppColors.textPrimary,
-                size: 18,
-              ),
-            ),
-          ),
+          // Spacer balancing back button to keep title centered
+          const SizedBox(width: 38),
         ],
       ),
     );
@@ -1131,12 +1108,20 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
 
   LessonEntity? _firstPlayableLesson(CourseDetailEntity? detail) {
     if (detail == null) return null;
+    final completedIds =
+        ref.read(completedLessonsProvider).valueOrNull ?? const {};
+    LessonEntity? firstLesson;
+
     for (final section in detail.sections) {
-      if (section.lessons.isNotEmpty) {
-        return section.lessons.first;
+      for (final lesson in section.lessons) {
+        firstLesson ??= lesson;
+        if (!completedIds.contains(lesson.id)) {
+          return lesson; // Return the first lesson the user hasn't completed yet
+        }
       }
     }
-    return null;
+    // If all lessons are completed, return the first lesson for review
+    return firstLesson;
   }
 
   Future<void> _startFree() async {

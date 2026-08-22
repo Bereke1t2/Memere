@@ -156,6 +156,18 @@ func (r *QuizAttemptRepo) Grade(ctx context.Context, a *entity.QuizAttempt) erro
 	return nil
 }
 
+func (r *QuizAttemptRepo) SumBestScores(ctx context.Context, studentID uuid.UUID) (repository.StudentScoreTotals, error) {
+	row, err := queriesFor(ctx, r.q).GetStudentQuizPoints(ctx, toPgUUID(studentID))
+	if err != nil {
+		return repository.StudentScoreTotals{}, apperror.Internal(err)
+	}
+	return repository.StudentScoreTotals{
+		Points:        row.TotalPoints,
+		Count:         row.QuizCount,
+		AvgPercentage: row.AvgPercentage,
+	}, nil
+}
+
 func mapQuizAttemptErr(err error) error {
 	if errors.Is(err, pgx.ErrNoRows) {
 		return apperror.NotFound("quiz attempt not found", err)

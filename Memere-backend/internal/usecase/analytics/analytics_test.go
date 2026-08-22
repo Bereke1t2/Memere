@@ -44,7 +44,7 @@ func TestGetAttemptAnalytics_WeakAreasRankedByMarksLost(t *testing.T) {
 		},
 	}}
 	ranking := &fakeRanking{pct: 75, ok: true}
-	svc := NewService(nil, attempts, nil, ranking)
+	svc := NewService(nil, attempts, nil, ranking, nil)
 
 	out, err := svc.GetAttemptAnalytics(context.Background(), stu, attemptID)
 	if err != nil {
@@ -67,7 +67,7 @@ func TestGetAttemptAnalytics_OtherStudentForbidden(t *testing.T) {
 	attempts := &fakeExamAttemptRepo{byID: map[uuid.UUID]*entity.ExamAttempt{
 		attemptID: {ID: attemptID, StudentID: owner, Status: entity.AttemptGraded},
 	}}
-	svc := NewService(nil, attempts, nil, nil)
+	svc := NewService(nil, attempts, nil, nil, nil)
 
 	_, err := svc.GetAttemptAnalytics(context.Background(), &Actor{UserID: uuid.New(), Role: entity.RoleStudent}, attemptID)
 	if !apperror.IsNotFound(err) {
@@ -82,7 +82,7 @@ func TestGetStudentTrend_OrderedSeries(t *testing.T) {
 		{ID: uuid.New(), Percentage: f64(55)},
 		{ID: uuid.New(), Percentage: f64(70)},
 	}}
-	svc := NewService(nil, attempts, nil, nil)
+	svc := NewService(nil, attempts, nil, nil, nil)
 
 	pts, err := svc.GetStudentTrend(context.Background(), stu, "Math")
 	if err != nil {
@@ -105,7 +105,7 @@ func TestGetExamStats_TeacherOwnsCourse(t *testing.T) {
 		courseID: {ID: courseID, TeacherID: teacher.UserID},
 	}}
 	attempts := &fakeExamAttemptRepo{stats: repository.ExamAttemptStats{TotalAttempts: 4, AvgPercentage: 62.5, PassedCount: 3}}
-	svc := NewService(exams, attempts, courses, nil)
+	svc := NewService(exams, attempts, courses, nil, nil)
 
 	stats, err := svc.GetExamStats(context.Background(), teacher, examID)
 	if err != nil {
@@ -117,7 +117,7 @@ func TestGetExamStats_TeacherOwnsCourse(t *testing.T) {
 }
 
 func TestGetExamStats_StudentForbidden(t *testing.T) {
-	svc := NewService(nil, nil, nil, nil)
+	svc := NewService(nil, nil, nil, nil, nil)
 	_, err := svc.GetExamStats(context.Background(), &Actor{UserID: uuid.New(), Role: entity.RoleStudent}, uuid.New())
 	if !apperror.IsCode(err, "FORBIDDEN") {
 		t.Fatalf("student must not view exam stats, got %v", err)
@@ -129,7 +129,7 @@ func TestGetExamStats_OtherTeacherForbidden(t *testing.T) {
 	examID := uuid.New()
 	exams := &fakeExamRepo{byID: map[uuid.UUID]*entity.Exam{examID: {ID: examID, CourseID: &courseID}}}
 	courses := &fakeCourseRepo{byID: map[uuid.UUID]*entity.Course{courseID: {ID: courseID, TeacherID: uuid.New()}}}
-	svc := NewService(exams, &fakeExamAttemptRepo{}, courses, nil)
+	svc := NewService(exams, &fakeExamAttemptRepo{}, courses, nil, nil)
 
 	_, err := svc.GetExamStats(context.Background(), &Actor{UserID: uuid.New(), Role: entity.RoleTeacher}, examID)
 	if !apperror.IsCode(err, "FORBIDDEN") {
@@ -138,6 +138,35 @@ func TestGetExamStats_OtherTeacherForbidden(t *testing.T) {
 }
 
 // ---- minimal fakes -----------------------------------------------------------
+
+func TestGetMyPoints_SumsBestQuizAndExamScores(t *testing.T) {
+	stu := &Actor{UserID: uuid.New(), Role: entity.RoleStudent}
+	quizzes := &fakeQuizAttemptRepo{totals: repository.StudentScoreTotals{Points: 30, Count: 3, AvgPercentage: 80}}
+	exams := &fakeExamAttemptRepo{totals: repository.StudentScoreTotals{Points: 70, Count: 1, AvgPercentage: 60}}
+	svc := NewService(nil, exams, nil, nil, quizzes)
+
+	pts, err := svc.GetMyPoints(context.Background(), stu)
+	if err != nil {
+		t.Fatalf("GetMyPoints: %v", err)
+	}
+	if pts.TotalPoints != 100 || pts.QuizPoints != 30 || pts.ExamPoints != 70 {
+		t.Errorf("point totals wrong: %+v", pts)
+	}
+	if pts.QuizCount != 3 || pts.ExamCount != 1 {
+		t.Errorf("counts wrong: %+v", pts)
+	}
+	// count-weighted mean: (80*3 + 60*1) / 4 = 75
+	if pts.AvgPercentage != 75 {
+		t.Errorf("avg percentage = %v, want 75", pts.AvgPercentage)
+	}
+}
+
+func TestGetMyPoints_GuestRejected(t *testing.T) {
+	svc := NewService(nil, &fakeExamAttemptRepo{}, nil, nil, &fakeQuizAttemptRepo{})
+	if _, err := svc.GetMyPoints(context.Background(), nil); !apperror.IsCode(err, "UNAUTHORIZED") {
+		t.Fatalf("nil actor must be unauthorized, got %v", err)
+	}
+}
 
 type fakeRanking struct {
 	pct float64
@@ -161,9 +190,10 @@ func (f *fakeRanking) RebuildFromScores(context.Context, uuid.UUID, map[uuid.UUI
 }
 
 type fakeExamAttemptRepo struct {
-	byID  map[uuid.UUID]*entity.ExamAttempt
-	trend []*entity.ExamAttempt
-	stats repository.ExamAttemptStats
+	byID   map[uuid.UUID]*entity.ExamAttempt
+	trend  []*entity.ExamAttempt
+	stats  repository.ExamAttemptStats
+	totals repository.StudentScoreTotals
 }
 
 func (f *fakeExamAttemptRepo) FindByID(_ context.Context, id, studentID uuid.UUID) (*entity.ExamAttempt, error) {
@@ -179,6 +209,9 @@ func (f *fakeExamAttemptRepo) ListGradedBySubject(context.Context, uuid.UUID, st
 }
 func (f *fakeExamAttemptRepo) Stats(context.Context, uuid.UUID) (repository.ExamAttemptStats, error) {
 	return f.stats, nil
+}
+func (f *fakeExamAttemptRepo) SumBestScores(context.Context, uuid.UUID) (repository.StudentScoreTotals, error) {
+	return f.totals, nil
 }
 func (f *fakeExamAttemptRepo) Create(context.Context, *entity.ExamAttempt) error { return nil }
 func (f *fakeExamAttemptRepo) GetActive(context.Context, uuid.UUID, uuid.UUID) (*entity.ExamAttempt, error) {
@@ -252,8 +285,38 @@ func (f *fakeCourseRepo) GetCourseWithSectionsAndLessons(context.Context, uuid.U
 	return nil, apperror.NotFound("not found", nil)
 }
 
+type fakeQuizAttemptRepo struct {
+	totals repository.StudentScoreTotals
+}
+
+func (f *fakeQuizAttemptRepo) SumBestScores(context.Context, uuid.UUID) (repository.StudentScoreTotals, error) {
+	return f.totals, nil
+}
+func (f *fakeQuizAttemptRepo) Create(context.Context, *entity.QuizAttempt) error { return nil }
+func (f *fakeQuizAttemptRepo) FindByID(context.Context, uuid.UUID, uuid.UUID) (*entity.QuizAttempt, error) {
+	return nil, apperror.NotFound("quiz attempt not found", nil)
+}
+func (f *fakeQuizAttemptRepo) GetActive(context.Context, uuid.UUID, uuid.UUID) (*entity.QuizAttempt, error) {
+	return nil, apperror.NotFound("none", nil)
+}
+func (f *fakeQuizAttemptRepo) ListByStudentAndQuiz(context.Context, uuid.UUID, uuid.UUID) ([]*entity.QuizAttempt, error) {
+	return nil, nil
+}
+func (f *fakeQuizAttemptRepo) CountByStudentAndQuiz(context.Context, uuid.UUID, uuid.UUID) (int, error) {
+	return 0, nil
+}
+func (f *fakeQuizAttemptRepo) ListExpired(context.Context, time.Time, int) ([]*entity.QuizAttempt, error) {
+	return nil, nil
+}
+func (f *fakeQuizAttemptRepo) Update(context.Context, *entity.QuizAttempt) error { return nil }
+func (f *fakeQuizAttemptRepo) ClaimForGrading(context.Context, *entity.QuizAttempt) (bool, error) {
+	return true, nil
+}
+func (f *fakeQuizAttemptRepo) Grade(context.Context, *entity.QuizAttempt) error { return nil }
+
 var (
 	_ repository.ExamAttemptRepository = (*fakeExamAttemptRepo)(nil)
+	_ repository.QuizAttemptRepository = (*fakeQuizAttemptRepo)(nil)
 	_ repository.ExamRepository        = (*fakeExamRepo)(nil)
 	_ repository.CourseRepository      = (*fakeCourseRepo)(nil)
 	_ repository.ScoreRanking          = (*fakeRanking)(nil)

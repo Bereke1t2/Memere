@@ -85,3 +85,27 @@ func NewExamStatsResponse(s *analytics.ExamStats) ExamStatsResponse {
 		PassRate:      s.PassRate,
 	}
 }
+
+// StudentPointsResponse is a student's cumulative points across all graded
+// quizzes and exams (best attempt per item), with per-source subtotals, the
+// number of distinct quizzes/exams completed, and an overall average percentage.
+type StudentPointsResponse struct {
+	TotalPoints   float64 `json:"total_points"`
+	QuizPoints    float64 `json:"quiz_points"`
+	ExamPoints    float64 `json:"exam_points"`
+	AvgPercentage float64 `json:"avg_percentage"`
+	QuizCount     int64   `json:"quiz_count"`
+	ExamCount     int64   `json:"exam_count"`
+}
+
+// NewStudentPointsResponse maps the cumulative points view to its response.
+func NewStudentPointsResponse(p *analytics.StudentPoints) StudentPointsResponse {
+	return StudentPointsResponse{
+		TotalPoints:   p.TotalPoints,
+		QuizPoints:    p.QuizPoints,
+		ExamPoints:    p.ExamPoints,
+		AvgPercentage: p.AvgPercentage,
+		QuizCount:     p.QuizCount,
+		ExamCount:     p.ExamCount,
+	}
+}
