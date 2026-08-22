@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 
 import 'download_store.dart';
 import 'offline_attempt_store.dart';
+import 'saved_courses_store.dart';
 
 /// Shared Riverpod wiring for the offline-grading + downloads features.
 ///
@@ -11,6 +12,9 @@ import 'offline_attempt_store.dart';
 
 final downloadStoreProvider =
     Provider<DownloadStore>((ref) => const DownloadStore());
+
+final savedCoursesStoreProvider =
+    Provider<SavedCoursesStore>((ref) => const SavedCoursesStore());
 
 final offlineAttemptStoreProvider =
     Provider<OfflineAttemptStore>((ref) => const OfflineAttemptStore());
