@@ -459,6 +459,10 @@ func (f *fakeSubRepo) ExpireLapsed(context.Context, uuid.UUID) (bool, error) {
 	return false, nil
 }
 
+func (f *fakeAttemptRepo) SumBestScores(context.Context, uuid.UUID) (repository.StudentScoreTotals, error) {
+	return repository.StudentScoreTotals{}, nil
+}
+
 // ---- compile-time interface checks -------------------------------------------
 
 var (
