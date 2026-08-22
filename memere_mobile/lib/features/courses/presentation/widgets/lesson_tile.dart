@@ -13,11 +13,15 @@ class LessonTile extends StatefulWidget {
     required this.lesson,
     required this.lessonNumber,
     this.canOpen = false,
+    this.isCompleted = false,
+    this.onToggleCompleted,
   });
 
   final LessonEntity lesson;
   final int lessonNumber;
   final bool canOpen;
+  final bool isCompleted;
+  final VoidCallback? onToggleCompleted;
 
   @override
   State<LessonTile> createState() => _LessonTileState();
@@ -27,6 +31,7 @@ class _LessonTileState extends State<LessonTile> {
   LessonEntity get lesson => widget.lesson;
   int get lessonNumber => widget.lessonNumber;
   bool get canOpen => widget.canOpen;
+  bool get isCompleted => widget.isCompleted;
 
   @override
   Widget build(BuildContext context) {
@@ -39,81 +44,160 @@ class _LessonTileState extends State<LessonTile> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: AppColors.bgSecondary,
+          color: isCompleted
+              ? AppColors.brandEmerald.withAlpha(15)
+              : AppColors.bgSecondary,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.borderStrong.withAlpha(90)),
+          border: Border.all(
+            color: isCompleted
+                ? AppColors.brandEmerald.withAlpha(120)
+                : AppColors.borderStrong.withAlpha(90),
+            width: isCompleted ? 1.5 : 1.0,
+          ),
         ),
         child: Row(
           children: [
-            // Left Number: e.g. "01."
-            Text(
-              '$numStr.',
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF94A3B8),
+            // Left Indicator: Completion Checkmark Badge or Lesson Number
+            if (isCompleted)
+              InkWell(
+                onTap: widget.onToggleCompleted,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 26,
+                  height: 26,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: AppColors.brandEmerald,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.check_rounded,
+                    size: 16,
+                    color: Colors.white,
+                  ),
+                ),
+              )
+            else
+              Text(
+                '$numStr.',
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF94A3B8),
+                ),
               ),
-            ),
             const SizedBox(width: 12),
 
-            // Middle Column: Title & Duration / Type Subtitle
+            // Middle Column: Title & Subtitle + Completed Mark Tag
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    lesson.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                      height: 1.25,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          lesson.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w700,
+                            color: isCompleted
+                                ? AppColors.brandEmerald
+                                : Colors.white,
+                            height: 1.25,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 3),
-                  Text(
-                    _buildSubtitleText(lesson),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Color(0xFF64748B),
-                      fontWeight: FontWeight.w500,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        _buildSubtitleText(lesson),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF64748B),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (isCompleted) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.brandEmerald.withAlpha(35),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.check_circle_rounded,
+                                size: 11,
+                                color: AppColors.brandEmerald,
+                              ),
+                              SizedBox(width: 3),
+                              Text(
+                                'Completed',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.brandEmerald,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
             ),
             const SizedBox(width: 10),
 
-            // Right Action Icon Pill (Play / Document / Quiz / Lock)
+            // Right Action Icon Pill (Completed Checkmark / Play / Document / Quiz / Lock)
             Container(
               width: 36,
               height: 36,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: isOpenable
-                    ? (lesson.isFreePreview && !canOpen
-                        ? const Color(0x2238BDF8)
-                        : const Color(0x2210B981))
-                    : const Color(0xFF1E2433),
+                color: isCompleted
+                    ? const Color(0x3310B981)
+                    : (isOpenable
+                        ? (lesson.isFreePreview && !canOpen
+                            ? const Color(0x2238BDF8)
+                            : const Color(0x2210B981))
+                        : const Color(0xFF1E2433)),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: isOpenable
-                      ? (lesson.isFreePreview && !canOpen
-                          ? const Color(0x5538BDF8)
-                          : const Color(0x5510B981))
-                      : const Color(0xFF2A3449),
+                  color: isCompleted
+                      ? AppColors.brandEmerald
+                      : (isOpenable
+                          ? (lesson.isFreePreview && !canOpen
+                              ? const Color(0x5538BDF8)
+                              : const Color(0x5510B981))
+                          : const Color(0xFF2A3449)),
                 ),
               ),
               child: Icon(
-                isOpenable ? _actionIcon(lesson) : Icons.lock_outline_rounded,
+                isCompleted
+                    ? Icons.check_circle_rounded
+                    : (isOpenable
+                        ? _actionIcon(lesson)
+                        : Icons.lock_outline_rounded),
                 size: 18,
-                color: isOpenable
-                    ? (lesson.isFreePreview && !canOpen
-                        ? const Color(0xFF38BDF8)
-                        : const Color(0xFF10B981))
-                    : const Color(0xFF64748B),
+                color: isCompleted
+                    ? AppColors.brandEmerald
+                    : (isOpenable
+                        ? (lesson.isFreePreview && !canOpen
+                            ? const Color(0xFF38BDF8)
+                            : const Color(0xFF10B981))
+                        : const Color(0xFF64748B)),
               ),
             ),
           ],
