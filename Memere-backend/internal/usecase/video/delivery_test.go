@@ -9,7 +9,12 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/access"
 )
+
+func init() {
+	access.DisableEnrollmentCheck = false
+}
 
 // readyVideo seeds a ready video with an HLS master + thumbnail for the harness
 // course/lesson and returns its id.
@@ -155,6 +160,35 @@ func TestGetStreamURL_SignerKeyChangesSignature(t *testing.T) {
 	}
 }
 
+// A ready transcoded video has both a self-contained original MP4 and an HLS
+// bundle. Streaming must sign the progressive MP4 (playable via one presigned
+// URL + HTTP Range), never the .m3u8 master — the object store cannot sign the
+// manifest's relative segment requests, so HLS 403s and playback fails.
+func TestGetStreamURL_SignsProgressiveMP4WhenOriginalPresent(t *testing.T) {
+	h := newHarness()
+	h.setCourseFree(true)
+	id := uuid.New()
+	orig := "originals/" + h.courseID.String() + "/" + h.lessonID.String() + "/" + id.String() + "/source.mp4"
+	master := "hls/" + id.String() + "/master.m3u8"
+	if err := h.videos.Create(context.Background(), &entity.Video{
+		ID: id, LessonID: h.lessonID, CourseID: h.courseID,
+		Status: entity.VideoReady, OriginalFileKey: &orig, HLSMasterKey: &master,
+	}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	res, err := h.svc.GetStreamURL(context.Background(), student(), id)
+	if err != nil {
+		t.Fatalf("GetStreamURL: %v", err)
+	}
+	if !strings.Contains(res.MasterURL, orig) {
+		t.Fatalf("stream URL %q does not sign the progressive MP4 %q", res.MasterURL, orig)
+	}
+	if strings.Contains(res.MasterURL, "master.m3u8") {
+		t.Fatalf("stream URL signs the unplayable HLS manifest: %q", res.MasterURL)
+	}
+}
+
 func TestGetDownloadURL_IssuesSingleUseToken(t *testing.T) {
 	h := newHarness()
 	h.setCourseFree(true)
@@ -183,6 +217,50 @@ func TestGetDownloadURL_PaidBlockedForStudent(t *testing.T) {
 	id := h.readyVideo(t) // paid course, non-preview lesson
 	_, err := h.svc.GetDownloadURL(context.Background(), student(), id)
 	mustCode(t, err, "FORBIDDEN")
+}
+
+// A ready transcoded video has both an original MP4 and an HLS bundle; the
+// offline download must sign the self-contained ORIGINAL, never the .m3u8 master
+// manifest (which is unplayable as a standalone offline file).
+func TestGetDownloadURL_SignsOriginalMP4(t *testing.T) {
+	h := newHarness()
+	h.setCourseFree(true)
+	id := uuid.New()
+	orig := "originals/" + h.courseID.String() + "/" + h.lessonID.String() + "/" + id.String() + "/source.mp4"
+	master := "hls/" + id.String() + "/master.m3u8"
+	if err := h.videos.Create(context.Background(), &entity.Video{
+		ID: id, LessonID: h.lessonID, CourseID: h.courseID,
+		Status: entity.VideoReady, OriginalFileKey: &orig, HLSMasterKey: &master,
+	}); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+
+	res, err := h.svc.GetDownloadURL(context.Background(), student(), id)
+	if err != nil {
+		t.Fatalf("GetDownloadURL: %v", err)
+	}
+	if !strings.Contains(res.DownloadURL, orig) {
+		t.Fatalf("download URL %q does not sign the original MP4 %q", res.DownloadURL, orig)
+	}
+	if strings.Contains(res.DownloadURL, "master.m3u8") {
+		t.Fatalf("download URL signs the HLS manifest, not a playable MP4: %q", res.DownloadURL)
+	}
+}
+
+// A direct-upload video stores its playable MP4 in HLSMasterKey with no separate
+// original; the download falls back to that key.
+func TestGetDownloadURL_FallsBackToMasterWhenNoOriginal(t *testing.T) {
+	h := newHarness()
+	h.setCourseFree(true)
+	id := h.readyVideo(t) // seeded with HLSMasterKey only (OriginalFileKey nil)
+	res, err := h.svc.GetDownloadURL(context.Background(), student(), id)
+	if err != nil {
+		t.Fatalf("GetDownloadURL: %v", err)
+	}
+	wantKey := "hls/" + id.String() + "/master.m3u8"
+	if !strings.Contains(res.DownloadURL, wantKey) {
+		t.Fatalf("download URL %q does not fall back to master key %q", res.DownloadURL, wantKey)
+	}
 }
 
 func TestConsumeDownloadToken_SingleUse(t *testing.T) {

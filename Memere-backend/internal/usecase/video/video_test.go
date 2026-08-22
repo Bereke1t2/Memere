@@ -153,14 +153,44 @@ func TestRequestUpload_OversizeRejectedBeforeDBWrite(t *testing.T) {
 	}
 }
 
-func TestRequestUpload_DuplicatePerLessonConflict(t *testing.T) {
+func TestRequestUpload_ReplacesExistingVideo(t *testing.T) {
 	h := newHarness()
 	ctx := context.Background()
-	if _, err := h.svc.RequestUpload(ctx, h.owner(), validInput(h.lessonID)); err != nil {
+	first, err := h.svc.RequestUpload(ctx, h.owner(), validInput(h.lessonID))
+	if err != nil {
 		t.Fatalf("first RequestUpload: %v", err)
 	}
-	_, err := h.svc.RequestUpload(ctx, h.owner(), validInput(h.lessonID))
-	mustCode(t, err, "CONFLICT")
+	// A second upload to the same lesson now REPLACES the prior video (teacher
+	// clicking "Replace video") instead of failing with CONFLICT.
+	second, err := h.svc.RequestUpload(ctx, h.owner(), validInput(h.lessonID))
+	if err != nil {
+		t.Fatalf("second RequestUpload should replace, got error: %v", err)
+	}
+	if second.VideoID == first.VideoID {
+		t.Fatalf("replace should mint a new video id, got same id %s", second.VideoID)
+	}
+	// The live video for the lesson is the replacement; the old one is soft-deleted.
+	cur, err := h.videos.GetByLessonID(ctx, h.lessonID)
+	if err != nil {
+		t.Fatalf("GetByLessonID after replace: %v", err)
+	}
+	if cur.ID != second.VideoID {
+		t.Fatalf("live video = %s, want replacement %s", cur.ID, second.VideoID)
+	}
+	if _, err := h.videos.GetByID(ctx, first.VideoID); err == nil {
+		t.Fatalf("old video %s should be soft-deleted (GetByID should 404)", first.VideoID)
+	}
+	// The replaced video's storage is purged: its source object plus the whole
+	// hls/<id>/ and thumbnails/<id>/ trees (segments included).
+	if !h.store.wasDeleted(first.SourceKey) {
+		t.Errorf("old source object %q was not deleted", first.SourceKey)
+	}
+	if !h.store.prefixDeleted("hls/" + first.VideoID.String() + "/") {
+		t.Errorf("hls/ prefix for %s was not purged", first.VideoID)
+	}
+	if !h.store.prefixDeleted("thumbnails/" + first.VideoID.String() + "/") {
+		t.Errorf("thumbnails/ prefix for %s was not purged", first.VideoID)
+	}
 }
 
 func TestConfirmUpload_RejectsWhenObjectMissing(t *testing.T) {

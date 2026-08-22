@@ -13,6 +13,7 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/service"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/access"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/media"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 )
 
@@ -145,9 +146,15 @@ func (s *Service) RequestUpload(ctx context.Context, actor *Actor, in RequestUpl
 		return nil, err // Forbidden
 	}
 
-	// If an existing video record exists for this lesson (e.g. from an aborted upload or replacement),
-	// soft-delete it so a new upload can be requested cleanly without unique constraint conflicts.
-	if existing, err := s.videos.GetByLessonID(ctx, in.LessonID); err == nil && existing != nil {
+	// Replace any prior video for this lesson so a re-upload ("Replace video")
+	// doesn't collide with the one-live-video-per-lesson partial unique index
+	// (videos_lesson_id_uniq, WHERE deleted_at IS NULL). Mirrors UploadVideoDirect.
+	// Purge its storage artifacts first so the old renditions/segments/thumbnail
+	// don't linger in the bucket, then soft-delete the row. Best-effort: if a stale
+	// row somehow survives, Create below still returns VIDEO_EXISTS rather than
+	// silently overwriting.
+	if existing, gerr := s.videos.GetByLessonID(ctx, in.LessonID); gerr == nil && existing != nil {
+		media.PurgeVideo(ctx, s.store, existing)
 		_ = s.videos.SoftDelete(ctx, existing.ID)
 	}
 
@@ -226,9 +233,9 @@ func (s *Service) ConfirmUpload(ctx context.Context, actor *Actor, videoID uuid.
 }
 
 // GetVideoStatus returns the processing status. The owning teacher/admin may
-// always read it (with error detail); any other authenticated user may read a
-// published course's video status (without error detail) so a student can poll
-// readiness. Raw storage keys are never returned.
+// always read it (with error detail); any other caller — including an
+// unregistered guest — may read a published course's video status (without error
+// detail) so a student can poll readiness. Raw storage keys are never returned.
 func (s *Service) GetVideoStatus(ctx context.Context, actor *Actor, videoID uuid.UUID) (*StatusView, error) {
 	v, err := s.videos.GetByID(ctx, videoID)
 	if err != nil {
@@ -239,11 +246,9 @@ func (s *Service) GetVideoStatus(ctx context.Context, actor *Actor, videoID uuid
 		return nil, err
 	}
 	owner := s.isOwner(actor, course)
-	if !owner {
-		if actor == nil || !course.IsPublished {
-			// Don't reveal existence of unpublished content to non-owners.
-			return nil, apperror.NotFound("video not found", nil)
-		}
+	if !owner && !course.IsPublished {
+		// Don't reveal existence of unpublished content to non-owners (incl. guests).
+		return nil, apperror.NotFound("video not found", nil)
 	}
 	return s.viewFor(actor, v, owner), nil
 }

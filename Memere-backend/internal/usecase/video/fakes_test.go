@@ -178,18 +178,21 @@ func (f *fakeCourseRepo) FindByID(_ context.Context, id uuid.UUID) (*entity.Cour
 	return nil, apperror.NotFound("course not found", nil)
 }
 
-// fakeStore embeds ObjectStore and overrides PresignPut + Exists, the two methods
-// the upload usecase uses.
+// fakeStore embeds ObjectStore and overrides PresignPut + Exists (the two methods
+// the upload usecase uses) plus Delete/DeletePrefix, which it records so tests
+// can assert a replaced video's storage was purged. It implements PrefixDeleter.
 type fakeStore struct {
 	service.ObjectStore
 	mu         sync.Mutex
 	presigned  []string        // keys a PUT URL was minted for
 	objects    map[string]bool // keys that "exist" in storage
+	deleted    map[string]bool // keys Delete was called for
+	prefixes   map[string]bool // prefixes DeletePrefix was called for
 	presignErr error
 }
 
 func newFakeStore() *fakeStore {
-	return &fakeStore{objects: map[string]bool{}}
+	return &fakeStore{objects: map[string]bool{}, deleted: map[string]bool{}, prefixes: map[string]bool{}}
 }
 
 func (f *fakeStore) PresignPut(_ context.Context, key, _ string, _ time.Duration) (string, error) {
@@ -208,12 +211,40 @@ func (f *fakeStore) Exists(_ context.Context, key string) (bool, error) {
 	return f.objects[key], nil
 }
 
+func (f *fakeStore) Delete(_ context.Context, key string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.deleted[key] = true
+	return nil
+}
+
+func (f *fakeStore) DeletePrefix(_ context.Context, prefix string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.prefixes[prefix] = true
+	return nil
+}
+
+func (f *fakeStore) wasDeleted(key string) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.deleted[key]
+}
+
+func (f *fakeStore) prefixDeleted(prefix string) bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.prefixes[prefix]
+}
+
 // markUploaded simulates the client's direct PUT landing the object.
 func (f *fakeStore) markUploaded(key string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.objects[key] = true
 }
+
+var _ service.PrefixDeleter = (*fakeStore)(nil)
 
 // fakeQueue records enqueued jobs and can be made to fail.
 type fakeQueue struct {
