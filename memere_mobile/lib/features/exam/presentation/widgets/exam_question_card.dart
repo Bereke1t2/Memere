@@ -171,9 +171,10 @@ class ExamQuestionCard extends StatelessWidget {
             final idx = entry.key;
             final answer = entry.value;
             final multi = question.type == ExamQuestionType.multipleSelect;
-            final selected = multi
-                ? selectedAnswer is List &&
-                    (selectedAnswer as List).contains(answer.id)
+            // Answers are stored as a list of selected ids (single-choice is a
+            // one-element list); tolerate a legacy bare string too.
+            final selected = selectedAnswer is List
+                ? (selectedAnswer as List).contains(answer.id)
                 : selectedAnswer == answer.id;
             return ExamAnswerOptionTile(
               index: idx,

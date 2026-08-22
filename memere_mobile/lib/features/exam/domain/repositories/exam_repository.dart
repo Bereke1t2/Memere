@@ -6,9 +6,12 @@ import '../entities/exam_attempt_analytics_entity.dart';
 import '../entities/exam_attempt_entity.dart';
 import '../entities/exam_attempt_history_entity.dart';
 import '../entities/exam_result_entity.dart';
+import '../entities/mock_exam_entity.dart';
 import '../entities/paginated_mock_exams_entity.dart';
 
 abstract class ExamRepository {
+  Future<Either<Failure, List<MockExamEntity>>> listExamsByCourse(String courseId);
+
   Future<Either<Failure, PaginatedMockExamsEntity>> listMockExams({
     int limit = 20,
     String? after,

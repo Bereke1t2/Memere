@@ -59,4 +59,36 @@ class ExamResultModel extends ExamResultEntity {
       subjectBreakdown: breakdown,
     );
   }
+
+  /// Round-trips with [ExamResultModel.fromJson] so an on-device-graded result
+  /// can be persisted to the `offline_attempt_results` box and rehydrated on the
+  /// existing result screen. `subject_breakdown` is written as the result-shape
+  /// map (key → `{key, earned, possible}`) that `fromMapEntry` reads back.
+  Map<String, dynamic> toJson() => {
+        'attempt_id': attemptId,
+        'exam_id': examId,
+        'status': examAttemptStatusValue(status),
+        'score': score,
+        'total_marks': totalMarks,
+        'percentage': percentage,
+        'pass_marks': passMarks,
+        'passed': passed,
+        'submitted_at': submittedAt?.toIso8601String(),
+        'feedback': feedback
+            .whereType<ExamQuestionFeedbackModel>()
+            .map((item) => item.toJson())
+            .toList(),
+        'subject_breakdown': subjectBreakdown.map(
+          (key, value) => MapEntry(
+            key,
+            value is ExamSubjectScoreModel
+                ? value.toJson()
+                : ExamSubjectScoreModel(
+                    key: key,
+                    earned: value.earned,
+                    possible: value.possible,
+                  ).toJson(),
+          ),
+        ),
+      };
 }
