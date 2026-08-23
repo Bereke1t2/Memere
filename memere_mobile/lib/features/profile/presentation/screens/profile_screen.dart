@@ -8,7 +8,6 @@ import '../../../../core/router/app_router.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../../courses/presentation/providers/completed_lessons_provider.dart';
 import '../../../payment/presentation/providers/purchase_history_provider.dart';
-import '../../../progress/domain/entities/student_points_entity.dart';
 import '../../../progress/presentation/providers/progress_providers.dart';
 
 /// Refined Profile Screen for Memere adapted directly from the reference UI design.
@@ -126,7 +125,7 @@ class ProfileScreen extends ConsumerWidget {
                     // 3. Horizontal Metric Stat Row (Courses, Points, Avg Score)
                     _SocialStatsRow(
                       enrolledCount: enrolledCount,
-                      totalPoints: points?.totalPoints ?? 0,
+                      totalPoints: (points?.totalPoints ?? 0).toInt(),
                       avgScore: points?.avgPercentage ?? 0,
                       onTapCourses: () => context.go(AppRoutes.learn),
                       onTapPoints: () => context.go(AppRoutes.mockExams),
@@ -1274,7 +1273,7 @@ class _GuestProfileView extends StatelessWidget {
 
                   // Guest Banner Text
                   const Text(
-                    "Guest Profile",
+                    'Guest Profile',
                     style: TextStyle(
                       fontFamily: 'Sora',
                       fontSize: 22,
@@ -1285,7 +1284,7 @@ class _GuestProfileView extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    "Sign in to sync your progress, enroll in courses, and access your mock exam analytics across devices.",
+                    'Sign in to sync your progress, enroll in courses, and access your mock exam analytics across devices.',
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.45,
