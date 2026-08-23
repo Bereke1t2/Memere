@@ -647,11 +647,11 @@ class _GuestSignInPromptCard extends StatelessWidget {
                 color: AppColors.brandEmerald, size: 20),
           ),
           const SizedBox(width: 12),
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Sign in to sync enrolled courses',
                   style: TextStyle(
                     fontSize: 13,
@@ -659,8 +659,8 @@ class _GuestSignInPromptCard extends StatelessWidget {
                     color: AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 2),
-                const Text(
+                SizedBox(height: 2),
+                Text(
                   'Enrolled courses sync automatically when signed in.',
                   style: TextStyle(
                     fontSize: 11,
