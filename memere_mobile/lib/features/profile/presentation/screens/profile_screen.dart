@@ -678,7 +678,7 @@ class _PointsCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Row(
-                  crossAxisAlignment: Cross.baseline,
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
