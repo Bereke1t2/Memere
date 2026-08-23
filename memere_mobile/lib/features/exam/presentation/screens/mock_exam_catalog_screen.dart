@@ -5,7 +5,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
-import '../../auth/presentation/providers/auth_state_provider.dart';
+import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../../progress/presentation/providers/progress_providers.dart';
 import '../providers/exam_providers.dart';
 import '../providers/mock_exam_catalog_provider.dart';
