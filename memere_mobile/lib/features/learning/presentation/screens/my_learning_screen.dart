@@ -65,11 +65,22 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen> {
     // 1. Enrolled Courses (account level)
     for (final e in enrollments) {
       if (seenIds.add(e.courseId)) {
+        final downloadedMatch =
+            downloadedCourses.where((d) => d.id == e.courseId).firstOrNull;
+        final favoriteMatch =
+            favorites.where((f) => f.courseId == e.courseId).firstOrNull;
+        final title = downloadedMatch?.title ??
+            favoriteMatch?.title ??
+            'Enrolled Course';
+        final subtitle = downloadedMatch != null
+            ? 'Grade ${downloadedMatch.grade} • ${downloadedMatch.subject}'
+            : (favoriteMatch?.subtitle ?? 'Active Enrollment');
+
         cardItems.add(_CourseCardData(
           id: e.courseId,
           kind: CourseCardKind.enrolled,
-          title: e.courseTitle.isNotEmpty ? e.courseTitle : 'Course',
-          subtitle: 'Grade ${e.courseGrade} • ${e.courseSubject}',
+          title: title,
+          subtitle: subtitle,
           enrollment: e,
         ));
       }
@@ -649,7 +660,7 @@ class _GuestSignInPromptCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
+                const Text(
                   'Enrolled courses sync automatically when signed in.',
                   style: TextStyle(
                     fontSize: 11,
