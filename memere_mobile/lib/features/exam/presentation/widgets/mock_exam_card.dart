@@ -40,30 +40,30 @@ class _MockExamCardState extends ConsumerState<MockExamCard> {
     LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color(0xFF065F46), Color(0xFF047857)],
+      colors: [Color(0xFF0F261E), Color(0xFF141926)],
     ),
     LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+      colors: [Color(0xFF0E2232), Color(0xFF141926)],
     ),
     LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color(0xFFB45309), Color(0xFF92400E)],
+      colors: [Color(0xFF241B12), Color(0xFF141926)],
     ),
     LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color(0xFF4F46E5), Color(0xFF3730A3)],
+      colors: [Color(0xFF1D1B36), Color(0xFF141926)],
     ),
   ];
 
   static const List<Color> _borderGlowColors = [
-    Color(0xFF10B981),
+    Color(0xFF34D399),
     Color(0xFF38BDF8),
-    Color(0xFFF59E0B),
-    Color(0xFF8B5CF6),
+    Color(0xFFFBBF24),
+    Color(0xFFA78BFA),
   ];
 
   @override
@@ -92,14 +92,14 @@ class _MockExamCardState extends ConsumerState<MockExamCard> {
               gradient: gradient,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: _isPressed ? Colors.white : glowColor.withAlpha(90),
-                width: 1.5,
+                color: _isPressed ? AppColors.borderFocused : glowColor.withAlpha(60),
+                width: 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: glowColor.withAlpha(40),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  color: glowColor.withAlpha(20),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
@@ -376,13 +376,13 @@ class _MockExamCardState extends ConsumerState<MockExamCard> {
                   child: ElevatedButton(
                     onPressed: _isStarting ? null : () => _confirmStart(context),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white.withAlpha(45),
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.bgTertiary,
+                      foregroundColor: glowColor,
                       elevation: 0,
                       padding: EdgeInsets.zero,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(color: Colors.white.withAlpha(80)),
+                        side: BorderSide(color: glowColor.withAlpha(80)),
                       ),
                     ),
                     child: _isStarting
