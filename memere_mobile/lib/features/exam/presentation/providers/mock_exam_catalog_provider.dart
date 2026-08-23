@@ -2,6 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/offline/offline_providers.dart';
+import '../../../../core/storage/hive/models/downloaded_item.dart';
+import '../../../../core/storage/hive/models/offline_exam.dart';
 import '../../domain/entities/mock_exam_entity.dart';
 import '../../domain/usecases/list_mock_exams_usecase.dart';
 import 'exam_providers.dart';
@@ -201,7 +204,23 @@ class MockExamCatalogNotifier extends AsyncNotifier<MockExamCatalogState> {
     );
 
     return result.fold(
-      (failure) => throw failure,
+      (failure) {
+        // Offline (or server error): fall back to downloaded exams so the hub
+        // still lists what can be taken on-device. The card's own start flow
+        // grades them locally. Only fall through to the error if nothing is
+        // downloaded.
+        final offline = _downloadedExamsAsCatalog();
+        if (offline.isNotEmpty) {
+          return MockExamCatalogState(
+            exams: offline,
+            filteredExams: _applySearch(offline, searchQuery),
+            selectedSubject: subject,
+            selectedGrade: grade,
+            searchQuery: searchQuery,
+          );
+        }
+        throw failure;
+      },
       (page) {
         return MockExamCatalogState(
           exams: page.exams,
@@ -213,6 +232,35 @@ class MockExamCatalogNotifier extends AsyncNotifier<MockExamCatalogState> {
         );
       },
     );
+  }
+
+  /// Builds catalog cards from downloaded exams (with answer keys stripped) so
+  /// the hub is usable offline. Every field the card renders is present on the
+  /// stored [OfflineExam].
+  List<MockExamEntity> _downloadedExamsAsCatalog() {
+    final store = ref.read(downloadStoreProvider);
+    return store
+        .listDownloads()
+        .where((item) => item.type == DownloadType.exam)
+        .map((item) => store.getOfflineExam(item.id))
+        .whereType<OfflineExam>()
+        .map(
+          (exam) => MockExamEntity(
+            id: exam.id,
+            courseId: exam.courseId,
+            title: exam.title,
+            subject: exam.subject,
+            grade: exam.grade,
+            durationMinutes: exam.durationMinutes,
+            totalMarks: exam.totalMarks,
+            passMarks: exam.passMarks,
+            instructions: exam.instructions,
+            isPublished: true,
+            createdAt: null,
+            updatedAt: null,
+          ),
+        )
+        .toList();
   }
 
   List<MockExamEntity> _mergeExams(
