@@ -528,14 +528,15 @@ class _SavedCardTileState extends ConsumerState<_SavedCardTile> {
               gradient: gradient,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: _isPressed ? Colors.white : glowColor.withAlpha(90),
-                width: 1.5,
+                color:
+                    _isPressed ? AppColors.borderFocused : glowColor.withAlpha(60),
+                width: 1.2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: glowColor.withAlpha(45),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  color: glowColor.withAlpha(20),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
@@ -551,17 +552,18 @@ class _SavedCardTileState extends ConsumerState<_SavedCardTile> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: badgeColor.withAlpha(60),
+                        color: AppColors.bgTertiary,
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
-                            color: Colors.white.withAlpha(50), width: 0.8),
+                            color: glowColor.withAlpha(80), width: 0.8),
                       ),
                       child: Text(
                         badgeLabel,
-                        style: const TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: glowColor,
+                          letterSpacing: 0.4,
                         ),
                       ),
                     ),
@@ -571,13 +573,14 @@ class _SavedCardTileState extends ConsumerState<_SavedCardTile> {
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Colors.black.withAlpha(40),
+                          color: AppColors.bgTertiary,
                           shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.borderStrong),
                         ),
                         child: const Icon(
                           Icons.delete_outline_rounded,
-                          size: 16,
-                          color: Colors.white70,
+                          size: 15,
+                          color: AppColors.textMuted,
                         ),
                       ),
                     ),
@@ -589,14 +592,14 @@ class _SavedCardTileState extends ConsumerState<_SavedCardTile> {
                 Row(
                   children: [
                     Container(
-                      width: 36,
-                      height: 36,
+                      width: 34,
+                      height: 34,
                       decoration: BoxDecoration(
-                        color: Colors.black.withAlpha(40),
+                        color: glowColor.withAlpha(25),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withAlpha(40)),
+                        border: Border.all(color: glowColor.withAlpha(60)),
                       ),
-                      child: Icon(iconData, size: 18, color: Colors.white),
+                      child: Icon(iconData, size: 16, color: glowColor),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -608,10 +611,10 @@ class _SavedCardTileState extends ConsumerState<_SavedCardTile> {
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              height: 1.2,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                              height: 1.25,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -619,9 +622,9 @@ class _SavedCardTileState extends ConsumerState<_SavedCardTile> {
                             item.subtitle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 11,
-                              color: Colors.white.withAlpha(180),
+                              color: AppColors.textMuted,
                             ),
                           ),
                         ],
@@ -636,25 +639,25 @@ class _SavedCardTileState extends ConsumerState<_SavedCardTile> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 6.5),
                   decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(35),
+                    color: AppColors.bgTertiary,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                        color: Colors.white.withAlpha(60), width: 0.8),
+                        color: glowColor.withAlpha(80), width: 0.8),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         buttonLabel,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: glowColor,
                         ),
                       ),
                       const SizedBox(width: 4),
-                      const Icon(Icons.arrow_forward_rounded,
-                          size: 12, color: Colors.white),
+                      Icon(Icons.arrow_forward_rounded,
+                          size: 12, color: glowColor),
                     ],
                   ),
                 ),
@@ -674,9 +677,9 @@ class _SavedCardTileState extends ConsumerState<_SavedCardTile> {
           const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF065F46), Color(0xFF047857)],
+            colors: [Color(0xFF0F261E), Color(0xFF141926)],
           ),
-          const Color(0xFF10B981),
+          const Color(0xFF34D399),
           const Color(0xFF059669),
           'COURSE',
           Icons.menu_book_rounded,
@@ -687,9 +690,9 @@ class _SavedCardTileState extends ConsumerState<_SavedCardTile> {
           const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF4F46E5), Color(0xFF3730A3)],
+            colors: [Color(0xFF1D1B36), Color(0xFF141926)],
           ),
-          const Color(0xFF8B5CF6),
+          const Color(0xFFA78BFA),
           const Color(0xFF7C3AED),
           'OFFLINE QUIZ',
           Icons.quiz_rounded,
@@ -700,7 +703,7 @@ class _SavedCardTileState extends ConsumerState<_SavedCardTile> {
           const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+            colors: [Color(0xFF0E2232), Color(0xFF141926)],
           ),
           const Color(0xFF38BDF8),
           const Color(0xFF0284C7),

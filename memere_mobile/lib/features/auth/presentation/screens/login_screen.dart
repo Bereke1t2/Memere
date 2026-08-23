@@ -119,7 +119,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Grade 12 Entrance Exam Preparation',
+                          'Interactive Course Learning Platform',
                           style: AppTextStyles.bodyMedium.copyWith(
                             color: AppColors.textSecondary,
                           ),
