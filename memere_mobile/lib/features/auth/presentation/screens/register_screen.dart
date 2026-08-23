@@ -137,7 +137,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   Text('Create Student Account', style: AppTextStyles.headlineMedium.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
                   Text(
-                    'Start preparing for Grade 12 National Exams today',
+                    'Start learning with interactive courses today',
                     style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
                   ),
                   const SizedBox(height: AppSizes.lg),

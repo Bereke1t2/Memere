@@ -26,7 +26,7 @@ final _pages = [
   const _OnboardingPage(
     title: 'Meet Memere',
     body:
-        'Selam. Learn with a wise teacher figure built for Grade 12 Ethiopian exam prep.',
+        'Selam. Learn with interactive AI-guided courses and comprehensive study tools.',
   ),
   const _OnboardingPage(
     title: 'Study Every Subject',

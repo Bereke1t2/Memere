@@ -78,7 +78,7 @@ class ProfileScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 42),
 
                     // User Name & Handle / Joined Info
                     Text(
@@ -171,7 +171,7 @@ class ProfileScreen extends ConsumerWidget {
                           icon: Icons.assignment_outlined,
                           title: 'Mock Exams & Results',
                           subtitle:
-                              'National entrance exams and score analytics',
+                              'Interactive mock exams and score analytics',
                           onTap: () => context.go(AppRoutes.mockExams),
                         ),
                         _SettingsItemData(
@@ -217,12 +217,12 @@ class ProfileScreen extends ConsumerWidget {
                         _SettingsItemData(
                           icon: Icons.grid_view_rounded,
                           title: 'Curriculum Stream',
-                          subtitle: 'Natural Science (Grade 12 EUEE)',
+                          subtitle: 'General Learning & Science',
                           onTap: () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
                                 content: Text(
-                                  'Curriculum Stream: Natural Science (Grade 12)',
+                                  'Learning Stream: General Courses & Science',
                                 ),
                                 behavior: SnackBarBehavior.floating,
                               ),
@@ -276,7 +276,7 @@ class ProfileScreen extends ConsumerWidget {
                       child: Column(
                         children: [
                           Text(
-                            'Memere • Ethiopian University Entrance Exam Prep',
+                            'Memere • Interactive Course Learning Platform',
                             style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,
@@ -1364,7 +1364,7 @@ class _GuestProfileView extends StatelessWidget {
                   const SizedBox(height: 32),
                   const Center(
                     child: Text(
-                      'Memere • Ethiopian University Entrance Exam Prep',
+                      'Memere • Interactive Course Learning Platform',
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
