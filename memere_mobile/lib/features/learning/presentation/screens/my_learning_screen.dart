@@ -592,36 +592,33 @@ class _CourseCardTileState extends ConsumerState<_CourseCardTile> {
                     ),
                     const SizedBox(height: 14),
 
-                    // 1-Tap Action Pill Button matching Home page CourseRowCard
+                    // 1-Tap Action Pill Button with refined obsidian styling
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       decoration: BoxDecoration(
-                        color: AppColors.brandEmerald,
+                        color: AppColors.bgTertiary,
                         borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.brandEmerald.withAlpha(70),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                        border: Border.all(
+                          color: glowColor.withAlpha(80),
+                          width: 1.0,
+                        ),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
                             buttonLabel,
-                            style: const TextStyle(
-                              fontSize: 13,
+                            style: TextStyle(
+                              fontSize: 12.5,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: glowColor,
                               letterSpacing: -0.2,
                             ),
                           ),
                           const SizedBox(width: 6),
-                          const Icon(Icons.arrow_forward_rounded,
-                              size: 15, color: Colors.white),
+                          Icon(Icons.arrow_forward_rounded,
+                              size: 14, color: glowColor),
                         ],
                       ),
                     ),
@@ -643,9 +640,9 @@ class _CourseCardTileState extends ConsumerState<_CourseCardTile> {
           const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF065F46), Color(0xFF047857)],
+            colors: [Color(0xFF0B251C), Color(0xFF11382A)],
           ),
-          const Color(0xFF10B981),
+          const Color(0xFF34D399),
           const Color(0xFF059669),
           'ENROLLED',
           Icons.verified_rounded,
@@ -656,9 +653,9 @@ class _CourseCardTileState extends ConsumerState<_CourseCardTile> {
           const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFFB45309), Color(0xFF92400E)],
+            colors: [Color(0xFF221A12), Color(0xFF342618)],
           ),
-          const Color(0xFFF59E0B),
+          const Color(0xFFFBBF24),
           const Color(0xFFD97706),
           'FAVORITE',
           Icons.bookmark_rounded,
@@ -669,7 +666,7 @@ class _CourseCardTileState extends ConsumerState<_CourseCardTile> {
           const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF0284C7), Color(0xFF0369A1)],
+            colors: [Color(0xFF0D1E2D), Color(0xFF142E43)],
           ),
           const Color(0xFF38BDF8),
           const Color(0xFF0284C7),
