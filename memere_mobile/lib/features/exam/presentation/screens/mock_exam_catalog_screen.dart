@@ -5,13 +5,15 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../auth/presentation/providers/auth_state_provider.dart';
+import '../../../progress/presentation/providers/progress_providers.dart';
 import '../providers/exam_providers.dart';
 import '../providers/mock_exam_catalog_provider.dart';
 import '../widgets/exam_empty_state.dart';
 import '../widgets/mock_exam_card.dart';
 import '../widgets/mock_exam_catalog_skeleton.dart';
 
-/// Refined Obsidian & Soft Emerald Exam Catalog Screen matching Image 5 mockup.
+/// Refined Obsidian & Soft Emerald Exam Catalog Screen.
 class MockExamCatalogScreen extends ConsumerStatefulWidget {
   const MockExamCatalogScreen({super.key});
 
@@ -23,7 +25,6 @@ class MockExamCatalogScreen extends ConsumerStatefulWidget {
 class _MockExamCatalogScreenState extends ConsumerState<MockExamCatalogScreen> {
   late final TextEditingController _searchController;
   late final ScrollController _scrollController;
-  int _selectedFilterIndex = 0;
 
   @override
   void initState() {
@@ -74,8 +75,6 @@ class _MockExamCatalogScreenState extends ConsumerState<MockExamCatalogScreen> {
                 controller: _scrollController,
                 searchController: _searchController,
                 state: previous,
-                selectedFilterIndex: _selectedFilterIndex,
-                onSelectFilter: (idx) => setState(() => _selectedFilterIndex = idx),
               );
             }
             return const Column(
@@ -105,8 +104,6 @@ class _MockExamCatalogScreenState extends ConsumerState<MockExamCatalogScreen> {
             controller: _scrollController,
             searchController: _searchController,
             state: state,
-            selectedFilterIndex: _selectedFilterIndex,
-            onSelectFilter: (idx) => setState(() => _selectedFilterIndex = idx),
           ),
         ),
       ),
@@ -119,15 +116,11 @@ class _CatalogContent extends ConsumerWidget {
     required this.controller,
     required this.searchController,
     required this.state,
-    required this.selectedFilterIndex,
-    required this.onSelectFilter,
   });
 
   final ScrollController controller;
   final TextEditingController searchController;
   final MockExamCatalogState state;
-  final int selectedFilterIndex;
-  final ValueChanged<int> onSelectFilter;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -136,28 +129,19 @@ class _CatalogContent extends ConsumerWidget {
       backgroundColor: AppColors.bgSecondary,
       onRefresh: () async {
         ref.invalidate(myAllExamAttemptsProvider);
+        ref.invalidate(studentPointsProvider);
         await ref.read(mockExamCatalogProvider.notifier).refresh();
       },
       child: CustomScrollView(
         controller: controller,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          // 1. Top Header Row + Greeting + Circular Category Badges (Image 5)
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const _CatalogHeader(),
-                _FilterPillsRow(
-                  selectedIndex: selectedFilterIndex,
-                  onSelect: onSelectFilter,
-                ),
-                const SizedBox(height: 14),
-              ],
-            ),
+          // 1. Top Header Row + Greeting + Circular Category Badges
+          const SliverToBoxAdapter(
+            child: _CatalogHeader(),
           ),
 
-          // 2. 2-Column Grid of Vibrant Gradient Exam Cards (Image 5)
+          // 2. 2-Column Grid of Vibrant Gradient Exam Cards
           if (state.filteredExams.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
@@ -179,7 +163,7 @@ class _CatalogContent extends ConsumerWidget {
                 AppSizes.screenPaddingH,
                 0,
                 AppSizes.screenPaddingH,
-                AppSizes.lg,
+                AppSizes.md,
               ),
               sliver: SliverGrid(
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -204,7 +188,7 @@ class _CatalogContent extends ConsumerWidget {
   }
 }
 
-/// Top Header Row (Logo + Points Badge) + Clean Circular Subject Badges
+/// Top Header Row (Logo + Dynamic Points Badge) + Clean Circular Subject Badges
 class _CatalogHeader extends ConsumerWidget {
   const _CatalogHeader();
 
@@ -212,6 +196,20 @@ class _CatalogHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final catalogState = ref.watch(mockExamCatalogProvider).valueOrNull;
     final currentSubject = catalogState?.selectedSubject;
+    final authState = ref.watch(authStateProvider).valueOrNull;
+    final isAuthenticated = authState?.isAuthenticated ?? false;
+    final pointsAsync = ref.watch(studentPointsProvider);
+
+    final String pointsText;
+    if (!isAuthenticated) {
+      pointsText = '0 pts';
+    } else {
+      pointsText = pointsAsync.when(
+        data: (pts) => '${_formatPoints(pts.totalPoints)} pts',
+        loading: () => '... pts',
+        error: (_, __) => '0 pts',
+      );
+    }
 
     final categories = <(IconData, String, String?)>[
       (Icons.grid_view_rounded, 'All', null),
@@ -263,7 +261,7 @@ class _CatalogHeader extends ConsumerWidget {
                   ],
                 ),
 
-                // Points / Score Pill Badge
+                // Dynamic Points / Score Pill Badge
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
@@ -271,13 +269,13 @@ class _CatalogHeader extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: AppColors.borderStrong),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(Icons.stars_rounded, color: AppColors.brandAmber, size: 16),
-                      SizedBox(width: 5),
+                      const Icon(Icons.stars_rounded, color: AppColors.brandAmber, size: 16),
+                      const SizedBox(width: 5),
                       Text(
-                        '120 pts',
-                        style: TextStyle(
+                        pointsText,
+                        style: const TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.bold,
                           color: AppColors.textPrimary,
@@ -379,89 +377,9 @@ class _CatalogHeader extends ConsumerWidget {
   }
 }
 
-/// Filter Pills Row (Upcoming, Highest Score, Mine) with safe horizontal scrolling
-class _FilterPillsRow extends StatelessWidget {
-  const _FilterPillsRow({
-    required this.selectedIndex,
-    required this.onSelect,
-  });
-
-  final int selectedIndex;
-  final ValueChanged<int> onSelect;
-
-  @override
-  Widget build(BuildContext context) {
-    final filters = [
-      ('Upcoming', Icons.timer_outlined),
-      ('Highest Score', Icons.workspace_premium_outlined),
-      ('Mine', Icons.person_outline_rounded),
-    ];
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: AppSizes.screenPaddingH),
-      child: Row(
-        children: List.generate(filters.length, (idx) {
-          final filter = filters[idx];
-          final isSelected = selectedIndex == idx;
-
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: InkWell(
-              onTap: () => onSelect(idx),
-              borderRadius: BorderRadius.circular(16),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.brandEmerald
-                      : AppColors.bgSecondary,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: isSelected
-                        ? AppColors.brandEmerald
-                        : AppColors.borderStrong,
-                  ),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: AppColors.brandEmerald.withAlpha(60),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : null,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      filter.$2,
-                      size: 14,
-                      color: isSelected ? Colors.white : AppColors.textSecondary,
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      filter.$1,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.w600,
-                        color:
-                            isSelected ? Colors.white : AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
+String _formatPoints(double value) {
+  if (value == value.roundToDouble()) return value.toInt().toString();
+  return value.toStringAsFixed(1);
 }
 
 class _LoadMoreFooter extends StatelessWidget {
@@ -473,7 +391,7 @@ class _LoadMoreFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     if (state.isLoadingMore) {
       return const Padding(
-        padding: EdgeInsets.only(bottom: 96),
+        padding: EdgeInsets.only(bottom: AppSizes.lg),
         child: Center(
           child: CircularProgressIndicator(
             strokeWidth: 2,
@@ -489,7 +407,7 @@ class _LoadMoreFooter extends StatelessWidget {
           AppSizes.screenPaddingH,
           0,
           AppSizes.screenPaddingH,
-          96,
+          AppSizes.lg,
         ),
         child: Text(
           state.loadMoreError!.message,
@@ -499,6 +417,6 @@ class _LoadMoreFooter extends StatelessWidget {
       );
     }
 
-    return const SizedBox(height: 96);
+    return const SizedBox(height: AppSizes.md);
   }
 }

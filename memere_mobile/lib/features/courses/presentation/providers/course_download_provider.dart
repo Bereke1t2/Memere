@@ -1,12 +1,15 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/offline/offline_providers.dart';
 import '../../../../core/storage/secure_pdf_storage.dart';
 import '../../../exam/presentation/providers/exam_download_provider.dart';
 import '../../../exam/presentation/providers/exam_providers.dart';
 import '../../../quiz/presentation/providers/quiz_download_provider.dart';
 import '../../../quiz/presentation/providers/quiz_providers.dart';
 import '../../../video_player/presentation/providers/offline_video_provider.dart';
+import '../../data/models/course_detail_model.dart';
 import '../../domain/entities/course_detail_entity.dart';
+import '../../domain/entities/course_entity.dart';
 
 /// Orchestrates a "download the whole course" — every downloadable asset across
 /// the course: each lesson's video (MP4) and PDF, plus every quiz and exam
@@ -17,6 +20,14 @@ final courseDownloadProvider = NotifierProvider.family<CourseDownloadController,
     CourseDownloadProgress, String>(
   CourseDownloadController.new,
 );
+
+/// Courses available fully offline (their structure was cached when downloaded),
+/// sorted by title. Backed by [CourseDetailCacheStore]; recomputed when a course
+/// download completes (the controller invalidates it). Drives the offline
+/// fallback on Home and the "Downloaded" section in My Courses.
+final downloadedCoursesProvider = Provider<List<CourseEntity>>((ref) {
+  return ref.watch(courseDetailCacheStoreProvider).listCourses();
+});
 
 enum CourseDownloadStatus { idle, running, done, failed }
 
@@ -126,6 +137,14 @@ class CourseDownloadController
     // Refresh the per-video download list so each lesson's own download button
     // reflects what the batch just fetched.
     ref.invalidate(offlineDownloadsProvider);
+
+    // Cache the course structure so it opens & studies offline, and surface it
+    // in the offline course lists. Only when something was actually fetched — a
+    // fully-failed batch leaves nothing to study.
+    if (completed > 0 && detail is CourseDetailModel) {
+      await ref.read(courseDetailCacheStoreProvider).cache(detail);
+      ref.invalidate(downloadedCoursesProvider);
+    }
 
     state = CourseDownloadProgress(
       status: completed == 0 && failed > 0
