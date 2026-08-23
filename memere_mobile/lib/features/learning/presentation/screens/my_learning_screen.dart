@@ -38,7 +38,7 @@ class _CourseCardData {
   final CourseEntity? courseEntity;
 }
 
-/// Refined Obsidian & Soft Emerald My Learning Screen matching Home & Exam catalog UX.
+/// Refined Obsidian & Soft Emerald My Learning Screen matching Home Page CourseRowCard UX.
 class MyLearningScreen extends ConsumerStatefulWidget {
   const MyLearningScreen({super.key});
 
@@ -167,7 +167,7 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen> {
                   ),
                 ),
 
-              // 3. Grid of Vibrant Obsidian Cards or Empty State
+              // 3. Spacious Full-Width Obsidian Course Cards (Matching Home Page CourseRowCard)
               if (isLoading)
                 const SliverFillRemaining(
                   child: Center(
@@ -202,22 +202,18 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen> {
                     AppSizes.screenPaddingH,
                     AppSizes.md,
                   ),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 10,
-                      crossAxisSpacing: 10,
-                      childAspectRatio: 0.72,
-                    ),
+                  sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         final item = filteredItems[index];
-                        return _CourseCardTile(
-                          item: item,
-                          cardIndex: index,
-                          onOpen: () => context
-                              .push(AppRoutes.courseDetailPath(item.id)),
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: _CourseCardTile(
+                            item: item,
+                            cardIndex: index,
+                            onOpen: () => context
+                                .push(AppRoutes.courseDetailPath(item.id)),
+                          ),
                         );
                       },
                       childCount: filteredItems.length,
@@ -257,9 +253,24 @@ class _MyLearningHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filterOptions = [
       (LearningFilter.all, Icons.grid_view_rounded, 'All', totalCount),
-      (LearningFilter.enrolled, Icons.verified_rounded, 'Enrolled', enrolledCount),
-      (LearningFilter.favorites, Icons.bookmark_rounded, 'Favorites', favoritesCount),
-      (LearningFilter.downloaded, Icons.download_done_rounded, 'Downloaded', downloadedCount),
+      (
+        LearningFilter.enrolled,
+        Icons.verified_rounded,
+        'Enrolled',
+        enrolledCount
+      ),
+      (
+        LearningFilter.favorites,
+        Icons.bookmark_rounded,
+        'Favorites',
+        favoritesCount
+      ),
+      (
+        LearningFilter.downloaded,
+        Icons.download_done_rounded,
+        'Downloaded',
+        downloadedCount
+      ),
     ];
 
     return Padding(
@@ -402,6 +413,7 @@ class _MyLearningHeader extends ConsumerWidget {
   }
 }
 
+/// Spacious Full-Width Obsidian Course Card matching Home Page CourseRowCard
 class _CourseCardTile extends ConsumerStatefulWidget {
   const _CourseCardTile({
     required this.item,
@@ -432,145 +444,191 @@ class _CourseCardTileState extends ConsumerState<_CourseCardTile> {
       onTapCancel: () => setState(() => _isPressed = false),
       onTap: widget.onOpen,
       child: AnimatedScale(
-        scale: _isPressed ? 0.96 : 1.0,
+        scale: _isPressed ? 0.98 : 1.0,
         duration: const Duration(milliseconds: 120),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              gradient: gradient,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _isPressed ? Colors.white : glowColor.withAlpha(90),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: glowColor.withAlpha(45),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+        curve: Curves.easeOutCubic,
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.bgSecondary,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color:
+                  _isPressed ? AppColors.borderFocused : AppColors.borderStrong,
+              width: 1.2,
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Top Row: Category Pill Badge + Status Icon
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: badgeColor.withAlpha(60),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                            color: Colors.white.withAlpha(50), width: 0.8),
-                      ),
-                      child: Text(
-                        badgeLabel,
-                        style: const TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: glowColor.withAlpha(25),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top Banner Area (Vibrant subject gradient + ambient watermark icon)
+              SizedBox(
+                height: 100,
+                width: double.infinity,
+                child: Container(
+                  decoration: BoxDecoration(gradient: gradient),
+                  child: Stack(
+                    children: [
+                      // Ambient background geometry / icon
+                      Positioned(
+                        right: -10,
+                        bottom: -15,
+                        child: Icon(
+                          iconData,
+                          size: 100,
+                          color: Colors.white.withAlpha(15),
                         ),
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withAlpha(40),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        iconData,
-                        size: 14,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
+                      // Top Row Overlay Badges
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Kind Badge (ENROLLED / FAVORITE / OFFLINE)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withAlpha(140),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                    color: Colors.white.withAlpha(40)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(iconData, size: 13, color: glowColor),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    badgeLabel,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w800,
+                                      color: glowColor,
+                                      letterSpacing: 0.4,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
 
-                // Middle: Icon + Title + Subtitle
-                Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withAlpha(40),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withAlpha(40)),
+                            // Status Pill Badge
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 9, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: badgeColor.withAlpha(180),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                    color: Colors.white.withAlpha(60)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.check_circle_rounded,
+                                      size: 12, color: Colors.white),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    item.kind == CourseCardKind.enrolled
+                                        ? 'Active Access'
+                                        : (item.kind == CourseCardKind.downloaded
+                                            ? 'Downloaded'
+                                            : 'Saved'),
+                                    style: const TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      child: const Icon(Icons.school_rounded,
-                          size: 18, color: Colors.white),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Bottom Content Area
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Subtitle / Track Tag
+                    Text(
+                      item.subtitle.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF38BDF8),
+                        letterSpacing: 0.5,
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 6),
+
+                    // Course Title
+                    Text(
+                      item.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                        letterSpacing: -0.2,
+                        height: 1.25,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // 1-Tap Action Pill Button matching Home page CourseRowCard
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.brandEmerald,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.brandEmerald.withAlpha(70),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            item.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                            buttonLabel,
                             style: const TextStyle(
-                              fontSize: 13.5,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
                               color: Colors.white,
-                              height: 1.2,
+                              letterSpacing: -0.2,
                             ),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            item.subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.white.withAlpha(180),
-                            ),
-                          ),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.arrow_forward_rounded,
+                              size: 15, color: Colors.white),
                         ],
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-
-                // Bottom 1-Tap Action Pill Button
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 6.5),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(35),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                        color: Colors.white.withAlpha(60), width: 0.8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        buttonLabel,
-                        style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.arrow_forward_rounded,
-                          size: 12, color: Colors.white),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
