@@ -342,13 +342,15 @@ class _CourseListContent extends ConsumerWidget {
   }
 }
 
-/// Minimalist App Bar: 'Memere' on left, Profile avatar on right
+/// Minimalist App Bar: 'Memere' on left, Profile avatar on right (only if signed in)
 class _HomeTopBar extends ConsumerWidget {
   const _HomeTopBar();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final user = ref.watch(authStateProvider).valueOrNull?.user;
+    final authState = ref.watch(authStateProvider).valueOrNull;
+    final isAuthenticated = authState?.isAuthenticated ?? false;
+    final user = authState?.user;
     final firstName = user?.firstName.trim();
     final initial = firstName == null || firstName.isEmpty
         ? 'M'
@@ -375,35 +377,36 @@ class _HomeTopBar extends ConsumerWidget {
             ),
           ),
 
-          // Clickable Profile Avatar (navigates to Account page)
-          InkWell(
-            onTap: () => context.go(AppRoutes.profile),
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              width: 38,
-              height: 38,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.brandEmerald,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.brandEmerald.withAlpha(80),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+          // Clickable Profile Avatar (only shown if user is signed in)
+          if (isAuthenticated)
+            InkWell(
+              onTap: () => context.go(AppRoutes.profile),
+              borderRadius: BorderRadius.circular(20),
+              child: Container(
+                width: 38,
+                height: 38,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: AppColors.brandEmerald,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.brandEmerald.withAlpha(80),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  initial,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                ],
-              ),
-              child: Text(
-                initial,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
                 ),
               ),
             ),
-          ),
         ],
       ),
     );
