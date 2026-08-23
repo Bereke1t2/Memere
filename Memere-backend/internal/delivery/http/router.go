@@ -197,6 +197,7 @@ func NewRouter(deps Deps) *gin.Engine {
 
 	// Student self-analytics.
 	v1.GET("/me/trend", requireAuth, deps.Analytics.Trend)
+	v1.GET("/me/points", requireAuth, deps.Analytics.Points)
 
 	// Video pipeline (Phase 3). Reads (status/stream/download) use OptionalAuth so
 	// unregistered guests can watch/download published & free content; access

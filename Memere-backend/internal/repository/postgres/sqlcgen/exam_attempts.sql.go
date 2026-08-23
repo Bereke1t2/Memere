@@ -392,3 +392,35 @@ func (q *Queries) UpdateExamAttempt(ctx context.Context, arg UpdateExamAttemptPa
 	)
 	return i, err
 }
+
+const getStudentExamPoints = `-- name: GetStudentExamPoints :one
+SELECT
+    COALESCE(SUM(best.best_score), 0)::float8      AS total_points,
+    COUNT(*)                                       AS exam_count,
+    COALESCE(AVG(best.best_percentage), 0)::float8 AS avg_percentage
+FROM (
+    SELECT exam_id,
+           MAX(score)      AS best_score,
+           MAX(percentage) AS best_percentage
+    FROM courses.exam_attempts
+    WHERE student_id = $1 AND status = 'graded' AND score IS NOT NULL
+    GROUP BY exam_id
+) best
+`
+
+type GetStudentExamPointsRow struct {
+	TotalPoints   float64
+	ExamCount     int64
+	AvgPercentage float64
+}
+
+// A student's cumulative exam points (§9.3): the best graded score per exam,
+// summed, plus how many distinct exams they've completed and the average of
+// those best percentages. Taking the best attempt per exam means retakes raise
+// the total only by the improvement — they never double-count.
+func (q *Queries) GetStudentExamPoints(ctx context.Context, studentID pgtype.UUID) (GetStudentExamPointsRow, error) {
+	row := q.db.QueryRow(ctx, getStudentExamPoints, studentID)
+	var i GetStudentExamPointsRow
+	err := row.Scan(&i.TotalPoints, &i.ExamCount, &i.AvgPercentage)
+	return i, err
+}

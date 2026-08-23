@@ -9,6 +9,8 @@ import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../../payment/presentation/providers/purchase_history_provider.dart';
+import '../../../progress/domain/entities/student_points_entity.dart';
+import '../../../progress/presentation/providers/progress_providers.dart';
 
 /// Refined, mature, and professional Profile & Account Screen for Memere.
 ///
@@ -41,6 +43,10 @@ class ProfileScreen extends ConsumerWidget {
     final purchasesAsync = ref.watch(paymentHistoryProvider);
     final purchasesCount = purchasesAsync.valueOrNull?.length ?? 0;
 
+    // Cumulative quiz + exam points, derived server-side from graded attempts.
+    // A failure (e.g. the endpoint not yet deployed) hides the card, never crashes.
+    final pointsAsync = ref.watch(studentPointsProvider);
+
     final topPadding = MediaQuery.paddingOf(context).top;
 
     return Scaffold(
@@ -54,6 +60,7 @@ class ProfileScreen extends ConsumerWidget {
             ref.invalidate(authStateProvider);
             ref.invalidate(enrollmentListProvider);
             ref.invalidate(paymentHistoryProvider);
+            ref.invalidate(studentPointsProvider);
           },
           child: ListView(
             padding: EdgeInsets.fromLTRB(
@@ -86,14 +93,29 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSizes.md),
 
-              // 3. Academic Metric Strip
+              // 3. Cumulative Points (quiz + exam) — server-synced, auth-only.
+              // Loading shows a skeleton; any error (e.g. endpoint not deployed)
+              // hides the card entirely rather than surfacing an error.
+              ...pointsAsync.when(
+                data: (points) => [
+                  _PointsCard(points: points),
+                  const SizedBox(height: AppSizes.md),
+                ],
+                loading: () => const [
+                  _PointsCardSkeleton(),
+                  SizedBox(height: AppSizes.md),
+                ],
+                error: (_, __) => const <Widget>[],
+              ),
+
+              // 4. Academic Metric Strip
               _LearningStatsRow(
                 enrolledCount: enrolledCount,
                 purchasesCount: purchasesCount,
               ),
               const SizedBox(height: AppSizes.xl),
 
-              // 4. Academic & Learning Section
+              // 5. Academic & Learning Section
               const _SectionHeader(title: 'Academic & Learning'),
               const SizedBox(height: AppSizes.xs),
               _SettingsGroup(
@@ -122,7 +144,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSizes.lg),
 
-              // 5. Memberships & Purchases Section
+              // 6. Memberships & Purchases Section
               const _SectionHeader(title: 'Membership & Billing'),
               const SizedBox(height: AppSizes.xs),
               _SettingsGroup(
@@ -146,7 +168,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSizes.lg),
 
-              // 6. Preferences & Support Section
+              // 7. Preferences & Support Section
               const _SectionHeader(title: 'Preferences & Support'),
               const SizedBox(height: AppSizes.xs),
               _SettingsGroup(
@@ -189,7 +211,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSizes.lg),
 
-              // 7. Account Session & Sign Out
+              // 8. Account Session & Sign Out
               const _SectionHeader(title: 'Account Session'),
               const SizedBox(height: AppSizes.xs),
               _SettingsGroup(
@@ -205,7 +227,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSizes.xl),
 
-              // 8. Footer Brand & Version
+              // 9. Footer Brand & Version
               const Center(
                 child: Column(
                   children: [
@@ -602,6 +624,273 @@ class _StudentHeroCard extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Cumulative points a signed-in student has earned from graded quizzes and
+/// mock exams — the best attempt per quiz/exam, summed server-side. Rendered
+/// only in the authenticated profile (guests never reach this widget).
+class _PointsCard extends StatelessWidget {
+  const _PointsCard({required this.points});
+
+  final StudentPointsEntity points;
+
+  @override
+  Widget build(BuildContext context) {
+    if (points.isEmpty) return const _PointsEmptyCard();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.bgSecondary,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderStrong),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Row(
+        children: [
+          const _PointsBadge(icon: Icons.military_tech_rounded),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'TOTAL POINTS',
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textMuted,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      _formatNumber(points.totalPoints),
+                      style: const TextStyle(
+                        fontFamily: 'Sora',
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'pts',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  _breakdownLabel(points),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          // Average score across counted attempts.
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF181820),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFF282834)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${_formatNumber(points.avgPercentage)}%',
+                  style: const TextStyle(
+                    fontFamily: 'Sora',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.brandEmerald,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                const Text(
+                  'avg score',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Encouraging placeholder shown when a signed-in student has no graded
+/// attempts yet — avoids displaying a bare "0".
+class _PointsEmptyCard extends StatelessWidget {
+  const _PointsEmptyCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.bgSecondary,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderStrong),
+        boxShadow: AppShadows.sm,
+      ),
+      child: const Row(
+        children: [
+          _PointsBadge(icon: Icons.military_tech_outlined),
+          SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Earn your first points',
+                  style: TextStyle(
+                    fontFamily: 'Sora',
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                SizedBox(height: 3),
+                Text(
+                  'Complete quizzes and mock exams to start building your score.',
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.4,
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Amber achievement badge shared by the points card and its empty state.
+class _PointsBadge extends StatelessWidget {
+  const _PointsBadge({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 46,
+      height: 46,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.brandAmber.withAlpha(28),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.brandAmber.withAlpha(60)),
+      ),
+      child: Icon(icon, size: 24, color: AppColors.brandAmber),
+    );
+  }
+}
+
+/// Placeholder shown while the points request is in flight.
+class _PointsCardSkeleton extends StatelessWidget {
+  const _PointsCardSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.bgSecondary,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderStrong),
+        boxShadow: AppShadows.sm,
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: const Color(0xFF181820),
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SkeletonBar(width: 90, height: 10),
+                SizedBox(height: 9),
+                _SkeletonBar(width: 64, height: 20),
+                SizedBox(height: 9),
+                _SkeletonBar(width: 130, height: 10),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SkeletonBar extends StatelessWidget {
+  const _SkeletonBar({required this.width, required this.height});
+
+  final double width;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: const Color(0xFF181820),
+        borderRadius: BorderRadius.circular(6),
+      ),
+    );
+  }
+}
+
+/// Formats a score/percentage without noisy trailing zeros: 80.0 → "80",
+/// 87.5 → "87.5".
+String _formatNumber(double value) {
+  if (value == value.roundToDouble()) return value.toInt().toString();
+  return value.toStringAsFixed(1);
+}
+
+/// "3 quizzes • 1 exam" — pluralized attempt breakdown for the points card.
+String _breakdownLabel(StudentPointsEntity p) {
+  final quizzes = '${p.quizCount} ${p.quizCount == 1 ? 'quiz' : 'quizzes'}';
+  final exams = '${p.examCount} ${p.examCount == 1 ? 'exam' : 'exams'}';
+  return '$quizzes • $exams';
 }
 
 /// Academic Metric Strip (Courses, Mock Exams, Saved Library)

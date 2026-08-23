@@ -6,15 +6,18 @@ import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/storage/secure_pdf_storage.dart';
 import '../../../../shared/widgets/ai_robot_mascot.dart';
+import '../providers/completed_lessons_provider.dart';
 
 /// In-App PDF & Study Notes Reader for Memere.
 /// Uses the high-performance native PDFView background engine (from btluBook-Store)
 /// while maintaining the full Obsidian header, dual-mode tabs, font controls,
 /// and note-taking UI.
-class PdfReaderScreen extends StatefulWidget {
+class PdfReaderScreen extends ConsumerStatefulWidget {
   const PdfReaderScreen({
     super.key,
     required this.title,
@@ -29,10 +32,10 @@ class PdfReaderScreen extends StatefulWidget {
   final String? content;
 
   @override
-  State<PdfReaderScreen> createState() => _PdfReaderScreenState();
+  ConsumerState<PdfReaderScreen> createState() => _PdfReaderScreenState();
 }
 
-class _PdfReaderScreenState extends State<PdfReaderScreen> {
+class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
   String? _localPdfPath;
   bool _isDownloading = false;
   double _downloadProgress = 0.0;
@@ -727,6 +730,43 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                   color: AppColors.brandEmerald,
                 ),
               ),
+            ),
+
+          // Mark Completed Action Button (overflow-safe compact button)
+          if (widget.lessonId != null && widget.lessonId!.trim().isNotEmpty)
+            Builder(
+              builder: (context) {
+                final completedIds =
+                    ref.watch(completedLessonsProvider).valueOrNull ?? const {};
+                final isCompleted = completedIds.contains(widget.lessonId);
+                return IconButton(
+                  icon: Icon(
+                    isCompleted
+                        ? Icons.check_circle_rounded
+                        : Icons.check_circle_outline_rounded,
+                    color: isCompleted
+                        ? AppColors.brandEmerald
+                        : mutedColor,
+                    size: 21,
+                  ),
+                  tooltip: isCompleted ? 'Completed ✓' : 'Mark as Completed',
+                  onPressed: () {
+                    ref
+                        .read(completedLessonsProvider.notifier)
+                        .toggle(widget.lessonId!);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          isCompleted
+                              ? 'Marked as uncompleted'
+                              : 'Marked as completed! ✓',
+                        ),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
 
           // Night / Light Mode Toggle
@@ -1714,6 +1754,14 @@ class _PdfReaderScreenState extends State<PdfReaderScreen> {
                           _totalPages = total;
                         }
                       });
+                      if (total != null && total > 0 && (page ?? 0) + 1 >= total) {
+                        if (widget.lessonId != null &&
+                            widget.lessonId!.trim().isNotEmpty) {
+                          ref
+                              .read(completedLessonsProvider.notifier)
+                              .markCompleted(widget.lessonId!);
+                        }
+                      }
                     }
                   },
                 ),

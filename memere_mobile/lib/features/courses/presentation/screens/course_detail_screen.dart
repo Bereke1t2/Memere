@@ -20,7 +20,10 @@ import '../../domain/entities/lesson_entity.dart';
 import '../../../exam/domain/entities/mock_exam_entity.dart';
 import '../../../exam/presentation/providers/exam_providers.dart';
 import '../../../quiz/presentation/providers/quiz_providers.dart';
+import '../../../saved/presentation/providers/saved_courses_provider.dart';
+import '../providers/completed_lessons_provider.dart';
 import '../providers/course_detail_provider.dart';
+import '../providers/course_download_provider.dart';
 import '../widgets/course_detail_skeleton.dart';
 import '../widgets/course_empty_state.dart';
 import '../widgets/lesson_tile.dart';
@@ -101,10 +104,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                 slivers: [
                   // 1. Top Bar with back button & course title
                   SliverToBoxAdapter(
-                    child: _DetailTopBar(
-                      title: course.title,
-                      subject: course.subject,
-                    ),
+                    child: _DetailTopBar(course: course),
                   ),
 
                   // 2. Hero Illustration Area (Mascot or Thumbnail)
@@ -132,15 +132,29 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
   }
 }
 
+/// Toggles the course in the local favorites store and confirms with a
+/// snackbar. Shared by the top-bar bookmark and the checkout-bar heart so both
+/// controls stay in sync.
+Future<void> _toggleFavorite(
+  BuildContext context,
+  WidgetRef ref,
+  CourseEntity course,
+) async {
+  final nowSaved = await ref.read(savedCoursesProvider.notifier).toggle(course);
+  if (!context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      content: Text(nowSaved ? 'Added to My Courses.' : 'Removed from My Courses.'),
+      duration: const Duration(seconds: 2),
+    ),
+  );
+}
+
 /// Top App Bar with back button and centered Title
 class _DetailTopBar extends StatelessWidget {
-  const _DetailTopBar({
-    required this.title,
-    required this.subject,
-  });
+  const _DetailTopBar({required this.course});
 
-  final String title;
-  final String subject;
+  final CourseEntity course;
 
   @override
   Widget build(BuildContext context) {
@@ -186,7 +200,7 @@ class _DetailTopBar extends StatelessWidget {
           // Course Subject / Title
           Expanded(
             child: Text(
-              subject.isNotEmpty ? subject : title,
+              course.subject.isNotEmpty ? course.subject : course.title,
               textAlign: TextAlign.center,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -200,30 +214,8 @@ class _DetailTopBar extends StatelessWidget {
           ),
           const SizedBox(width: 12),
 
-          // Action / Bookmark Button
-          InkWell(
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Course saved to your library.')),
-              );
-            },
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              width: 38,
-              height: 38,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.bgSecondary,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.borderStrong),
-              ),
-              child: const Icon(
-                Icons.bookmark_border_rounded,
-                color: AppColors.textPrimary,
-                size: 18,
-              ),
-            ),
-          ),
+          // Spacer balancing back button to keep title centered
+          const SizedBox(width: 38),
         ],
       ),
     );
@@ -366,7 +358,7 @@ class _MascotHeroCanvas extends StatelessWidget {
 }
 
 /// Curved Course Content Sheet matching image copy 5.png (Screen 3)
-class _CourseContentSheet extends StatefulWidget {
+class _CourseContentSheet extends ConsumerStatefulWidget {
   const _CourseContentSheet({
     required this.detail,
     required this.hasAccess,
@@ -380,10 +372,11 @@ class _CourseContentSheet extends StatefulWidget {
   final ValueChanged<int> onTabChanged;
 
   @override
-  State<_CourseContentSheet> createState() => _CourseContentSheetState();
+  ConsumerState<_CourseContentSheet> createState() =>
+      _CourseContentSheetState();
 }
 
-class _CourseContentSheetState extends State<_CourseContentSheet> {
+class _CourseContentSheetState extends ConsumerState<_CourseContentSheet> {
   late Set<int> _expandedSections;
 
   @override
@@ -408,7 +401,15 @@ class _CourseContentSheetState extends State<_CourseContentSheet> {
   @override
   Widget build(BuildContext context) {
     final course = widget.detail.course;
-    final totalLessons = widget.detail.lessonCount;
+    final allLessons =
+        widget.detail.sections.expand((s) => s.lessons).toList();
+    final totalLessons = allLessons.length;
+    final completedIds =
+        ref.watch(completedLessonsProvider).valueOrNull ?? const {};
+    final completedCount =
+        allLessons.where((l) => completedIds.contains(l.id)).length;
+    final progressPercent =
+        totalLessons > 0 ? (completedCount / totalLessons) : 0.0;
 
     return Container(
       width: double.infinity,
@@ -455,6 +456,73 @@ class _CourseContentSheetState extends State<_CourseContentSheet> {
               color: Color(0xFF94A3B8),
               fontWeight: FontWeight.w500,
             ),
+          ),
+          const SizedBox(height: 16),
+
+          // Course Lesson Completion Progress Bar & Metric
+          if (totalLessons > 0) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.bgSecondary,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.borderStrong),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.task_alt_rounded,
+                            size: 16,
+                            color: AppColors.brandEmerald,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            'Lesson Completion',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '$completedCount of $totalLessons completed (${(progressPercent * 100).round()}%)',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.brandEmerald,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: progressPercent,
+                      minHeight: 6,
+                      backgroundColor: AppColors.bgTertiary,
+                      color: AppColors.brandEmerald,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          // Download the whole course for offline study — every video, PDF,
+          // quiz and exam, all in one tap.
+          _DownloadWholeCourseButton(
+            detail: widget.detail,
+            canDownload: course.isFree || widget.hasAccess,
           ),
           const SizedBox(height: 16),
 
@@ -508,7 +576,7 @@ class _CourseContentSheetState extends State<_CourseContentSheet> {
                 ),
               )
             else
-              ..._buildSectionsList(course, widget.hasAccess),
+              ..._buildSectionsList(course, widget.hasAccess, completedIds),
           ] else if (widget.selectedTab == 1) ...[
             _CourseQuizzesTab(
               courseId: course.id,
@@ -549,7 +617,11 @@ class _CourseContentSheetState extends State<_CourseContentSheet> {
     );
   }
 
-  List<Widget> _buildSectionsList(CourseEntity course, bool hasAccess) {
+  List<Widget> _buildSectionsList(
+    CourseEntity course,
+    bool hasAccess,
+    Set<String> completedIds,
+  ) {
     final widgets = <Widget>[];
     int globalLessonNumber = 0;
 
@@ -654,6 +726,10 @@ class _CourseContentSheetState extends State<_CourseContentSheet> {
                   lesson: lesson,
                   lessonNumber: globalLessonNumber,
                   canOpen: course.isFree || hasAccess,
+                  isCompleted: completedIds.contains(lesson.id),
+                  onToggleCompleted: () => ref
+                      .read(completedLessonsProvider.notifier)
+                      .toggle(lesson.id),
                 ),
               ),
             );
@@ -706,6 +782,158 @@ class _TabButton extends StatelessWidget {
   }
 }
 
+/// One-tap "download the whole course" control — fetches every video, PDF,
+/// quiz and exam for offline use, showing one aggregate progress value. Gated
+/// on access (free or enrolled); otherwise it nudges the student to enroll.
+class _DownloadWholeCourseButton extends ConsumerWidget {
+  const _DownloadWholeCourseButton({
+    required this.detail,
+    required this.canDownload,
+  });
+
+  final CourseDetailEntity detail;
+  final bool canDownload;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final courseId = detail.course.id;
+    final progress = ref.watch(courseDownloadProvider(courseId));
+    final running = progress.isRunning;
+    final done = progress.status == CourseDownloadStatus.done;
+    final failedAll = progress.status == CourseDownloadStatus.failed;
+    final offlineReady = done && progress.failed == 0;
+
+    final label = running
+        ? 'Downloading ${progress.processed}/${progress.total} • ${progress.percent}%'
+        : offlineReady
+            ? 'Course downloaded • Offline ready'
+            : done
+                ? 'Downloaded ${progress.completed}/${progress.total} • ${progress.failed} unavailable'
+                : failedAll
+                    ? 'Download failed • Tap to retry'
+                    : 'Download whole course';
+
+    final accent = offlineReady
+        ? AppColors.brandEmerald
+        : (canDownload ? Colors.white : AppColors.textMuted);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Material(
+          color: offlineReady ? const Color(0x1810B981) : AppColors.bgSecondary,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: (!canDownload || running)
+                ? null
+                : () => _run(context, ref, courseId),
+            child: Container(
+              width: double.infinity,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: offlineReady
+                      ? const Color(0x5510B981)
+                      : AppColors.borderStrong,
+                ),
+              ),
+              child: Row(
+                children: [
+                  running
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.brandEmerald,
+                          ),
+                        )
+                      : Icon(
+                          offlineReady
+                              ? Icons.check_circle_rounded
+                              : failedAll
+                                  ? Icons.refresh_rounded
+                                  : Icons.download_for_offline_outlined,
+                          size: 20,
+                          color: accent,
+                        ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                        color: accent,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (running) ...[
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress.fraction == 0 ? null : progress.fraction,
+              minHeight: 4,
+              backgroundColor: AppColors.bgTertiary,
+              valueColor:
+                  const AlwaysStoppedAnimation(AppColors.brandEmerald),
+            ),
+          ),
+          if (progress.currentLabel != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              progress.currentLabel!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
+            ),
+          ],
+        ] else if (!canDownload) ...[
+          const SizedBox(height: 6),
+          const Text(
+            'Enroll to download this course for offline study.',
+            style: TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _run(
+    BuildContext context,
+    WidgetRef ref,
+    String courseId,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await ref
+        .read(courseDownloadProvider(courseId).notifier)
+        .downloadCourse(detail);
+    if (!context.mounted) return;
+    final result = ref.read(courseDownloadProvider(courseId));
+    final String message;
+    if (result.total == 0) {
+      message = 'Nothing to download for this course yet.';
+    } else if (result.failed == 0) {
+      message = 'Course downloaded for offline study.';
+    } else {
+      message =
+          'Downloaded ${result.completed}/${result.total} — ${result.failed} item(s) unavailable.';
+    }
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
 /// Bottom Sticky CTA that reflects real access state and drives checkout
 class _CheckoutCtaBar extends ConsumerStatefulWidget {
   const _CheckoutCtaBar({
@@ -731,6 +959,8 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
     final accessAsync = ref.watch(courseAccessProvider(_courseId));
     final checkoutAsync = ref.watch(checkoutFlowProvider(_courseId));
     final busy = checkoutAsync.valueOrNull?.isWorking ?? false;
+    final saved = ref.watch(savedCoursesProvider).valueOrNull ?? const [];
+    final isSaved = saved.any((item) => item.id == widget.course.id);
 
     return SafeArea(
       top: false,
@@ -744,13 +974,9 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
         ),
         child: Row(
           children: [
-            // Bookmark Heart Action Button
+            // Bookmark Heart Action Button — toggles the course in My Courses
             InkWell(
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Saved to your favorites.')),
-                );
-              },
+              onTap: () => _toggleFavorite(context, ref, widget.course),
               borderRadius: BorderRadius.circular(14),
               child: Container(
                 width: 48,
@@ -759,11 +985,18 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
                 decoration: BoxDecoration(
                   color: AppColors.bgSecondary,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.borderStrong),
+                  border: Border.all(
+                    color: isSaved
+                        ? AppColors.brandEmerald
+                        : AppColors.borderStrong,
+                  ),
                 ),
-                child: const Icon(
-                  Icons.favorite_border_rounded,
-                  color: AppColors.textPrimary,
+                child: Icon(
+                  isSaved
+                      ? Icons.favorite_rounded
+                      : Icons.favorite_border_rounded,
+                  color:
+                      isSaved ? AppColors.brandEmerald : AppColors.textPrimary,
                   size: 20,
                 ),
               ),
@@ -873,12 +1106,20 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
 
   LessonEntity? _firstPlayableLesson(CourseDetailEntity? detail) {
     if (detail == null) return null;
+    final completedIds =
+        ref.read(completedLessonsProvider).valueOrNull ?? const {};
+    LessonEntity? firstLesson;
+
     for (final section in detail.sections) {
-      if (section.lessons.isNotEmpty) {
-        return section.lessons.first;
+      for (final lesson in section.lessons) {
+        firstLesson ??= lesson;
+        if (!completedIds.contains(lesson.id)) {
+          return lesson; // Return the first lesson the user hasn't completed yet
+        }
       }
     }
-    return null;
+    // If all lessons are completed, return the first lesson for review
+    return firstLesson;
   }
 
   Future<void> _startFree() async {

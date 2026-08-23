@@ -164,6 +164,18 @@ func (r *ExamAttemptRepo) Stats(ctx context.Context, examID uuid.UUID) (reposito
 	}, nil
 }
 
+func (r *ExamAttemptRepo) SumBestScores(ctx context.Context, studentID uuid.UUID) (repository.StudentScoreTotals, error) {
+	row, err := queriesFor(ctx, r.q).GetStudentExamPoints(ctx, toPgUUID(studentID))
+	if err != nil {
+		return repository.StudentScoreTotals{}, apperror.Internal(err)
+	}
+	return repository.StudentScoreTotals{
+		Points:        row.TotalPoints,
+		Count:         row.ExamCount,
+		AvgPercentage: row.AvgPercentage,
+	}, nil
+}
+
 func mapExamAttemptErr(err error) error {
 	if errors.Is(err, pgx.ErrNoRows) {
 		return apperror.NotFound("exam attempt not found", err)
