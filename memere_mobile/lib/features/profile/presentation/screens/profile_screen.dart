@@ -3,31 +3,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
-import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../../payment/presentation/providers/purchase_history_provider.dart';
 import '../../../progress/domain/entities/student_points_entity.dart';
 import '../../../progress/presentation/providers/progress_providers.dart';
 
-/// Refined, mature, and professional Profile & Account Screen for Memere.
+/// Clean, simple, mature, and professional Profile & Account Screen for Memere.
 ///
-/// Design Highlights:
-/// - Clean obsidian surfaces with subtle borders and shadows (no childish candy colors or mascots)
-/// - Refined Hero Student Card with initials avatar, verification badge, and curriculum stream metadata
-/// - Quick Academic Metric Strip with press feedback
-/// - Cohesive, grouped navigation settings with unified neutral icon badges
-/// - Elegant sign-out confirmation and support modals
+/// Design Language:
+/// - Dark Obsidian surfaces with subtle borders matching the Home, Exam, and Learning Hubs
+/// - Clean hero student card with initials avatar and active stream pill
+/// - Simple 3-stat metric strip
+/// - Unified dark neutral settings groups with subtle chevrons
+/// - Zero colorful distractions or candy mascots
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authValue = ref.watch(authStateProvider).valueOrNull;
-    // Guests browse without an account — show a sign-in card instead of
-    // account-only sections (enrollments/purchases would 401).
     if (!(authValue?.isAuthenticated ?? false)) {
       return const _GuestProfileView();
     }
@@ -43,16 +39,11 @@ class ProfileScreen extends ConsumerWidget {
     final purchasesAsync = ref.watch(paymentHistoryProvider);
     final purchasesCount = purchasesAsync.valueOrNull?.length ?? 0;
 
-    // Cumulative quiz + exam points, derived server-side from graded attempts.
-    // A failure (e.g. the endpoint not yet deployed) hides the card, never crashes.
     final pointsAsync = ref.watch(studentPointsProvider);
-
-    final topPadding = MediaQuery.paddingOf(context).top;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
-        top: false,
         child: RefreshIndicator(
           color: AppColors.brandEmerald,
           backgroundColor: AppColors.bgSecondary,
@@ -63,14 +54,14 @@ class ProfileScreen extends ConsumerWidget {
             ref.invalidate(studentPointsProvider);
           },
           child: ListView(
-            padding: EdgeInsets.fromLTRB(
+            padding: const EdgeInsets.fromLTRB(
               AppSizes.screenPaddingH,
-              topPadding + AppSizes.sm,
+              AppSizes.sm,
               AppSizes.screenPaddingH,
               AppSizes.xxl,
             ),
             children: [
-              // 1. Sleek Top Bar
+              // 1. Sleek Top Bar matching Home & Learning Hubs
               _ProfileTopBar(
                 canPop: context.canPop(),
                 onPop: () {
@@ -81,7 +72,7 @@ class ProfileScreen extends ConsumerWidget {
                   }
                 },
               ),
-              const SizedBox(height: AppSizes.md),
+              const SizedBox(height: 16),
 
               // 2. Refined Hero Student Profile Card
               _StudentHeroCard(
@@ -91,38 +82,36 @@ class ProfileScreen extends ConsumerWidget {
                 role: user?.role.name ?? 'student',
                 initials: _initials(user?.firstName, user?.lastName),
               ),
-              const SizedBox(height: AppSizes.md),
+              const SizedBox(height: 14),
 
-              // 3. Cumulative Points (quiz + exam) — server-synced, auth-only.
-              // Loading shows a skeleton; any error (e.g. endpoint not deployed)
-              // hides the card entirely rather than surfacing an error.
+              // 3. Points Card (Auth-only, synced points)
               ...pointsAsync.when(
                 data: (points) => [
                   _PointsCard(points: points),
-                  const SizedBox(height: AppSizes.md),
+                  const SizedBox(height: 14),
                 ],
                 loading: () => const [
                   _PointsCardSkeleton(),
-                  SizedBox(height: AppSizes.md),
+                  SizedBox(height: 14),
                 ],
                 error: (_, __) => const <Widget>[],
               ),
 
-              // 4. Academic Metric Strip
+              // 4. Clean Academic Metric Strip
               _LearningStatsRow(
                 enrolledCount: enrolledCount,
                 purchasesCount: purchasesCount,
               ),
-              const SizedBox(height: AppSizes.xl),
+              const SizedBox(height: 20),
 
               // 5. Academic & Learning Section
               const _SectionHeader(title: 'Academic & Learning'),
-              const SizedBox(height: AppSizes.xs),
+              const SizedBox(height: 6),
               _SettingsGroup(
                 items: [
                   _SettingsItemData(
-                    icon: Icons.menu_book_outlined,
-                    title: 'Enrolled Courses',
+                    icon: Icons.school_outlined,
+                    title: 'My Enrolled Courses',
                     subtitle: enrolledCount == 0
                         ? 'Explore curriculum courses'
                         : '$enrolledCount active courses in progress',
@@ -137,28 +126,27 @@ class ProfileScreen extends ConsumerWidget {
                   _SettingsItemData(
                     icon: Icons.bookmark_outline_rounded,
                     title: 'Saved Notes & Library',
-                    subtitle: 'Offline study guides and bookmarked materials',
+                    subtitle: 'Offline study guides and saved materials',
                     onTap: () => context.go(AppRoutes.saved),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSizes.lg),
+              const SizedBox(height: 18),
 
-              // 6. Memberships & Purchases Section
+              // 6. Membership & Billing Section
               const _SectionHeader(title: 'Membership & Billing'),
-              const SizedBox(height: AppSizes.xs),
+              const SizedBox(height: 6),
               _SettingsGroup(
                 items: [
                   _SettingsItemData(
                     icon: Icons.workspace_premium_outlined,
-                    iconAccent: AppColors.brandAmber,
                     title: 'All-Access Plans',
                     subtitle: 'Unlock unlimited mock exams & full solutions',
                     onTap: () => context.push(AppRoutes.subscriptionPlans),
                   ),
                   _SettingsItemData(
                     icon: Icons.receipt_outlined,
-                    title: 'Purchase History & Receipts',
+                    title: 'Purchase History',
                     subtitle: purchasesCount == 0
                         ? 'View transaction history and invoices'
                         : '$purchasesCount recorded transactions',
@@ -166,15 +154,15 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: AppSizes.lg),
+              const SizedBox(height: 18),
 
               // 7. Preferences & Support Section
               const _SectionHeader(title: 'Preferences & Support'),
-              const SizedBox(height: AppSizes.xs),
+              const SizedBox(height: 6),
               _SettingsGroup(
                 items: [
                   _SettingsItemData(
-                    icon: Icons.school_outlined,
+                    icon: Icons.grid_view_rounded,
                     title: 'Curriculum Stream',
                     subtitle: 'Natural Science (Grade 12 EUEE)',
                     onTap: () {
@@ -190,12 +178,13 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   _SettingsItemData(
                     icon: Icons.notifications_none_rounded,
-                    title: 'Exam Reminders & Notifications',
+                    title: 'Study Notifications',
                     subtitle: 'Daily study schedules and mock announcements',
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Study notifications are currently enabled.'),
+                          content:
+                              Text('Study notifications are currently enabled.'),
                           behavior: SnackBarBehavior.floating,
                         ),
                       );
@@ -203,17 +192,17 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                   _SettingsItemData(
                     icon: Icons.help_outline_rounded,
-                    title: 'Help Center & Support',
+                    title: 'Help & Support',
                     subtitle: 'FAQs, contact instructors, report an issue',
                     onTap: () => _showHelpDialog(context),
                   ),
                 ],
               ),
-              const SizedBox(height: AppSizes.lg),
+              const SizedBox(height: 18),
 
-              // 8. Account Session & Sign Out
+              // 8. Account Session Section
               const _SectionHeader(title: 'Account Session'),
-              const SizedBox(height: AppSizes.xs),
+              const SizedBox(height: 6),
               _SettingsGroup(
                 items: [
                   _SettingsItemData(
@@ -225,7 +214,7 @@ class ProfileScreen extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: AppSizes.xl),
+              const SizedBox(height: 28),
 
               // 9. Footer Brand & Version
               const Center(
@@ -234,7 +223,7 @@ class ProfileScreen extends ConsumerWidget {
                     Text(
                       'Memere • Ethiopian University Entrance Exam Prep',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w600,
                         color: AppColors.textMuted,
                       ),
@@ -243,7 +232,7 @@ class ProfileScreen extends ConsumerWidget {
                     Text(
                       'Version 1.0.0 (Build 42)',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 10.5,
                         color: AppColors.textDisabled,
                       ),
                     ),
@@ -293,7 +282,11 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(width: 12),
             const Text(
               'Sign Out',
-              style: AppTextStyles.titleLarge,
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
             ),
           ],
         ),
@@ -305,7 +298,8 @@ class ProfileScreen extends ConsumerWidget {
             height: 1.45,
           ),
         ),
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        actionsPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -322,7 +316,8 @@ class ProfileScreen extends ConsumerWidget {
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
               elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -351,7 +346,14 @@ class ProfileScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(20),
           side: const BorderSide(color: AppColors.borderStrong),
         ),
-        title: const Text('Help & Support', style: AppTextStyles.titleLarge),
+        title: const Text(
+          'Help & Support',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
         content: const Text(
           'Need help with course materials, mock exams, or payment confirmations? Contact the Memere academic support team at support@memere.et.',
           style: TextStyle(
@@ -360,14 +362,16 @@ class ProfileScreen extends ConsumerWidget {
             height: 1.45,
           ),
         ),
-        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        actionsPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         actions: [
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.brandEmerald,
               foregroundColor: Colors.white,
               elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -384,7 +388,7 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-/// Sleek Top Bar for Profile Screen
+/// Sleek Top Bar matching Home & Learning Hubs
 class _ProfileTopBar extends StatelessWidget {
   const _ProfileTopBar({
     required this.canPop,
@@ -399,47 +403,55 @@ class _ProfileTopBar extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        if (canPop)
-          InkWell(
-            onTap: onPop,
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              width: 38,
-              height: 38,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: AppColors.bgSecondary,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.borderStrong),
+        Row(
+          children: [
+            if (canPop) ...[
+              InkWell(
+                onTap: onPop,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.bgSecondary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.borderStrong),
+                  ),
+                  child: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: AppColors.textPrimary,
+                    size: 14,
+                  ),
+                ),
               ),
-              child: const Icon(
-                Icons.arrow_back_ios_new_rounded,
-                color: AppColors.textPrimary,
-                size: 15,
+              const SizedBox(width: 10),
+            ] else ...[
+              const Icon(
+                Icons.person_rounded,
+                color: AppColors.brandEmerald,
+                size: 22,
               ),
-            ),
-          )
-        else
-          const Expanded(
-            child: Text(
+              const SizedBox(width: 8),
+            ],
+            const Text(
               'Profile & Account',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontFamily: 'Sora',
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
                 color: AppColors.textPrimary,
-                letterSpacing: -0.5,
+                letterSpacing: -0.4,
               ),
             ),
-          ),
-        const SizedBox(width: 8),
+          ],
+        ),
+
+        // Active Student Status Pill
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
             color: AppColors.bgSecondary,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.borderStrong),
           ),
           child: Row(
@@ -457,7 +469,7 @@ class _ProfileTopBar extends StatelessWidget {
               const Text(
                 'Active Student',
                 style: TextStyle(
-                  fontSize: 11.5,
+                  fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textSecondary,
                 ),
@@ -470,7 +482,7 @@ class _ProfileTopBar extends StatelessWidget {
   }
 }
 
-/// Refined Hero Student Profile Card with Minimalist Obsidian Styling
+/// Refined Hero Student Profile Card
 class _StudentHeroCard extends StatelessWidget {
   const _StudentHeroCard({
     required this.name,
@@ -490,39 +502,37 @@ class _StudentHeroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.bgSecondary,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.borderStrong),
-        boxShadow: AppShadows.sm,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Sleek Avatar with Active Ring
+          // Sleek Emerald-Tinted Avatar Circle
           Stack(
             clipBehavior: Clip.none,
             children: [
               Container(
-                width: 58,
-                height: 58,
+                width: 54,
+                height: 54,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF181820),
+                  color: AppColors.brandEmerald.withAlpha(25),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: const Color(0xFF2C2C38),
+                    color: AppColors.brandEmerald.withAlpha(80),
                     width: 1.5,
                   ),
                 ),
                 child: Text(
                   initials,
                   style: const TextStyle(
-                    fontFamily: 'Sora',
-                    fontSize: 20,
+                    fontSize: 19,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
+                    color: AppColors.brandEmerald,
                     letterSpacing: -0.5,
                   ),
                 ),
@@ -531,19 +541,19 @@ class _StudentHeroCard extends StatelessWidget {
                 bottom: 0,
                 right: 0,
                 child: Container(
-                  width: 16,
-                  height: 16,
+                  width: 15,
+                  height: 15,
                   decoration: BoxDecoration(
                     color: AppColors.bgSecondary,
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: AppColors.bgSecondary,
-                      width: 2,
+                      width: 1.5,
                     ),
                   ),
                   child: const Icon(
                     Icons.check_circle_rounded,
-                    size: 14,
+                    size: 13,
                     color: AppColors.brandEmerald,
                   ),
                 ),
@@ -552,7 +562,7 @@ class _StudentHeroCard extends StatelessWidget {
           ),
           const SizedBox(width: 14),
 
-          // Name, Email, & Metadata Badges
+          // Name, Email, & Stream Pill
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -562,8 +572,7 @@ class _StudentHeroCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontFamily: 'Sora',
-                    fontSize: 17,
+                    fontSize: 16,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
                     letterSpacing: -0.3,
@@ -576,7 +585,7 @@ class _StudentHeroCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 12.5,
+                      fontSize: 12,
                       color: AppColors.textMuted,
                     ),
                   ),
@@ -585,37 +594,29 @@ class _StudentHeroCard extends StatelessWidget {
                   Text(
                     phoneNumber,
                     style: const TextStyle(
-                      fontSize: 11.5,
+                      fontSize: 11,
                       color: AppColors.textDisabled,
                     ),
                   ),
                 ],
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF181820),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFF282834)),
-                      ),
-                      child: const Text(
-                        'GRADE 12 • NATURAL SCIENCE',
-                        style: TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textSecondary,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
+                const SizedBox(height: 6),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppColors.bgTertiary,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppColors.borderStrong),
+                  ),
+                  child: const Text(
+                    'GRADE 12 • NATURAL SCIENCE',
+                    style: TextStyle(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF38BDF8),
+                      letterSpacing: 0.4,
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -626,9 +627,7 @@ class _StudentHeroCard extends StatelessWidget {
   }
 }
 
-/// Cumulative points a signed-in student has earned from graded quizzes and
-/// mock exams — the best attempt per quiz/exam, summed server-side. Rendered
-/// only in the authenticated profile (guests never reach this widget).
+/// Cumulative Points Card (Auth Only)
 class _PointsCard extends StatelessWidget {
   const _PointsCard({required this.points});
 
@@ -640,17 +639,30 @@ class _PointsCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.bgSecondary,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.borderStrong),
-        boxShadow: AppShadows.sm,
       ),
       child: Row(
         children: [
-          const _PointsBadge(icon: Icons.military_tech_rounded),
-          const SizedBox(width: 14),
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.brandEmerald.withAlpha(25),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.brandEmerald.withAlpha(60)),
+            ),
+            child: const Icon(
+              Icons.military_tech_rounded,
+              size: 22,
+              color: AppColors.brandEmerald,
+            ),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -658,28 +670,27 @@ class _PointsCard extends StatelessWidget {
                 const Text(
                   'TOTAL POINTS',
                   style: TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 10,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textMuted,
                     letterSpacing: 0.8,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  crossAxisAlignment: Cross.baseline,
                   textBaseline: TextBaseline.alphabetic,
                   children: [
                     Text(
                       _formatNumber(points.totalPoints),
                       style: const TextStyle(
-                        fontFamily: 'Sora',
-                        fontSize: 26,
+                        fontSize: 24,
                         fontWeight: FontWeight.w800,
                         color: AppColors.textPrimary,
                         letterSpacing: -0.5,
                       ),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 5),
                     const Text(
                       'pts',
                       style: TextStyle(
@@ -690,13 +701,13 @@ class _PointsCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 2),
                 Text(
                   _breakdownLabel(points),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     color: AppColors.textMuted,
                   ),
                 ),
@@ -704,13 +715,14 @@ class _PointsCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 10),
-          // Average score across counted attempts.
+
+          // Average score pill badge
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF181820),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF282834)),
+              color: AppColors.bgTertiary,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.borderStrong),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -718,8 +730,7 @@ class _PointsCard extends StatelessWidget {
                 Text(
                   '${_formatNumber(points.avgPercentage)}%',
                   style: const TextStyle(
-                    fontFamily: 'Sora',
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: AppColors.brandEmerald,
                   ),
@@ -728,7 +739,7 @@ class _PointsCard extends StatelessWidget {
                 const Text(
                   'avg score',
                   style: TextStyle(
-                    fontSize: 9.5,
+                    fontSize: 9,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textMuted,
                   ),
@@ -742,8 +753,6 @@ class _PointsCard extends StatelessWidget {
   }
 }
 
-/// Encouraging placeholder shown when a signed-in student has no graded
-/// attempts yet — avoids displaying a bare "0".
 class _PointsEmptyCard extends StatelessWidget {
   const _PointsEmptyCard();
 
@@ -751,37 +760,48 @@ class _PointsEmptyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.bgSecondary,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.borderStrong),
-        boxShadow: AppShadows.sm,
       ),
-      child: const Row(
+      child: Row(
         children: [
-          _PointsBadge(icon: Icons.military_tech_outlined),
-          SizedBox(width: 14),
-          Expanded(
+          Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.bgTertiary,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.borderStrong),
+            ),
+            child: const Icon(
+              Icons.military_tech_outlined,
+              size: 22,
+              color: AppColors.textMuted,
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Earn your first points',
                   style: TextStyle(
-                    fontFamily: 'Sora',
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary,
-                    letterSpacing: -0.2,
                   ),
                 ),
-                SizedBox(height: 3),
+                SizedBox(height: 2),
                 Text(
                   'Complete quizzes and mock exams to start building your score.',
                   style: TextStyle(
-                    fontSize: 12,
-                    height: 1.4,
+                    fontSize: 11.5,
+                    height: 1.35,
                     color: AppColors.textMuted,
                   ),
                 ),
@@ -794,29 +814,6 @@ class _PointsEmptyCard extends StatelessWidget {
   }
 }
 
-/// Amber achievement badge shared by the points card and its empty state.
-class _PointsBadge extends StatelessWidget {
-  const _PointsBadge({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 46,
-      height: 46,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: AppColors.brandAmber.withAlpha(28),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.brandAmber.withAlpha(60)),
-      ),
-      child: Icon(icon, size: 24, color: AppColors.brandAmber),
-    );
-  }
-}
-
-/// Placeholder shown while the points request is in flight.
 class _PointsCardSkeleton extends StatelessWidget {
   const _PointsCardSkeleton();
 
@@ -824,33 +821,32 @@ class _PointsCardSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.bgSecondary,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.borderStrong),
-        boxShadow: AppShadows.sm,
       ),
       child: Row(
         children: [
           Container(
-            width: 46,
-            height: 46,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: const Color(0xFF181820),
-              borderRadius: BorderRadius.circular(14),
+              color: AppColors.bgTertiary,
+              borderRadius: BorderRadius.circular(12),
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _SkeletonBar(width: 90, height: 10),
-                SizedBox(height: 9),
-                _SkeletonBar(width: 64, height: 20),
-                SizedBox(height: 9),
-                _SkeletonBar(width: 130, height: 10),
+                _SkeletonBar(width: 80, height: 10),
+                SizedBox(height: 8),
+                _SkeletonBar(width: 60, height: 18),
+                SizedBox(height: 8),
+                _SkeletonBar(width: 120, height: 10),
               ],
             ),
           ),
@@ -872,21 +868,18 @@ class _SkeletonBar extends StatelessWidget {
       width: width,
       height: height,
       decoration: BoxDecoration(
-        color: const Color(0xFF181820),
+        color: AppColors.bgTertiary,
         borderRadius: BorderRadius.circular(6),
       ),
     );
   }
 }
 
-/// Formats a score/percentage without noisy trailing zeros: 80.0 → "80",
-/// 87.5 → "87.5".
 String _formatNumber(double value) {
   if (value == value.roundToDouble()) return value.toInt().toString();
   return value.toStringAsFixed(1);
 }
 
-/// "3 quizzes • 1 exam" — pluralized attempt breakdown for the points card.
 String _breakdownLabel(StudentPointsEntity p) {
   final quizzes = '${p.quizCount} ${p.quizCount == 1 ? 'quiz' : 'quizzes'}';
   final exams = '${p.examCount} ${p.examCount == 1 ? 'exam' : 'exams'}';
@@ -955,12 +948,12 @@ class _StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(14),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.bgSecondary,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: AppColors.borderStrong),
         ),
         child: Column(
@@ -973,7 +966,7 @@ class _StatCard extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 13,
+                fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: AppColors.textPrimary,
               ),
@@ -982,7 +975,7 @@ class _StatCard extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                fontSize: 11,
+                fontSize: 10.5,
                 color: AppColors.textMuted,
                 fontWeight: FontWeight.w500,
               ),
@@ -1002,11 +995,11 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 6),
+      padding: const EdgeInsets.only(left: 2, bottom: 4),
       child: Text(
         title.toUpperCase(),
         style: const TextStyle(
-          fontSize: 11,
+          fontSize: 10.5,
           fontWeight: FontWeight.w700,
           color: AppColors.textMuted,
           letterSpacing: 0.8,
@@ -1022,7 +1015,6 @@ class _SettingsItemData {
     required this.title,
     required this.subtitle,
     required this.onTap,
-    this.iconAccent,
     this.isDestructive = false,
   });
 
@@ -1030,7 +1022,6 @@ class _SettingsItemData {
   final String title;
   final String subtitle;
   final VoidCallback onTap;
-  final Color? iconAccent;
   final bool isDestructive;
 }
 
@@ -1044,7 +1035,7 @@ class _SettingsGroup extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.bgSecondary,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.borderStrong),
       ),
       clipBehavior: Clip.antiAlias,
@@ -1057,24 +1048,19 @@ class _SettingsGroup extends StatelessWidget {
             const Divider(height: 1, color: AppColors.border),
         itemBuilder: (context, index) {
           final item = items[index];
-          final Color iconColor = item.isDestructive
-              ? AppColors.error
-              : (item.iconAccent ?? AppColors.textSecondary);
+          final Color iconColor =
+              item.isDestructive ? AppColors.error : AppColors.textSecondary;
           final Color iconBg = item.isDestructive
               ? const Color(0x1DEF4444)
-              : (item.iconAccent != null
-                  ? item.iconAccent!.withAlpha(20)
-                  : const Color(0xFF181820));
+              : AppColors.bgTertiary;
           final Color iconBorder = item.isDestructive
               ? const Color(0x35EF4444)
-              : (item.iconAccent != null
-                  ? item.iconAccent!.withAlpha(45)
-                  : const Color(0xFF282834));
+              : AppColors.borderStrong;
 
           return InkWell(
             onTap: item.onTap,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 children: [
                   Container(
@@ -1088,7 +1074,7 @@ class _SettingsGroup extends StatelessWidget {
                     ),
                     child: Icon(item.icon, size: 18, color: iconColor),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1096,7 +1082,7 @@ class _SettingsGroup extends StatelessWidget {
                         Text(
                           item.title,
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w600,
                             color: item.isDestructive
                                 ? AppColors.error
@@ -1108,7 +1094,7 @@ class _SettingsGroup extends StatelessWidget {
                         Text(
                           item.subtitle,
                           style: const TextStyle(
-                            fontSize: 11.5,
+                            fontSize: 11,
                             color: AppColors.textMuted,
                           ),
                         ),
@@ -1132,90 +1118,92 @@ class _SettingsGroup extends StatelessWidget {
   }
 }
 
-/// Profile tab as seen by a guest (no account). Browsing, downloads, saved
-/// items, and taking quizzes/exams all work signed-out; this card explains what
-/// an account adds and offers sign-in / sign-up without blocking the app.
+/// Guest Profile View (Unauthenticated)
 class _GuestProfileView extends StatelessWidget {
   const _GuestProfileView();
 
   @override
   Widget build(BuildContext context) {
-    final topPadding = MediaQuery.paddingOf(context).top;
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
       body: SafeArea(
-        top: false,
         child: ListView(
-          padding: EdgeInsets.fromLTRB(
+          padding: const EdgeInsets.fromLTRB(
             AppSizes.screenPaddingH,
-            topPadding + AppSizes.sm,
+            AppSizes.sm,
             AppSizes.screenPaddingH,
             AppSizes.xxl,
           ),
           children: [
-            const SizedBox(height: AppSizes.sm),
-            const Text(
-              'Profile & Account',
-              style: TextStyle(
-                fontFamily: 'Sora',
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
-                letterSpacing: -0.5,
-              ),
+            const Row(
+              children: [
+                Icon(
+                  Icons.person_rounded,
+                  color: AppColors.brandEmerald,
+                  size: 22,
+                ),
+                SizedBox(width: 8),
+                Text(
+                  'Profile & Account',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.4,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: AppSizes.lg),
+            const SizedBox(height: 16),
 
-            // Guest hero card
+            // Guest Hero Card
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 color: AppColors.bgSecondary,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: AppColors.borderStrong),
-                boxShadow: AppShadows.sm,
               ),
               child: Column(
                 children: [
                   Container(
-                    width: 64,
-                    height: 64,
+                    width: 56,
+                    height: 56,
                     alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF181820),
+                    decoration: BoxDecoration(
+                      color: AppColors.bgTertiary,
                       shape: BoxShape.circle,
+                      border: Border.all(color: AppColors.borderStrong),
                     ),
                     child: const Icon(
                       Icons.person_outline_rounded,
-                      size: 30,
+                      size: 26,
                       color: AppColors.textMuted,
                     ),
                   ),
-                  const SizedBox(height: AppSizes.md),
+                  const SizedBox(height: 14),
                   const Text(
                     "You're browsing as a guest",
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontFamily: 'Sora',
-                      fontSize: 17,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: AppSizes.xs),
+                  const SizedBox(height: 6),
                   const Text(
                     'Sign in to enroll in courses, sync your progress across '
-                    'devices, and keep your purchases. Your downloads and saved '
-                    'items stay on this device either way.',
+                    'devices, and keep your purchases.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 13,
-                      height: 1.45,
+                      fontSize: 12.5,
+                      height: 1.4,
                       color: AppColors.textSecondary,
                     ),
                   ),
-                  const SizedBox(height: AppSizes.lg),
+                  const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
@@ -1223,7 +1211,7 @@ class _GuestProfileView extends StatelessWidget {
                         backgroundColor: AppColors.brandEmerald,
                         foregroundColor: Colors.white,
                         elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -1231,19 +1219,19 @@ class _GuestProfileView extends StatelessWidget {
                       onPressed: () => context.push(AppRoutes.login),
                       child: const Text(
                         'Sign in',
-                        style:
-                            TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 14),
                       ),
                     ),
                   ),
-                  const SizedBox(height: AppSizes.sm),
+                  const SizedBox(height: 8),
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.textPrimary,
                         side: const BorderSide(color: AppColors.borderStrong),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -1251,19 +1239,19 @@ class _GuestProfileView extends StatelessWidget {
                       onPressed: () => context.push(AppRoutes.register),
                       child: const Text(
                         'Create account',
-                        style:
-                            TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700, fontSize: 14),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: AppSizes.xl),
+            const SizedBox(height: 20),
 
-            // Browse actions available without an account
+            // Browse options available without an account
             const _SectionHeader(title: 'Explore without an account'),
-            const SizedBox(height: AppSizes.xs),
+            const SizedBox(height: 6),
             _SettingsGroup(
               items: [
                 _SettingsItemData(
@@ -1286,12 +1274,12 @@ class _GuestProfileView extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: AppSizes.xxl),
+            const SizedBox(height: 28),
             const Center(
               child: Text(
                 'Memere • Ethiopian University Entrance Exam Prep',
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11.5,
                   fontWeight: FontWeight.w600,
                   color: AppColors.textMuted,
                 ),
@@ -1303,4 +1291,3 @@ class _GuestProfileView extends StatelessWidget {
     );
   }
 }
-
