@@ -475,6 +475,7 @@ class _CourseContentSheetState extends ConsumerState<_CourseContentSheet> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
                             Icons.task_alt_rounded,
@@ -492,12 +493,18 @@ class _CourseContentSheetState extends ConsumerState<_CourseContentSheet> {
                           ),
                         ],
                       ),
-                      Text(
-                        '$completedCount of $totalLessons completed (${(progressPercent * 100).round()}%)',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.brandEmerald,
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          '$completedCount / $totalLessons (${(progressPercent * 100).round()}%)',
+                          textAlign: TextAlign.right,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.brandEmerald,
+                          ),
                         ),
                       ),
                     ],

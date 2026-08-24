@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_constants.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/offline/offline_providers.dart';
 import '../../domain/entities/course_entity.dart';
 import '../../domain/usecases/list_courses_usecase.dart';
 import 'courses_providers.dart';
@@ -211,7 +212,22 @@ class CourseListNotifier extends AsyncNotifier<CourseListState> {
     );
 
     return result.fold(
-      (failure) => throw failure,
+      (failure) {
+        // Offline (or server error): fall back to downloaded courses so Home
+        // still shows something usable instead of an error. Only courses that
+        // were downloaded are cached, so each one opens & studies offline.
+        final offline = ref.read(courseDetailCacheStoreProvider).listCourses();
+        if (offline.isNotEmpty) {
+          return CourseListState(
+            courses: offline,
+            filteredCourses: _applySearch(offline, searchQuery),
+            selectedSubject: subject,
+            selectedGrade: grade ?? 0,
+            searchQuery: searchQuery,
+          );
+        }
+        throw failure;
+      },
       (page) {
         return CourseListState(
           courses: page.courses,

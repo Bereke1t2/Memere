@@ -13,6 +13,9 @@ abstract class AppConstants {
   static const String downloadsIndexBoxKey = 'downloads_index';
   static const String savedItemsBoxKey = 'saved_items';
   static const String offlineAttemptResultsBoxKey = 'offline_attempt_results';
+  // Cached course structure (CourseDetailModel JSON keyed by courseId), written
+  // when a whole course is downloaded so it can be opened & studied offline.
+  static const String courseDetailsBoxKey = 'course_details';
   // Encrypted boxes: these carry correct-answer keys for on-device grading
   // (the narrow, sanctioned relaxation of "answers never sent to client").
   static const String downloadedQuizzesBoxKey = 'downloaded_quizzes';

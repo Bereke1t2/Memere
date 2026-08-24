@@ -40,6 +40,8 @@ class AppHiveBoxes {
       _openBox(AppConstants.savedItemsBoxKey),
       _openBox(AppConstants.syncQueueKey),
       _openBox(AppConstants.offlineAttemptResultsBoxKey),
+      // Course structure cache — no answer keys, so plain (unencrypted).
+      _openBox(AppConstants.courseDetailsBoxKey),
       // Encrypted: these carry the answer key (Non-Negotiable #1 relaxation).
       _openBox(AppConstants.downloadedQuizzesBoxKey, cipher: cipher),
       _openBox(AppConstants.downloadedExamsBoxKey, cipher: cipher),
@@ -62,6 +64,9 @@ class AppHiveBoxes {
 
   static Box<String> get offlineAttemptResults =>
       Hive.box<String>(AppConstants.offlineAttemptResultsBoxKey);
+
+  static Box<String> get courseDetails =>
+      Hive.box<String>(AppConstants.courseDetailsBoxKey);
 
   static Box<String> get downloadedQuizzes =>
       Hive.box<String>(AppConstants.downloadedQuizzesBoxKey);

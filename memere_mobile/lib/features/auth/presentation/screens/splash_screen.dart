@@ -77,7 +77,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     const Text('Memere', style: AppTextStyles.displayMedium),
                     const SizedBox(height: AppSizes.xs),
                     Text(
-                      'Grade 12 University Entrance Prep',
+                      'Interactive Course Learning Platform',
                       textAlign: TextAlign.center,
                       style: AppTextStyles.bodyMedium.copyWith(
                         color: AppColors.textSecondary,

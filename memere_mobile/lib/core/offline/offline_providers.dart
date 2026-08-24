@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import 'course_detail_cache_store.dart';
 import 'download_store.dart';
 import 'offline_attempt_store.dart';
 import 'saved_courses_store.dart';
@@ -12,6 +13,9 @@ import 'saved_courses_store.dart';
 
 final downloadStoreProvider =
     Provider<DownloadStore>((ref) => const DownloadStore());
+
+final courseDetailCacheStoreProvider =
+    Provider<CourseDetailCacheStore>((ref) => const CourseDetailCacheStore());
 
 final savedCoursesStoreProvider =
     Provider<SavedCoursesStore>((ref) => const SavedCoursesStore());
