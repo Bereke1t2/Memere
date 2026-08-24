@@ -28,7 +28,6 @@ final courseDownloadProvider = NotifierProvider.family<CourseDownloadController,
 final downloadedCoursesProvider = Provider<List<CourseEntity>>((ref) {
   return ref.watch(courseDetailCacheStoreProvider).listCourses();
 });
-
 enum CourseDownloadStatus { idle, running, done, failed }
 
 /// Aggregate progress across every asset queued for a whole-course download.
@@ -145,7 +144,6 @@ class CourseDownloadController
       await ref.read(courseDetailCacheStoreProvider).cache(detail);
       ref.invalidate(downloadedCoursesProvider);
     }
-
     state = CourseDownloadProgress(
       status: completed == 0 && failed > 0
           ? CourseDownloadStatus.failed
