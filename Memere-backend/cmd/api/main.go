@@ -142,8 +142,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	// ListenPort prefers the platform-injected PORT (Cloud Run) and falls back to
+	// APP_PORT for local dev. Binding ":"+port listens on all interfaces (0.0.0.0),
+	// which Cloud Run requires.
+	listenPort := cfg.App.ListenPort()
 	srv := &http.Server{
-		Addr:              ":" + cfg.App.Port,
+		Addr:              ":" + listenPort,
 		Handler:           app.Router,
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
@@ -152,7 +156,7 @@ func main() {
 	}
 
 	go func() {
-		slog.Info("API server listening", "port", cfg.App.Port, "env", cfg.App.Env)
+		slog.Info("API server listening", "port", listenPort, "env", cfg.App.Env)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			slog.Error("listen and serve error", "err", err)
 			os.Exit(1)
@@ -176,17 +180,30 @@ func main() {
 		slog.Info("subscription sweeper disabled", "reason", "SUBSCRIPTION_SWEEP_ENABLED=false")
 	}
 
-	// Transcode worker: re-enqueue videos stranded in 'processing' by a previous
-	// crash (the in-proc queue is non-durable), then start consuming jobs.
-	if n, err := app.VideoUC.RequeueStuck(bgCtx); err != nil {
-		slog.Error("requeue stuck videos failed", "err", err)
-	} else if n > 0 {
-		slog.Info("re-enqueued stuck videos", "count", n)
+	// Transcode worker: needs FFmpeg on PATH and steady CPU, so on the scale-to-
+	// zero API image it is disabled (TRANSCODE_WORKER_ENABLED=false) and the
+	// dedicated worker image owns transcoding. When enabled, re-enqueue videos
+	// stranded in 'processing' by a previous crash (the in-proc queue is
+	// non-durable), then start consuming jobs.
+	if cfg.Video.WorkerEnabled {
+		if n, err := app.VideoUC.RequeueStuck(bgCtx); err != nil {
+			slog.Error("requeue stuck videos failed", "err", err)
+		} else if n > 0 {
+			slog.Info("re-enqueued stuck videos", "count", n)
+		}
+		go app.Worker.Run(bgCtx)
+	} else {
+		slog.Info("transcode worker disabled", "reason", "TRANSCODE_WORKER_ENABLED=false")
 	}
-	go app.Worker.Run(bgCtx)
 
-	// Phase 5 workers: notification fan-out + engagement (streak) sweeper.
-	go app.NotifWorker.Run(bgCtx)
+	// Phase 5 workers: notification fan-out + engagement (streak) sweeper. The
+	// notification worker is an always-on consumer loop, so it is disabled on a
+	// scale-to-zero instance whose CPU is throttled between requests.
+	if cfg.Notifications.WorkerEnabled {
+		go app.NotifWorker.Run(bgCtx)
+	} else {
+		slog.Info("notification worker disabled", "reason", "NOTIFICATION_WORKER_ENABLED=false")
+	}
 
 	if cfg.EngagementSweep.Enabled {
 		go app.EngSweeper.Run(bgCtx)
@@ -202,7 +219,10 @@ func main() {
 
 	stopBackground()
 
-	ctxTimeout, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	// Drain in-flight requests before exiting. Cloud Run sends SIGTERM and then
+	// SIGKILLs the container after a ~10s grace period, so keep the drain within
+	// that window; requests on this API are short, so this is ample headroom.
+	ctxTimeout, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctxTimeout); err != nil {
@@ -438,6 +458,16 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	// Engagement sweeper warns students whose streak is at risk.
 	engSweeper := worker.NewEngagementSweeper(progressRepo, hooks, nil, cfg.EngagementSweep.Interval)
 
+	// Attempt + subscription sweepers. Constructed here (before the router) so the
+	// same instances can be driven two ways: by the in-process tickers (main.go)
+	// and on-demand via the internal jobs endpoints for an external scheduler.
+	// Construction is unconditional; whether the tickers run is gated in main.go
+	// by the *_ENABLED flags, and whether the endpoints exist is gated by
+	// INTERNAL_JOB_TOKEN in the router.
+	sweeper := worker.NewAttemptSweeper(cfg.Sweeper.Interval, quizSvc, examSvc)
+	subSweeper := worker.NewSubscriptionSweeper(cfg.SubSweeper.Interval, subscriptionSvc, nil)
+	jobsHandler := delivery_http.NewJobsHandler(sweeper, subSweeper, engSweeper)
+
 	// Phase 5 usecases.
 	progressSvc := progress.NewService(progressRepo, courseRepo, enrollmentRepo, accessSvc, lessonRepo, hooks,
 		progress.Config{StreakTZ: "Africa/Addis_Ababa"}, nil)
@@ -489,12 +519,11 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 
 		Media:       mediaHandler,
 		GoogleOAuth: googleOAuthHandler,
+		Jobs:        jobsHandler,
 	})
 
-	// Background workers: the expiry sweeper drives both attempt engines off one
-	// ticker; the transcode worker consumes the in-proc queue and runs FFmpeg.
-	sweeper := worker.NewAttemptSweeper(cfg.Sweeper.Interval, quizSvc, examSvc)
-	subSweeper := worker.NewSubscriptionSweeper(cfg.SubSweeper.Interval, subscriptionSvc, nil)
+	// Transcode worker consumes the in-proc queue and runs FFmpeg. Constructed
+	// regardless of TRANSCODE_WORKER_ENABLED; main.go decides whether to Run it.
 	coder := transcode.NewFFmpeg()
 	transcodeWorker := worker.NewTranscodeWorker(queue.Transcode(), store, videoRepo, coder, queue, nil, worker.WorkerCfg{
 		Concurrency: cfg.Video.Concurrency,

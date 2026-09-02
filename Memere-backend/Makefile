@@ -1,4 +1,4 @@
-.PHONY: run build tidy lint test up down migrate-up migrate-down migrate-create sqlc minio-bucket \
+.PHONY: run build tidy lint test up down migrate-up migrate-down migrate-force migrate-create sqlc minio-bucket \
         ci docker-build docker-build-worker compose-up compose-down seed seed-admin seed-teacher \
         k8s-dry-run k8s-apply k8s-migrate k8s-status k8s-rollout kind-up kind-down
 
@@ -83,6 +83,14 @@ migrate-up:
 
 migrate-down:
 	go run ./cmd/migrate -direction down
+
+# migrate-force clears a "dirty" migration state left by a failed migration: it
+# sets the recorded version and clears the dirty flag WITHOUT running any SQL, so
+# the next `make migrate-up` resumes cleanly. Recovery only.
+#   make migrate-force V=18    # then: make migrate-up
+migrate-force:
+	@if [ -z "$(V)" ]; then echo "usage: make migrate-force V=<version>"; exit 1; fi
+	go run ./cmd/migrate -force $(V)
 
 # migrate-create scaffolds a new up/down pair:  make migrate-create name=add_widgets
 migrate-create:

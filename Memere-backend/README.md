@@ -253,23 +253,40 @@ The API server will start on `http://localhost:8080`.
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `APP_ENV` | Application environment | `development` / `staging` / `production` |
-| `APP_PORT` | Server port | `8080` |
+| `APP_PORT` | Server port (local dev / Compose) | `8080` |
+| `PORT` | Platform-injected listen port (Cloud Run). Preferred over `APP_PORT` when set — **do not set it manually** | `8080` |
 | `DB_HOST` | PostgreSQL host | `localhost` |
 | `DB_PORT` | PostgreSQL port | `5432` |
 | `DB_USER` | PostgreSQL user | `memere` |
 | `DB_PASSWORD` | PostgreSQL password | `your_secure_password` |
 | `DB_NAME` | PostgreSQL database name | `memere_db` |
-| `DB_SSL_MODE` | PostgreSQL SSL mode | `disable` / `require` |
-| `REDIS_HOST` | Redis host | `localhost` |
+| `DB_SSL_MODE` | PostgreSQL SSL mode (Neon needs `require`) | `disable` / `require` |
+| `DB_MAX_CONNS` | Max pool connections **per instance** (× max-instances must stay ≤ the DB's global limit) | `10` |
+| `DB_MIN_CONNS` | Min idle pool connections (keep `0` so scaled-in instances release connections) | `0` |
+| `DB_MAX_CONN_LIFETIME` | Recycle connections older than this | `30m` |
+| `DB_POOLED` | Use the pgx simple protocol for a transaction-mode pooler (Neon `-pooler` / PgBouncer) | `false` |
+| `REDIS_URL` | Full `redis://` / `rediss://` connection string (Upstash). Overrides the discrete Redis vars; `rediss://` enables TLS automatically | `rediss://default:***@xxx.upstash.io:6379` |
+| `REDIS_HOST` | Redis host (discrete-var path) | `localhost` |
 | `REDIS_PORT` | Redis port | `6379` |
 | `REDIS_PASSWORD` | Redis password | `""` |
-| `JWT_SECRET` | JWT signing secret | `your_jwt_secret_key` |
+| `REDIS_TLS` | Enable TLS on the discrete-var path (Upstash requires it) | `false` |
+| `JWT_SECRET` | JWT signing secret — **≥ 32 chars in production** (boot fails otherwise) | `your_jwt_secret_key` |
 | `JWT_ACCESS_TTL` | Access token TTL | `15m` |
 | `JWT_REFRESH_TTL` | Refresh token TTL | `720h` |
-| `SWEEPER_ENABLED` | Enable the background attempt-expiry sweeper | `true` |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated allowed origins. **Must not be `*` in production** (boot fails otherwise) | `https://app.memere.et` |
+| `TRUSTED_PROXIES` | Proxy CIDRs trusted for `X-Forwarded-For` client-IP resolution; empty = trust none | `` |
+| `RATE_LIMIT_RPM` | Global per-IP request budget per minute | `120` |
+| `SWEEPER_ENABLED` | Enable the in-process attempt-expiry sweeper ticker | `true` |
 | `SWEEPER_INTERVAL` | How often the sweeper scans for expired attempts | `60s` |
-| `SUBSCRIPTION_SWEEP_ENABLED` | Enable the background subscription-expiry sweeper | `true` |
+| `SUBSCRIPTION_SWEEP_ENABLED` | Enable the in-process subscription-expiry sweeper ticker | `true` |
 | `SUBSCRIPTION_SWEEP_INTERVAL` | How often the subscription sweeper scans for lapsed plans | `1h` |
+| `ENGAGEMENT_SWEEP_ENABLED` / `ENGAGEMENT_SWEEP_INTERVAL` | Streak-warning sweeper ticker toggle + cadence | `true` / `24h` |
+| `TRANSCODE_WORKER_ENABLED` | Run the in-process transcode worker (needs FFmpeg + steady CPU) | `true` |
+| `NOTIFICATION_WORKER_ENABLED` | Run the in-process push/email delivery worker (steady CPU) | `true` |
+| `INTERNAL_JOB_TOKEN` | Shared secret guarding `/internal/jobs/*` (Cloud Scheduler). Empty = those routes are **not registered** | `<32-byte hex>` |
+| `METRICS_PORT` | Prometheus `/metrics` port; set **empty** on Cloud Run (only one port is routed) | `9090` |
+| `LOG_LEVEL` | Structured-log level (`debug`/`info`/`warn`/`error`) | `info` |
+| `OTEL_ENDPOINT` | OTLP/HTTP collector URL (`stdout` in dev, empty = off) | `` |
 | `AWS_S3_BUCKET` | S3 bucket for media | `memere-media` |
 | `AWS_REGION` | AWS region | `af-south-1` |
 | `CHAPA_SECRET_KEY` | Chapa payment API key | `CHASECK_TEST-...` |
@@ -571,6 +588,158 @@ docker build -t memere-backend .
 # Run with Docker Compose
 docker-compose up -d
 ```
+
+### Google Cloud Run + Upstash (production)
+
+This is the supported managed-hosting path: the Go binary runs on **Cloud Run**,
+PostgreSQL is **Neon**, and Redis is **Upstash**. Nothing durable lives in the
+container — it is fully stateless and horizontally scalable.
+
+#### Topology (read this first)
+
+The app uses an **in-process, non-durable job queue** for two async paths:
+video **transcoding** (FFmpeg) and **push/email** delivery. A job is enqueued and
+consumed *in the same process* — it does not cross instances. In-app
+notifications are written to Postgres synchronously and are unaffected.
+
+Consequences for Cloud Run:
+
+- The process that serves `POST /videos/:id/confirm` (and other
+  notification-producing endpoints) **must also run the transcode/notification
+  workers**, so those workers must be **enabled in the API service** and the
+  instance needs **CPU always allocated** (background goroutines don't run while
+  a scale-to-zero instance is throttled between requests).
+- Therefore the recommended topology is a **single Cloud Run service with
+  `--min-instances=1 --no-cpu-throttling`** — not scale-to-zero. Pure
+  scale-to-zero would silently drop transcode/push jobs; it becomes possible
+  only after the in-proc queue is replaced with a durable queue (Cloud Tasks /
+  Pub/Sub — future work).
+- The **periodic sweeps** (attempt expiry, subscription expiry, streak warnings)
+  are DB-driven and idempotent. Instead of running their per-instance tickers
+  (which would fire on every instance once you scale past one), disable the
+  tickers and drive them **once per tick from Cloud Scheduler** hitting the
+  authenticated `/internal/jobs/*` endpoints.
+
+The image must include FFmpeg, so build the single service from
+**`Dockerfile.worker`** (the distroless `Dockerfile` has no FFmpeg and is kept
+for a future durable-queue split).
+
+#### 1. Provision managed data stores
+
+**Neon (PostgreSQL):** create a project in a region close to your Cloud Run
+region. Copy the connection details. Prefer the **pooled** (`-pooler`) host so
+many Cloud Run instances share few backend connections, and set `DB_POOLED=true`
+(transaction-mode pooler ⇒ pgx simple protocol). Neon requires TLS, so
+`DB_SSL_MODE=require`.
+
+**Upstash (Redis):** create a database, then copy the **`rediss://`** connection
+URL from the console — that single value populates `REDIS_URL` and enables TLS.
+
+#### 2. Set project + enable APIs
+
+```bash
+export PROJECT_ID=your-gcp-project
+export REGION=europe-west1          # match Neon/Upstash region for low latency
+gcloud config set project "$PROJECT_ID"
+gcloud services enable run.googleapis.com artifactregistry.googleapis.com \
+    cloudscheduler.googleapis.com secretmanager.googleapis.com
+```
+
+#### 3. Store secrets in Secret Manager (never in the image or env files)
+
+```bash
+# Generate strong secrets locally
+openssl rand -base64 48 | tr -d '\n' | gcloud secrets create JWT_SECRET --data-file=-
+openssl rand -hex 32   | tr -d '\n' | gcloud secrets create INTERNAL_JOB_TOKEN --data-file=-
+
+# Managed-store credentials (paste the real values)
+printf '%s' 'postgres://USER:PASSWORD@HOST-pooler.REGION.aws.neon.tech/DB?sslmode=require' \
+  | gcloud secrets create DB_PASSWORD --data-file=-   # or store discrete DB_* as separate secrets
+printf '%s' 'rediss://default:PASSWORD@xxx.upstash.io:6379' \
+  | gcloud secrets create REDIS_URL --data-file=-
+# Plus any of: B2_APPLICATION_KEY, CHAPA_WEBHOOK_SECRET, STRIPE_WEBHOOK_SECRET, FCM_SERVER_KEY, SENDGRID_API_KEY …
+```
+
+#### 4. Build & push the image (with FFmpeg)
+
+```bash
+export REPO=memere
+gcloud artifacts repositories create "$REPO" --repository-format=docker --location="$REGION" || true
+export IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/$REPO/memere-api:$(git rev-parse --short HEAD)"
+
+# Build from Dockerfile.worker so the single service has FFmpeg for transcoding.
+gcloud builds submit --tag "$IMAGE" --config=/dev/stdin <<'EOF'
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ['build','-f','Dockerfile.worker','-t','$_IMAGE','.']
+images: ['$_IMAGE']
+substitutions: {_IMAGE: '${IMAGE}'}
+EOF
+# (or simply: docker build -f Dockerfile.worker -t "$IMAGE" . && docker push "$IMAGE")
+```
+
+#### 5. Run database migrations (once per schema change)
+
+Run them from your machine or CI against Neon — the migrator reads the same env:
+
+```bash
+DB_HOST=... DB_USER=... DB_PASSWORD=... DB_NAME=... DB_SSL_MODE=require DB_POOLED=true \
+  make migrate-up
+```
+
+#### 6. Deploy the service
+
+`deploy/cloudrun/deploy.sh` wraps the command below; run it or copy it.
+
+```bash
+gcloud run deploy memere-api \
+  --image="$IMAGE" --region="$REGION" --platform=managed \
+  --allow-unauthenticated \
+  --min-instances=1 --max-instances=4 --no-cpu-throttling \
+  --cpu=1 --memory=512Mi --concurrency=80 --timeout=300 \
+  --set-env-vars=APP_ENV=production,DB_HOST=HOST-pooler.REGION.aws.neon.tech,DB_PORT=5432,DB_USER=USER,DB_NAME=DB,DB_SSL_MODE=require,DB_POOLED=true \
+  --set-env-vars=CORS_ALLOWED_ORIGINS=https://app.memere.et,METRICS_PORT=,APP_PUBLIC_URL=https://api.memere.et \
+  --set-env-vars=SWEEPER_ENABLED=false,SUBSCRIPTION_SWEEP_ENABLED=false,ENGAGEMENT_SWEEP_ENABLED=false \
+  --set-env-vars=TRANSCODE_WORKER_ENABLED=true,NOTIFICATION_WORKER_ENABLED=true \
+  --set-secrets=JWT_SECRET=JWT_SECRET:latest,INTERNAL_JOB_TOKEN=INTERNAL_JOB_TOKEN:latest,REDIS_URL=REDIS_URL:latest,DB_PASSWORD=DB_PASSWORD:latest
+```
+
+Key flags: `--no-cpu-throttling` keeps background workers alive; `--min-instances=1`
+keeps one warm; `METRICS_PORT=` (empty) disables the second metrics listener Cloud
+Run can't route to; `PORT` is injected automatically and preferred by the server.
+
+#### 7. Schedule the periodic sweeps
+
+`deploy/cloudrun/scheduler.sh` creates the three jobs. Each authenticates with the
+same `INTERNAL_JOB_TOKEN` via the `X-Internal-Job-Token` header:
+
+```bash
+export SERVICE_URL=$(gcloud run services describe memere-api --region="$REGION" --format='value(status.url)')
+export TOKEN=$(gcloud secrets versions access latest --secret=INTERNAL_JOB_TOKEN)
+
+gcloud scheduler jobs create http sweep-attempts --location="$REGION" \
+  --schedule="*/2 * * * *" --uri="$SERVICE_URL/internal/jobs/sweep-attempts" \
+  --http-method=POST --headers="X-Internal-Job-Token=$TOKEN"
+gcloud scheduler jobs create http sweep-subscriptions --location="$REGION" \
+  --schedule="17 * * * *" --uri="$SERVICE_URL/internal/jobs/sweep-subscriptions" \
+  --http-method=POST --headers="X-Internal-Job-Token=$TOKEN"
+gcloud scheduler jobs create http sweep-engagement --location="$REGION" \
+  --schedule="23 3 * * *" --uri="$SERVICE_URL/internal/jobs/sweep-engagement" \
+  --http-method=POST --headers="X-Internal-Job-Token=$TOKEN"
+```
+
+#### 8. Verify
+
+```bash
+curl -fsS "$SERVICE_URL/healthz"    # liveness → {"status":"ok"}
+curl -fsS "$SERVICE_URL/readyz"     # readiness → 200 only when Neon + Upstash reachable
+curl -fsS "$SERVICE_URL/version"    # build metadata
+curl -fsS -X POST "$SERVICE_URL/internal/jobs/sweep-attempts" -H "X-Internal-Job-Token=$TOKEN"  # → {"status":"ok"}
+```
+
+Graceful shutdown (SIGTERM → drain within Cloud Run's ~10 s grace) and connection
+pooling are handled by the server; see `DB_MAX_CONNS` guidance so
+`DB_MAX_CONNS × --max-instances` stays under Neon's connection limit.
 
 ### Kubernetes
 

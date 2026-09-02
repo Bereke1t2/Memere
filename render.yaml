@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: memere-backend
+    runtime: docker
+    rootDir: Memere-backend
+    dockerfilePath: ./Dockerfile.worker
+    region: frankfurt
+    plan: starter
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_PUBLIC_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        value: "*"
+      - key: DATABASE_URL
+        value: postgresql://neondb_owner:npg_ki4GCJ8cOhPe@ep-blue-unit-b2ryzoq0-pooler.c-6.eu-central-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require
+      - key: DB_POOLED
+        value: "true"
+      - key: REDIS_URL
+        value: rediss://default:gQAAAAAAAsknAAIgcDI1MmU1NWM5M2EwMjk0Nzg2OThlY2ZiYjkzM2NhZmRiOQ@relieved-buffalo-182567.upstash.io:6379
+      - key: STORAGE_PROVIDER
+        value: b2
+      - key: B2_APPLICATION_KEY_ID
+        value: 003aca5833548750000000002
+      - key: B2_APPLICATION_KEY
+        sync: false
+      - key: B2_ENDPOINT
+        value: s3.eu-central-003.backblazeb2.com
+      - key: B2_REGION
+        value: eu-central-003
+      - key: B2_BUCKET
+        value: memere
+      - key: METRICS_PORT
+        value: ""

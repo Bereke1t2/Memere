@@ -11,20 +11,24 @@ CREATE INDEX IF NOT EXISTS idx_courses_published_subject_grade
     ON courses.courses (subject, grade, enrollment_count DESC, created_at DESC)
     WHERE deleted_at IS NULL AND is_published = true;
 
--- Payment reconciliation + revenue queries filter by status and created_at or
--- paid_at. The composite index supports both the admin payment list and the
--- revenue roll-up without a seq scan on the full payments table.
+-- Payment reconciliation + revenue queries filter by status and paid_at. The
+-- composite index supports both the admin payment list and the revenue roll-up
+-- without a seq scan on the full payments table. (payments rows are immutable
+-- financial records — never soft-deleted — so there is no deleted_at column.)
 CREATE INDEX IF NOT EXISTS idx_payments_status_paid_at
-    ON payments.payments (status, paid_at DESC)
-    WHERE deleted_at IS NULL;
+    ON payments.payments (status, paid_at DESC);
 
 -- Attempt expiry sweeper (Phase 2 §9.2) scans in_progress attempts past their
--- deadline. A partial index on the status column reduces the scan to the small
--- subset of live attempts rather than the whole table.
+-- deadline. Partial indexes on the in_progress subset keep the scan tiny.
+--
+-- Exam attempts store no explicit expiry: the deadline is started_at +
+-- exams.duration_minutes (0005 — started_at is the server-side timer source of
+-- truth) and the sweeper orders by started_at ASC, so index started_at.
 CREATE INDEX IF NOT EXISTS idx_exam_attempts_inprogress
-    ON courses.exam_attempts (expires_at)
+    ON courses.exam_attempts (started_at)
     WHERE status = 'in_progress';
 
+-- Quiz attempts carry an explicit expires_at deadline (added in 0011); index it.
 CREATE INDEX IF NOT EXISTS idx_quiz_attempts_inprogress
     ON courses.quiz_attempts (expires_at)
     WHERE status = 'in_progress';
@@ -33,12 +37,12 @@ CREATE INDEX IF NOT EXISTS idx_quiz_attempts_inprogress
 -- The existing progress_student_course_idx covers (student_id, course_id) but
 -- not ordering by updated_at, which the dashboard query needs.
 CREATE INDEX IF NOT EXISTS idx_progress_student_updated
-    ON progress.lesson_progress (student_id, updated_at DESC)
+    ON progress.progress (student_id, updated_at DESC)
     WHERE deleted_at IS NULL;
 
--- Notification unread count: the existing notifications_user_unread_idx covers
--- (user_id) WHERE is_read = false; extend to include created_at for the list
--- query ordering without a filesort.
+-- Notification list: the existing notifications_user_unread_idx covers
+-- (user_id, read_at) WHERE read_at IS NULL; add (user_id, created_at DESC) for
+-- the full-list query ordering without a filesort. (notifications rows are not
+-- soft-deleted — no deleted_at column.)
 CREATE INDEX IF NOT EXISTS idx_notifications_user_created
-    ON progress.notifications (user_id, created_at DESC)
-    WHERE deleted_at IS NULL;
+    ON notifications.notifications (user_id, created_at DESC);

@@ -90,3 +90,9 @@ func (s *SubscriptionSweeper) sweepOnce(ctx context.Context) {
 		log.Printf("subscription sweeper: expired %d subscription(s)", len(expired))
 	}
 }
+
+// RunOnce performs exactly one sweep and returns. It lets an external scheduler
+// (Cloud Scheduler → /internal/jobs/sweep-subscriptions) drive the sweep when
+// the in-process ticker is disabled on a scale-to-zero deployment. The guarded
+// transition makes it safe to call repeatedly / concurrently with Run.
+func (s *SubscriptionSweeper) RunOnce(ctx context.Context) { s.sweepOnce(ctx) }

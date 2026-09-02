@@ -28,6 +28,8 @@ type Config struct {
 	Payment    PaymentConfig
 	Observability ObservabilityConfig
 	Security      SecurityConfig
+	Notifications NotificationConfig
+	Jobs          JobsConfig
 
 	// Reserved for later phases (not required to boot in Phase 1).
 	AWS      AWSConfig
@@ -41,6 +43,10 @@ type Config struct {
 type AppConfig struct {
 	Env  string `envconfig:"APP_ENV" default:"development"`
 	Port string `envconfig:"APP_PORT" default:"8080"`
+	// CloudRunPort mirrors the platform-injected PORT variable (Cloud Run,
+	// Heroku, etc.). It is empty in local dev. ListenPort prefers it over Port so
+	// the same binary binds the platform's port without any APP_PORT juggling.
+	CloudRunPort string `envconfig:"PORT" default:""`
 	// PublicURL is the externally reachable base URL of this API (scheme+host+
 	// port, no trailing slash). It is used only to build absolute media-proxy
 	// URLs when STORAGE_PROVIDER=gdrive (e.g. <PublicURL>/api/v1/media?...), so
@@ -50,20 +56,51 @@ type AppConfig struct {
 
 func (a AppConfig) IsProduction() bool { return a.Env == "production" }
 
-type DBConfig struct {
-	Host     string `envconfig:"DB_HOST" required:"true"`
-	Port     string `envconfig:"DB_PORT" default:"5432"`
-	User     string `envconfig:"DB_USER" required:"true"`
-	Password string `envconfig:"DB_PASSWORD" required:"true"`
-	Name     string `envconfig:"DB_NAME" required:"true"`
-	SSLMode  string `envconfig:"DB_SSL_MODE" default:"disable"`
-
-	MaxConns        int32         `envconfig:"DB_MAX_CONNS" default:"20"`
-	MaxConnIdleTime time.Duration `envconfig:"DB_MAX_CONN_IDLE_TIME" default:"5m"`
+// ListenPort is the TCP port the HTTP server binds. It prefers the platform-
+// injected PORT (Cloud Run and most PaaS route only to that port) and falls back
+// to APP_PORT for local dev / Docker Compose. The server binds ":"+ListenPort,
+// i.e. all interfaces (0.0.0.0), as Cloud Run requires.
+func (a AppConfig) ListenPort() string {
+	if a.CloudRunPort != "" {
+		return a.CloudRunPort
+	}
+	return a.Port
 }
 
-// DSN builds a libpq-style connection URL for pgx.
+type DBConfig struct {
+	// URL, when set, is a full connection string (postgres:// or postgresql://) that
+	// overrides Host/Port/User/Password/Name/SSLMode — convenient for managed
+	// providers like Neon that provide a single connection string.
+	URL      string `envconfig:"DATABASE_URL" default:""`
+	Host     string `envconfig:"DB_HOST" default:""`
+	Port     string `envconfig:"DB_PORT" default:"5432"`
+	User     string `envconfig:"DB_USER" default:""`
+	Password string `envconfig:"DB_PASSWORD" default:""`
+	Name     string `envconfig:"DB_NAME" default:""`
+	SSLMode  string `envconfig:"DB_SSL_MODE" default:"disable"`
+
+	// Pool sizing. On Cloud Run each instance owns its own pool, so the ceiling is
+	// MaxConns × max-instances against the database's global connection limit
+	// (Neon free tier ~100). Keep MaxConns modest and lean on a small MinConns so
+	// scaled-out instances don't exhaust it. MaxConnLifetime recycles connections
+	// so a scaled-in instance's conns are released promptly.
+	MaxConns        int32         `envconfig:"DB_MAX_CONNS" default:"10"`
+	MinConns        int32         `envconfig:"DB_MIN_CONNS" default:"0"`
+	MaxConnIdleTime time.Duration `envconfig:"DB_MAX_CONN_IDLE_TIME" default:"5m"`
+	MaxConnLifetime time.Duration `envconfig:"DB_MAX_CONN_LIFETIME" default:"30m"`
+
+	// Pooled is set true when connecting through a transaction-mode pooler
+	// (Neon's -pooler endpoint / PgBouncer). That mode does not support the
+	// implicit prepared statements pgx caches by default, so the driver must use
+	// the simple query protocol. Leave false for a direct endpoint.
+	Pooled bool `envconfig:"DB_POOLED" default:"false"`
+}
+
+// DSN builds a connection URL for pgx, using URL directly when set.
 func (d DBConfig) DSN() string {
+	if d.URL != "" {
+		return d.URL
+	}
 	u := url.URL{
 		Scheme: "postgres",
 		User:   url.UserPassword(d.User, d.Password),
@@ -77,10 +114,18 @@ func (d DBConfig) DSN() string {
 }
 
 type RedisConfig struct {
-	Host     string `envconfig:"REDIS_HOST" required:"true"`
+	// URL, when set, is a full connection string (redis:// or rediss://) that
+	// overrides Host/Port/Password/DB/TLS — convenient for managed providers like
+	// Upstash that hand you one URL. A rediss:// scheme enables TLS automatically.
+	URL      string `envconfig:"REDIS_URL" default:""`
+	Host     string `envconfig:"REDIS_HOST" default:"localhost"`
 	Port     string `envconfig:"REDIS_PORT" default:"6379"`
 	Password string `envconfig:"REDIS_PASSWORD" default:""`
 	DB       int    `envconfig:"REDIS_DB" default:"0"`
+	// TLS enables a TLS connection (required by Upstash and most managed Redis).
+	// Leave false for a local/Docker Redis. Ignored when URL is set (the URL's
+	// scheme decides). Upstash uses a valid public cert, so no extra CA config.
+	TLS bool `envconfig:"REDIS_TLS" default:"false"`
 
 	// Pool sizing and timeouts (Phase 6 Skill 3 §12.2).
 	PoolSize    int           `envconfig:"REDIS_POOL_SIZE"    default:"20"`
@@ -111,6 +156,13 @@ type HTTPConfig struct {
 	// (default 5 attempts per 15 minutes per IP, spec §7.3).
 	LoginRateLimit  int           `envconfig:"LOGIN_RATE_LIMIT" default:"5"`
 	LoginRateWindow time.Duration `envconfig:"LOGIN_RATE_WINDOW" default:"15m"`
+
+	// TrustedProxies lists the CIDRs/IPs Gin trusts to set X-Forwarded-For, so
+	// client IPs (used by the rate limiter and logs) are read from the real edge
+	// rather than spoofable headers. Behind Cloud Run set this to the container
+	// network range that fronts the app (see README); empty means "trust none"
+	// (Gin uses the direct RemoteAddr — the safe default on an untrusted network).
+	TrustedProxies []string `envconfig:"TRUSTED_PROXIES" default:""`
 }
 
 // SweeperConfig tunes the background expiry sweeper (Phase 2 §9.2). Interval is
@@ -244,6 +296,11 @@ type VideoConfig struct {
 	// means os.TempDir()/memere-transcode.
 	Concurrency int    `envconfig:"TRANSCODE_CONCURRENCY" default:"0"`
 	WorkDir     string `envconfig:"TRANSCODE_WORKDIR"`
+	// WorkerEnabled runs the in-process transcode worker (needs FFmpeg on PATH).
+	// The scale-to-zero Cloud Run API image is FFmpeg-free and CPU-throttled
+	// between requests, so it sets this false and lets the dedicated worker image
+	// (Dockerfile.worker) own transcoding. Defaults true for local dev / Compose.
+	WorkerEnabled bool `envconfig:"TRANSCODE_WORKER_ENABLED" default:"true"`
 }
 
 type AWSConfig struct {
@@ -289,6 +346,26 @@ type SecurityConfig struct {
 	MinJWTSecretLen  int           `envconfig:"MIN_JWT_SECRET_LEN"  default:"32"`
 }
 
+// NotificationConfig gates the in-process notification worker (Phase 5). On a
+// scale-to-zero Cloud Run instance whose CPU is throttled between requests, an
+// always-on delivery loop can't run reliably, so production disables it here and
+// drives delivery from the dedicated worker image / a scheduled sweep instead.
+// Defaults true so local dev and Docker Compose keep their current behavior.
+type NotificationConfig struct {
+	WorkerEnabled bool `envconfig:"NOTIFICATION_WORKER_ENABLED" default:"true"`
+}
+
+// JobsConfig secures the internal /internal/jobs/* endpoints that Cloud
+// Scheduler calls to drive periodic sweeps (attempt expiry, subscription expiry,
+// engagement) when the in-process tickers are disabled on a scale-to-zero
+// service. InternalToken is a shared secret compared in constant time; when it
+// is empty the internal routes are not registered at all (local dev keeps using
+// the in-process tickers, so it needs no token). Never hardcode it — inject via
+// a secret and give the same value to the Scheduler job's header.
+type JobsConfig struct {
+	InternalToken string `envconfig:"INTERNAL_JOB_TOKEN" default:""`
+}
+
 // ObservabilityConfig groups Phase 6 telemetry settings.
 //
 //   - LogLevel:      stdlib slog level ("debug" | "info" | "warn" | "error").
@@ -307,6 +384,9 @@ func Load() (*Config, error) {
 	var cfg Config
 	if err := envconfig.Process("", &cfg); err != nil {
 		return nil, fmt.Errorf("load config: %w", err)
+	}
+	if cfg.DB.URL == "" && (cfg.DB.Host == "" || cfg.DB.User == "" || cfg.DB.Password == "" || cfg.DB.Name == "") {
+		return nil, fmt.Errorf("load config: either DATABASE_URL or DB_HOST/DB_USER/DB_PASSWORD/DB_NAME must be set")
 	}
 	return &cfg, nil
 }

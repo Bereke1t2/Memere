@@ -100,3 +100,9 @@ func (w *EngagementSweeper) tick(ctx context.Context) {
 		log.Printf("engagement sweeper: sent streak warnings to %d student(s)", warned)
 	}
 }
+
+// RunOnce performs exactly one sweep and returns. It lets an external scheduler
+// (Cloud Scheduler → /internal/jobs/sweep-engagement) drive the sweep when the
+// in-process ticker is disabled on a scale-to-zero deployment. Idempotent per
+// calendar day (last_warned_date), so safe to call repeatedly.
+func (w *EngagementSweeper) RunOnce(ctx context.Context) { w.tick(ctx) }

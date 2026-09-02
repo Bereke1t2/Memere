@@ -1,6 +1,9 @@
 package http
 
 import (
+	"log"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	redis "github.com/redis/go-redis/v9"
@@ -49,6 +52,12 @@ type Deps struct {
 	//   GoogleOAuth — the one-time admin connect/callback flow for the Drive account.
 	Media       *MediaHandler
 	GoogleOAuth *GoogleOAuthHandler
+
+	// Jobs exposes the periodic sweeps as authenticated /internal/jobs/* endpoints
+	// for an external scheduler (Cloud Scheduler). Nil, or an empty
+	// INTERNAL_JOB_TOKEN, leaves those routes unregistered (local dev drives the
+	// sweeps with in-process tickers instead).
+	Jobs *JobsHandler
 }
 
 // NewRouter assembles the Gin engine: the global middleware stack (in order),
@@ -57,6 +66,17 @@ type Deps struct {
 func NewRouter(deps Deps) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
+
+	// Client-IP resolution for the rate limiter and access logs. Gin reads
+	// X-Forwarded-For only from proxies it trusts; behind Cloud Run set
+	// TRUSTED_PROXIES to the fronting range so real client IPs are used and a
+	// forged header can't spoof them. Empty (default) keeps Gin's built-in
+	// behavior; an invalid value is logged and ignored rather than crashing boot.
+	if proxies := nonEmptyStrings(deps.Config.HTTP.TrustedProxies); len(proxies) > 0 {
+		if err := r.SetTrustedProxies(proxies); err != nil {
+			log.Printf("router: invalid TRUSTED_PROXIES %v, keeping default: %v", proxies, err)
+		}
+	}
 
 	// Global middleware — order matters (spec §3.2, Phase 6 §12):
 	//  1. SecurityHeaders — hardening headers on every response
@@ -84,6 +104,21 @@ func NewRouter(deps Deps) *gin.Engine {
 	r.GET("/readyz", readyzHandler(deps.DB, deps.Cache))
 	r.GET("/health", healthHandler(deps.DB, deps.Cache)) // legacy alias kept for backwards compat
 	r.GET("/version", versionHandler())
+
+	// Internal job endpoints for an external scheduler (Cloud Scheduler) to drive
+	// the periodic sweeps when the in-process tickers are disabled on a
+	// scale-to-zero deployment. Registered only when a handler AND a shared token
+	// are configured, so they never exist unauthenticated. Guarded by the
+	// constant-time InternalToken check (INTERNAL_JOB_TOKEN); excluded from the
+	// public API surface (not under /api/v1) and from user auth entirely.
+	if deps.Jobs != nil && deps.Config.Jobs.InternalToken != "" {
+		internal := r.Group("/internal/jobs", middleware.InternalToken(deps.Config.Jobs.InternalToken))
+		{
+			internal.POST("/sweep-attempts", deps.Jobs.SweepAttempts)
+			internal.POST("/sweep-subscriptions", deps.Jobs.SweepSubscriptions)
+			internal.POST("/sweep-engagement", deps.Jobs.SweepEngagement)
+		}
+	}
 
 	requireAuth := middleware.RequireAuth(deps.JWT, deps.Sessions)
 	optionalAuth := middleware.OptionalAuth(deps.JWT)
@@ -329,4 +364,17 @@ func NewRouter(deps Deps) *gin.Engine {
 	}
 
 	return r
+}
+
+// nonEmptyStrings returns s without empty/whitespace-only entries, so a stray
+// "" from an env value like TRUSTED_PROXIES="," can't be misread as a real
+// (and dangerously broad) proxy entry.
+func nonEmptyStrings(s []string) []string {
+	out := make([]string, 0, len(s))
+	for _, v := range s {
+		if strings.TrimSpace(v) != "" {
+			out = append(out, v)
+		}
+	}
+	return out
 }

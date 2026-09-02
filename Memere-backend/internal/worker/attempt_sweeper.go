@@ -79,3 +79,9 @@ func (s *AttemptSweeper) sweepOnce(ctx context.Context) {
 		log.Printf("attempt sweeper: graded %d expired attempt(s)", total)
 	}
 }
+
+// RunOnce performs exactly one sweep and returns. It lets an external scheduler
+// (Cloud Scheduler → /internal/jobs/sweep-attempts) drive the sweep when the
+// in-process ticker is disabled on a scale-to-zero deployment. Safe to call
+// concurrently with Run; the underlying engine sweeps are idempotent.
+func (s *AttemptSweeper) RunOnce(ctx context.Context) { s.sweepOnce(ctx) }
