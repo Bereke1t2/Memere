@@ -35,10 +35,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
 
 # ---------------------------------------------------------------------------
 # Runtime stage — alpine with FFmpeg.
-# Pin digest: `docker pull alpine:3.20 && docker inspect --format
-# '{{index .RepoDigests 0}}' alpine:3.20`
 # ---------------------------------------------------------------------------
-FROM alpine:3.20@sha256:de4fe76caf59e963f4c4da9a01fa0aa31fb6b29c3eef56d0d18fd65a78a040dd
+FROM alpine:3.20
 
 RUN apk add --no-cache ffmpeg ca-certificates tzdata
 
