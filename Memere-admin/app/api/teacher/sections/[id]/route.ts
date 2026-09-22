@@ -1,7 +1,7 @@
 import { getRouteStaffSession } from "@/lib/auth/session";
 import { canManageContent } from "@/lib/auth/roles";
-import { updateCourse, deleteCourse } from "@/lib/api/endpoints";
-import { CreateCourseInputSchema } from "@/lib/api/schemas";
+import { updateSection, deleteSection } from "@/lib/api/endpoints";
+import { AddSectionInputSchema } from "@/lib/api/schemas";
 import { ApiError, friendlyMessage } from "@/lib/api/errors";
 
 export async function PUT(
@@ -15,18 +15,25 @@ export async function PUT(
 
     const { id } = await params;
     const body = await req.json().catch(() => ({}));
-    const parsed = CreateCourseInputSchema.partial().safeParse(body);
+    const parsed = AddSectionInputSchema.partial().safeParse(body);
     if (!parsed.success) {
       return Response.json({ message: "Validation failed", details: parsed.error.flatten().fieldErrors }, { status: 400 });
     }
 
-    const course = await updateCourse(id, parsed.data);
-    return Response.json(course);
+    const payload = {
+      title: parsed.data.title,
+      description: parsed.data.description,
+      order_index: parsed.data.order_index ?? parsed.data.order,
+      is_published: parsed.data.is_published,
+    };
+
+    const section = await updateSection(id, payload);
+    return Response.json(section);
   } catch (err) {
     if (err instanceof ApiError) {
       return Response.json({ message: friendlyMessage(err), details: err.details }, { status: err.status });
     }
-    const message = err instanceof Error ? err.message : "Failed to update course.";
+    const message = err instanceof Error ? err.message : "Failed to update section.";
     return Response.json({ message }, { status: 500 });
   }
 }
@@ -41,13 +48,13 @@ export async function DELETE(
     if (!canManageContent(session.user)) return Response.json({ message: "Forbidden" }, { status: 403 });
 
     const { id } = await params;
-    await deleteCourse(id);
+    await deleteSection(id);
     return new Response(null, { status: 204 });
   } catch (err) {
     if (err instanceof ApiError) {
       return Response.json({ message: friendlyMessage(err), details: err.details }, { status: err.status });
     }
-    const message = err instanceof Error ? err.message : "Failed to delete course.";
+    const message = err instanceof Error ? err.message : "Failed to delete section.";
     return Response.json({ message }, { status: 500 });
   }
 }

@@ -73,6 +73,25 @@ func (s *Service) CreateExam(ctx context.Context, actor *Actor, in CreateExamInp
 	return exam, nil
 }
 
+// InlineAnswerInput is one option for inline question creation.
+type InlineAnswerInput struct {
+	Text       string
+	IsCorrect  bool
+	OrderIndex int
+}
+
+// AddInlineQuestionInput is the payload for creating a question inline with an exam.
+type AddInlineQuestionInput struct {
+	Text        string
+	Type        entity.QuestionType
+	Marks       int
+	Explanation *string
+	OrderIndex  int
+	Subject     *string
+	Topic       *string
+	Answers     []InlineAnswerInput
+}
+
 // AddExamQuestion links a bank question to an exam and recomputes the exam's
 // total_marks from the sum of its question marks, transactionally, so the
 // header total never drifts from the parts (skill decision: total is derived).
@@ -87,6 +106,72 @@ func (s *Service) AddExamQuestion(ctx context.Context, actor *Actor, examID, que
 
 	err = s.tx.WithinTx(ctx, func(ctx context.Context) error {
 		eq := &entity.ExamQuestion{ExamID: examID, QuestionID: questionID, OrderIndex: orderIndex, Marks: marks}
+		if err := s.exams.AddQuestion(ctx, eq); err != nil {
+			return err
+		}
+		links, err := s.exams.ListQuestions(ctx, examID)
+		if err != nil {
+			return err
+		}
+		total := 0
+		for _, l := range links {
+			total += l.Marks
+		}
+		exam.TotalMarks = total
+		return s.exams.Update(ctx, exam)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return exam, nil
+}
+
+// AddInlineExamQuestion creates a question and attaches it to the exam.
+func (s *Service) AddInlineExamQuestion(ctx context.Context, actor *Actor, examID uuid.UUID, in AddInlineQuestionInput) (*entity.Exam, error) {
+	exam, err := s.loadOwnedExam(ctx, actor, examID)
+	if err != nil {
+		return nil, err
+	}
+	if in.Marks <= 0 {
+		return nil, apperror.Validation(map[string]any{"marks": "must be positive"}, nil)
+	}
+	if in.Text == "" {
+		return nil, apperror.Validation(map[string]any{"text": "must not be empty"}, nil)
+	}
+	if len(in.Answers) < 2 {
+		return nil, apperror.Validation(map[string]any{"answers": "must have at least 2 options"}, nil)
+	}
+
+	qType := in.Type
+	if qType == "" {
+		qType = entity.QuestionMultipleChoice
+	}
+
+	q := &entity.Question{
+		Text:        in.Text,
+		Type:        qType,
+		Points:      in.Marks,
+		Explanation: in.Explanation,
+		OrderIndex:  in.OrderIndex,
+		Subject:     in.Subject,
+		Topic:       in.Topic,
+	}
+	answers := make([]*entity.Answer, len(in.Answers))
+	for i, a := range in.Answers {
+		answers[i] = &entity.Answer{
+			Text:       a.Text,
+			IsCorrect:  a.IsCorrect,
+			OrderIndex: a.OrderIndex,
+		}
+	}
+
+	err = s.tx.WithinTx(ctx, func(ctx context.Context) error {
+		if s.questions != nil {
+			if err := s.questions.Create(ctx, q, answers); err != nil {
+				return err
+			}
+		}
+		eq := &entity.ExamQuestion{ExamID: examID, QuestionID: q.ID, OrderIndex: in.OrderIndex, Marks: in.Marks}
 		if err := s.exams.AddQuestion(ctx, eq); err != nil {
 			return err
 		}

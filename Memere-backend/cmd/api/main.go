@@ -91,17 +91,18 @@ func main() {
 
 	// Phase 6 — Prometheus metrics server (separate port so /metrics is never
 	// exposed on the public API port). An empty MetricsPort disables it.
-	if cfg.Observability.MetricsPort != "" {
+	metricsPort := strings.Trim(cfg.Observability.MetricsPort, "\" \t\r\n")
+	if metricsPort != "" && metricsPort != "0" && metricsPort != "disabled" {
 		mux := http.NewServeMux()
 		mux.Handle("/metrics", promhttp.Handler())
 		metricsSrv := &http.Server{
-			Addr:         ":" + cfg.Observability.MetricsPort,
+			Addr:         ":" + metricsPort,
 			Handler:      mux,
 			ReadTimeout:  5 * time.Second,
 			WriteTimeout: 5 * time.Second,
 		}
 		go func() {
-			slog.Info("metrics server listening", "port", cfg.Observability.MetricsPort)
+			slog.Info("metrics server listening", "port", metricsPort)
 			if err := metricsSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 				slog.Error("metrics server error", "err", err)
 			}
@@ -385,7 +386,7 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	// course/lesson?" — quiz/exam taking and paid video all route through it.
 	accessSvc := access.NewService(enrollmentRepo, subscriptionRepo, courseRepo, nil)
 	quizSvc := quiz.NewService(quizRepo, questionRepo, quizAttemptRepo, courseRepo, attemptStateRepo, txManager, accessSvc)
-	examSvc := exam.NewService(examRepo, examAttemptRepo, courseRepo, attemptStateRepo, scoreRankingRepo, txManager, accessSvc, hooks)
+	examSvc := exam.NewService(examRepo, examAttemptRepo, courseRepo, attemptStateRepo, scoreRankingRepo, txManager, accessSvc, hooks).WithQuestionRepo(questionRepo)
 	analyticsSvc := analytics.NewService(examRepo, examAttemptRepo, courseRepo, scoreRankingRepo, quizAttemptRepo)
 	videoSvc := video.NewService(videoRepo, lessonRepo, courseRepo, store, queue, signer, downloadTokens, accessSvc, video.Config{
 		UploadURLTTL:   cfg.Storage.UploadURLTTL,

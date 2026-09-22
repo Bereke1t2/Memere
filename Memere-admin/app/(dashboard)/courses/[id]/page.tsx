@@ -47,19 +47,42 @@ export default async function CourseDetailPage({
       ? "Free"
       : formatMoney(String(course.price), course.currency);
 
+  const tags: string[] = Array.isArray(course.metadata?.tags) ? course.metadata.tags : [];
+
   return (
     <>
       <BreadcrumbSetter label={course.title} />
 
       <div className="flex flex-col gap-6 max-w-2xl">
         <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{course.title}</h1>
-            {course.short_description && (
-              <p className="text-sm text-muted-foreground mt-0.5">
-                {course.short_description}
-              </p>
-            )}
+          <div className="flex gap-4 items-start flex-1 min-w-0">
+            {course.thumbnail_url ? (
+              <div className="relative h-20 w-32 shrink-0 rounded-lg overflow-hidden border bg-muted">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={course.thumbnail_url}
+                  alt={course.title}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ) : null}
+            <div className="flex flex-col gap-1 min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight">{course.title}</h1>
+              {course.short_description && (
+                <p className="text-sm text-muted-foreground">
+                  {course.short_description}
+                </p>
+              )}
+              {tags.length > 0 && (
+                <div className="flex items-center gap-1.5 flex-wrap mt-1">
+                  {tags.map((tag) => (
+                    <Badge key={tag} variant="outline" className="text-xs">
+                      #{tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <CourseActions course={course} />
         </div>
@@ -110,7 +133,7 @@ export default async function CourseDetailPage({
         {course.description && (
           <div className="flex flex-col gap-1">
             <h2 className="text-sm font-medium text-muted-foreground">Description</h2>
-            <p className="text-sm leading-relaxed">{course.description}</p>
+            <p className="text-sm leading-relaxed whitespace-pre-line">{course.description}</p>
           </div>
         )}
 
@@ -132,7 +155,7 @@ export default async function CourseDetailPage({
                   className="flex items-center gap-3 rounded-md border px-4 py-2.5 text-sm"
                 >
                   <span className="tabular-nums text-muted-foreground w-5">
-                    {i + 1}.
+                    {section.order_index ?? section.order ?? i + 1}.
                   </span>
                   <span className="flex-1">{section.title}</span>
                   {section.is_published === false && (

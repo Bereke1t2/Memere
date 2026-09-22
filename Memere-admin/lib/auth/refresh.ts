@@ -23,7 +23,10 @@ export async function refreshAccessToken(): Promise<string | undefined> {
   try {
     const res = await fetch(`${env.API_BASE_URL}/api/v1/auth/refresh`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "Memere-Admin/1.0",
+      },
       body: JSON.stringify({ refresh_token: refreshToken }),
       cache: "no-store",
     });

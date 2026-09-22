@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { requireStaff } from "@/lib/auth/session";
+import { getRouteStaffSession } from "@/lib/auth/session";
 import { canManageContent } from "@/lib/auth/roles";
 import { requestVideoUpload } from "@/lib/api/endpoints";
 import { ApiError, friendlyMessage } from "@/lib/api/errors";
@@ -12,8 +12,9 @@ const Schema = z.object({
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { user } = await requireStaff();
-    if (!canManageContent(user)) return Response.json({ message: "Forbidden" }, { status: 403 });
+    const session = await getRouteStaffSession();
+    if (!session) return Response.json({ message: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
+    if (!canManageContent(session.user)) return Response.json({ message: "Forbidden" }, { status: 403 });
     const { id } = await params;
     const body = await req.json().catch(() => ({}));
     const parsed = Schema.safeParse(body);

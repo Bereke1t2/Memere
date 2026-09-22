@@ -20,12 +20,28 @@ type CreateExamRequest struct {
 	Instructions    *string `json:"instructions"`
 }
 
-// AddExamQuestionRequest is the body of POST /exams/:id/questions. It references
-// an existing question by id and assigns its per-exam marks and order.
+// UpdateExamRequest is the body of PUT /exams/:id.
+type UpdateExamRequest struct {
+	Title           *string `json:"title"`
+	Subject         *string `json:"subject"`
+	Grade           *int    `json:"grade"`
+	DurationMinutes *int    `json:"duration_minutes"`
+	PassMarks       *int    `json:"pass_marks"`
+	Instructions    *string `json:"instructions"`
+}
+
+// AddExamQuestionRequest is the body of POST /exams/:id/questions. It can reference
+// an existing question by id or create a new question inline.
 type AddExamQuestionRequest struct {
-	QuestionID uuid.UUID `json:"question_id"`
-	Marks      int       `json:"marks"`
-	OrderIndex int       `json:"order_index"`
+	QuestionID  *uuid.UUID         `json:"question_id,omitempty"`
+	Marks       int                `json:"marks"`
+	OrderIndex  int                `json:"order_index"`
+	Text        *string            `json:"text,omitempty"`
+	Type        *string            `json:"type,omitempty"`
+	Explanation *string            `json:"explanation,omitempty"`
+	Subject     *string            `json:"subject,omitempty"`
+	Topic       *string            `json:"topic,omitempty"`
+	Answers     []AddAnswerRequest `json:"answers,omitempty"`
 }
 
 // SubmitExamRequest is the body of POST /exam-attempts/:id/submit.

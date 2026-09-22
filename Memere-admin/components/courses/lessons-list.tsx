@@ -4,7 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Loader2, Video, FileText, FileCheck, Upload, RefreshCw, Edit3, File, CheckCircle2, Settings2, Sparkles, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Loader2,
+  Video,
+  FileText,
+  FileCheck,
+  Upload,
+  RefreshCw,
+  Edit3,
+  File,
+  CheckCircle2,
+  Settings2,
+  Sparkles,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,13 +26,21 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { clientAction } from "@/lib/client-action";
-import { AddLessonInputSchema, type AddLessonInput, type Lesson } from "@/lib/api/schemas";
+import { AddLessonInputSchema, type AddLessonInput, type Lesson, type Quiz } from "@/lib/api/schemas";
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
   video: <Video className="h-3.5 w-3.5" />,
@@ -30,6 +52,7 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
 interface LessonsListProps {
   sectionId: string;
   lessons: Lesson[];
+  quizzes?: Quiz[];
   canEdit?: boolean;
 }
 
@@ -54,10 +77,18 @@ function UploadSuccessDialog({
           <DialogTitle className="text-lg font-bold text-center">Upload Successful!</DialogTitle>
         </DialogHeader>
         <p className="text-xs text-muted-foreground mt-2 max-w-[260px] mx-auto leading-relaxed">
-          Your <strong className="text-foreground">{fileType}</strong> (<span className="truncate inline-block max-w-[180px] align-bottom font-mono font-semibold">{fileName}</span>) was uploaded and saved successfully.
+          Your <strong className="text-foreground">{fileType}</strong> (
+          <span className="truncate inline-block max-w-[180px] align-bottom font-mono font-semibold">
+            {fileName}
+          </span>
+          ) was uploaded and saved successfully.
         </p>
         <DialogFooter className="w-full mt-5 flex justify-center">
-          <Button size="sm" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium" onClick={() => onOpenChange(false)}>
+          <Button
+            size="sm"
+            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+            onClick={() => onOpenChange(false)}
+          >
             Done
           </Button>
         </DialogFooter>
@@ -91,7 +122,9 @@ function UploadProgressModal({
         </DialogHeader>
         <div className="flex flex-col gap-3 py-3">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-medium truncate max-w-[210px] text-foreground" title={fileName}>{fileName}</span>
+            <span className="font-medium truncate max-w-[210px] text-foreground" title={fileName}>
+              {fileName}
+            </span>
             <span className="font-bold tabular-nums text-primary text-sm">
               {indeterminate ? "Finalizing…" : `${progress}%`}
             </span>
@@ -99,9 +132,6 @@ function UploadProgressModal({
 
           <div className="w-full bg-muted h-3.5 rounded-full overflow-hidden p-0.5 border border-border">
             {indeterminate ? (
-              // The bytes have left the browser but the server is still storing
-              // them to object storage — a leg the browser cannot measure. Show
-              // an honest "working" shimmer rather than a frozen 100% bar.
               <div className="bg-primary/80 h-full rounded-full w-full animate-pulse shadow-sm" />
             ) : (
               <div
@@ -157,7 +187,6 @@ function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: stri
     setStatus("Preparing upload…");
 
     try {
-      // 1. First get presigned upload URL
       const { upload_url, video_id } = await clientAction<{ upload_url: string; video_id: string }>(
         `/api/teacher/lessons/${lessonId}/videos/upload-url`,
         { file_name: file.name, content_type: file.type || "video/mp4", size_bytes: file.size }
@@ -166,19 +195,20 @@ function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: stri
       setStatus("Uploading video file…");
 
       try {
-        // Attempt direct browser XHR PUT upload
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
           xhr.upload.onprogress = (ev) => {
             if (ev.lengthComputable) setProgress(Math.round((ev.loaded / ev.total) * 100));
           };
           xhr.upload.onload = () => {
-            // All bytes reached B2; only its PUT response is outstanding now.
             setProgress(100);
             setIndeterminate(true);
             setStatus("Finalizing upload…");
           };
-          xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Status ${xhr.status}`)));
+          xhr.onload = () =>
+            xhr.status >= 200 && xhr.status < 300
+              ? resolve()
+              : reject(new Error(`Status ${xhr.status}`));
           xhr.onerror = () => reject(new Error("Direct upload network error"));
           xhr.open("PUT", upload_url);
           xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
@@ -188,8 +218,7 @@ function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: stri
         setStatus("Confirming upload with server…");
         setProgress(100);
         await fetchNoContent(`/api/teacher/videos/${video_id}/confirm`, { method: "POST" });
-      } catch (directErr) {
-        // Direct upload hit network error (e.g. MinIO host unresolvable / CORS); fall back to Next.js upload proxy!
+      } catch {
         setStatus("Uploading via server proxy…");
         const bodyData = new FormData();
         bodyData.append("file", file);
@@ -200,14 +229,14 @@ function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: stri
             if (ev.lengthComputable) setProgress(Math.round((ev.loaded / ev.total) * 100));
           };
           xhr.upload.onload = () => {
-            // Bytes are off the browser; the proxy is still streaming them to B2
-            // — a leg we can't measure — so switch to an honest "working" state
-            // instead of parking at a frozen 100%.
             setProgress(100);
             setIndeterminate(true);
             setStatus("Uploading to storage…");
           };
-          xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Server upload failed with status ${xhr.status}`)));
+          xhr.onload = () =>
+            xhr.status >= 200 && xhr.status < 300
+              ? resolve()
+              : reject(new Error(`Server upload failed with status ${xhr.status}`));
           xhr.onerror = () => reject(new Error("Server proxy upload error"));
           xhr.open("POST", `/api/teacher/lessons/${lessonId}/videos/upload`);
           xhr.send(bodyData);
@@ -221,7 +250,9 @@ function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: stri
       const poll = setInterval(async () => {
         attempts++;
         try {
-          const s = await fetchJson<{ status?: string; processing_error?: string }>(`/api/teacher/videos/${video_id}/status`);
+          const s = await fetchJson<{ status?: string; processing_error?: string }>(
+            `/api/teacher/videos/${video_id}/status`
+          );
           if (s.status === "ready" || attempts >= 3) {
             clearInterval(poll);
             setStatus("ready");
@@ -241,7 +272,7 @@ function VideoUploader({ lessonId, videoId }: { lessonId: string; videoId?: stri
             setUploading(false);
             toast.error("Video is still processing. Check status again later.");
           }
-        } catch (err) {
+        } catch {
           clearInterval(poll);
           setStatus("ready");
           setUploading(false);
@@ -335,11 +366,6 @@ function PdfUploader({ lesson, pdfUrl }: { lesson: Lesson; pdfUrl?: string | nul
     setStatusText("Uploading PDF document…");
 
     try {
-      // Upload the actual bytes to the backend (POST /lessons/:id/pdf). The
-      // backend validates the %PDF- header, stores the file in object storage
-      // (Backblaze B2) at lessons/<id>/notes.pdf, and sets the lesson's pdf_url
-      // to that storage key. Previously this only saved file.name to the DB and
-      // never uploaded the bytes — so nothing ever reached storage.
       const bodyData = new FormData();
       bodyData.append("file", file);
 
@@ -349,7 +375,6 @@ function PdfUploader({ lesson, pdfUrl }: { lesson: Lesson; pdfUrl?: string | nul
           if (ev.lengthComputable) setProgress(Math.round((ev.loaded / ev.total) * 100));
         };
         xhr.upload.onload = () => {
-          // Bytes are off the browser; the server is still storing them to B2.
           setProgress(100);
           setIndeterminate(true);
           setStatusText("Saving to storage…");
@@ -361,7 +386,7 @@ function PdfUploader({ lesson, pdfUrl }: { lesson: Lesson; pdfUrl?: string | nul
             const j = JSON.parse(xhr.responseText);
             if (j?.message) msg = j.message;
           } catch {
-            /* non-JSON error body — keep the status message */
+            /* ignore JSON parse error */
           }
           reject(new Error(msg));
         };
@@ -401,7 +426,10 @@ function PdfUploader({ lesson, pdfUrl }: { lesson: Lesson; pdfUrl?: string | nul
       />
 
       {currentPdf && (
-        <span className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium mr-1 max-w-[120px] truncate" title={currentPdf}>
+        <span
+          className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium mr-1 max-w-[120px] truncate"
+          title={currentPdf}
+        >
           <File className="h-3 w-3 shrink-0" /> {currentPdf.split("/").pop() || currentPdf}
         </span>
       )}
@@ -446,7 +474,10 @@ function TextNoteEditor({ lesson, onSave }: { lesson: Lesson; onSave?: (text: st
     <>
       <div className="flex items-center gap-2">
         {savedText ? (
-          <span className="inline-flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300 font-medium mr-1 max-w-[100px] truncate" title={savedText}>
+          <span
+            className="inline-flex items-center gap-1 text-xs text-slate-600 dark:text-slate-300 font-medium mr-1 max-w-[100px] truncate"
+            title={savedText}
+          >
             <FileText className="h-3 w-3 shrink-0 text-amber-500" /> Text note set
           </span>
         ) : null}
@@ -525,10 +556,12 @@ function DeleteLessonButton({ lesson }: { lesson: Lesson }) {
           </DialogHeader>
           <p className="text-xs text-muted-foreground py-1 leading-relaxed">
             This removes <strong className="text-foreground">{lesson.title}</strong> and its attached
-            video/notes from the course, and students will no longer see it.
+            video/notes from the course.
           </p>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={() => setOpen(false)} disabled={deleting}>Cancel</Button>
+            <Button variant="outline" size="sm" onClick={() => setOpen(false)} disabled={deleting}>
+              Cancel
+            </Button>
             <Button variant="destructive" size="sm" onClick={handleDelete} disabled={deleting}>
               {deleting ? <><Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />Deleting…</> : "Delete lesson"}
             </Button>
@@ -539,13 +572,26 @@ function DeleteLessonButton({ lesson }: { lesson: Lesson }) {
   );
 }
 
-function EditLessonDialog({ lesson, open, onOpenChange }: { lesson: Lesson; open: boolean; onOpenChange: (open: boolean) => void }) {
+function EditLessonDialog({
+  lesson,
+  quizzes,
+  open,
+  onOpenChange,
+}: {
+  lesson: Lesson;
+  quizzes?: Quiz[];
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState(lesson.title);
   const [type, setType] = useState<AddLessonInput["type"]>((lesson.type as AddLessonInput["type"]) || "video");
   const [duration, setDuration] = useState(lesson.duration_seconds ?? 0);
+  const [orderIndex, setOrderIndex] = useState(lesson.order_index ?? 0);
   const [isFree, setIsFree] = useState(lesson.is_free_preview ?? false);
+  const [isPublished, setIsPublished] = useState(lesson.is_published ?? true);
+  const [quizId, setQuizId] = useState<string>(lesson.quiz_id ?? "none");
   const [content, setContent] = useState(lesson.content ?? "");
 
   async function handleSave() {
@@ -555,9 +601,11 @@ function EditLessonDialog({ lesson, open, onOpenChange }: { lesson: Lesson; open
         title,
         type,
         duration_seconds: duration,
+        order_index: orderIndex,
         is_free_preview: isFree,
+        is_published: isPublished,
+        quiz_id: quizId === "none" ? null : quizId,
         content,
-        is_published: true,
       });
       toast.success(`Lesson "${title}" updated successfully.`);
       onOpenChange(false);
@@ -571,7 +619,7 @@ function EditLessonDialog({ lesson, open, onOpenChange }: { lesson: Lesson; open
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-sm font-semibold flex items-center gap-2">
             <Settings2 className="h-4 w-4 text-primary" /> Edit Lesson Details
@@ -598,8 +646,38 @@ function EditLessonDialog({ lesson, open, onOpenChange }: { lesson: Lesson; open
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="ed-dur" className="text-xs">Duration (seconds)</Label>
-              <Input id="ed-dur" type="number" value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="text-xs" />
+              <Input id="ed-dur" type="number" min="0" value={duration} onChange={(e) => setDuration(Number(e.target.value))} className="text-xs" />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label htmlFor="ed-order" className="text-xs">Order index</Label>
+              <Input
+                id="ed-order"
+                type="number"
+                min="0"
+                value={orderIndex}
+                onChange={(e) => setOrderIndex(Number(e.target.value))}
+                className="text-xs"
+              />
+            </div>
+            {quizzes && quizzes.length > 0 && (type === "quiz" || type === "mixed") ? (
+              <div className="grid gap-1.5">
+                <Label className="text-xs">Attach Quiz</Label>
+                <Select value={quizId} onValueChange={setQuizId}>
+                  <SelectTrigger className="text-xs"><SelectValue placeholder="Select quiz" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {quizzes.map((q) => (
+                      <SelectItem key={q.id} value={q.id}>
+                        {q.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
           </div>
 
           {(type === "note" || type === "mixed") && (
@@ -616,9 +694,15 @@ function EditLessonDialog({ lesson, open, onOpenChange }: { lesson: Lesson; open
             </div>
           )}
 
-          <div className="flex items-center gap-2">
-            <input type="checkbox" id="ed-free" checked={isFree} onChange={(e) => setIsFree(e.target.checked)} className="rounded" />
-            <Label htmlFor="ed-free" className="cursor-pointer text-xs">Free preview</Label>
+          <div className="flex items-center justify-between border-t pt-3">
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="ed-free" checked={isFree} onChange={(e) => setIsFree(e.target.checked)} className="rounded" />
+              <Label htmlFor="ed-free" className="cursor-pointer text-xs">Free preview</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="checkbox" id="ed-pub" checked={isPublished} onChange={(e) => setIsPublished(e.target.checked)} className="rounded" />
+              <Label htmlFor="ed-pub" className="cursor-pointer text-xs">Published</Label>
+            </div>
           </div>
 
           <div className="border-t pt-3 flex flex-col gap-2">
@@ -645,7 +729,7 @@ function EditLessonDialog({ lesson, open, onOpenChange }: { lesson: Lesson; open
   );
 }
 
-export function LessonsList({ sectionId, lessons, canEdit = true }: LessonsListProps) {
+export function LessonsList({ sectionId, lessons, quizzes, canEdit = true }: LessonsListProps) {
   const [open, setOpen] = useState(false);
   const [editingLesson, setEditingLesson] = useState<Lesson | null>(null);
   const router = useRouter();
@@ -653,7 +737,13 @@ export function LessonsList({ sectionId, lessons, canEdit = true }: LessonsListP
   const { register, handleSubmit, setValue, watch, reset, formState: { errors, isSubmitting } } =
     useForm<AddLessonInput>({
       resolver: zodResolver(AddLessonInputSchema),
-      defaultValues: { is_free_preview: false, duration_seconds: 0, is_published: true, type: "video" },
+      defaultValues: {
+        is_free_preview: false,
+        duration_seconds: 0,
+        is_published: true,
+        type: "video",
+        order_index: lessons.length + 1,
+      },
     });
 
   const selectedType = watch("type");
@@ -662,11 +752,17 @@ export function LessonsList({ sectionId, lessons, canEdit = true }: LessonsListP
     try {
       await clientAction(`/api/teacher/sections/${sectionId}/lessons`, {
         ...values,
-        is_published: true,
+        quiz_id: values.quiz_id === "none" ? null : values.quiz_id,
       });
       toast.success("Lesson added successfully.");
       setOpen(false);
-      reset();
+      reset({
+        is_free_preview: false,
+        duration_seconds: 0,
+        is_published: true,
+        type: "video",
+        order_index: lessons.length + 2,
+      });
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to add lesson.");
@@ -681,7 +777,14 @@ export function LessonsList({ sectionId, lessons, canEdit = true }: LessonsListP
           <span className="flex items-center gap-1 text-muted-foreground">
             {TYPE_ICONS[lesson.type] ?? <FileText className="h-3.5 w-3.5" />}
           </span>
-          <span className="flex-1 font-medium">{lesson.title}</span>
+          <div className="flex-1 min-w-0 flex items-center gap-2">
+            <span className="font-medium truncate">{lesson.title}</span>
+            {lesson.is_published === false && (
+              <Badge variant="outline" className="text-xs h-5">
+                Draft
+              </Badge>
+            )}
+          </div>
           {lesson.duration_seconds && lesson.duration_seconds > 0 ? (
             <span className="text-xs text-muted-foreground tabular-nums">
               {Math.floor(lesson.duration_seconds / 60)}m
@@ -726,13 +829,14 @@ export function LessonsList({ sectionId, lessons, canEdit = true }: LessonsListP
       {editingLesson && (
         <EditLessonDialog
           lesson={editingLesson}
+          quizzes={quizzes}
           open={!!editingLesson}
           onOpenChange={(isOpen) => !isOpen && setEditingLesson(null)}
         />
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md" aria-describedby={undefined}>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader><DialogTitle>Add Lesson</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 py-2">
             <div className="grid gap-1.5">
@@ -761,6 +865,35 @@ export function LessonsList({ sectionId, lessons, canEdit = true }: LessonsListP
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-3">
+              <div className="grid gap-1.5">
+                <Label htmlFor="ls-order">Order index (optional)</Label>
+                <Input
+                  id="ls-order"
+                  type="number"
+                  min="0"
+                  placeholder="Auto"
+                  {...register("order_index", { valueAsNumber: true })}
+                />
+              </div>
+              {quizzes && quizzes.length > 0 && (selectedType === "quiz" || selectedType === "mixed") ? (
+                <div className="grid gap-1.5">
+                  <Label>Attach Quiz (optional)</Label>
+                  <Select onValueChange={(v) => setValue("quiz_id", v === "none" ? null : v)}>
+                    <SelectTrigger><SelectValue placeholder="Select quiz" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {quizzes.map((q) => (
+                        <SelectItem key={q.id} value={q.id}>
+                          {q.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
+            </div>
+
             {(selectedType === "note" || selectedType === "mixed") && (
               <div className="grid gap-1.5 border-t pt-3">
                 <Label htmlFor="ls-content" className="text-xs font-semibold">Write Text Content (Optional)</Label>
@@ -774,9 +907,15 @@ export function LessonsList({ sectionId, lessons, canEdit = true }: LessonsListP
               </div>
             )}
 
-            <div className="flex items-center gap-2">
-              <input type="checkbox" id="ls-free" {...register("is_free_preview")} className="rounded" />
-              <Label htmlFor="ls-free" className="cursor-pointer text-xs">Free preview</Label>
+            <div className="flex items-center justify-between border-t pt-3">
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="ls-free" {...register("is_free_preview")} className="rounded" />
+                <Label htmlFor="ls-free" className="cursor-pointer text-xs">Free preview</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="ls-pub" {...register("is_published")} className="rounded" />
+                <Label htmlFor="ls-pub" className="cursor-pointer text-xs">Published</Label>
+              </div>
             </div>
             
             <DialogFooter>

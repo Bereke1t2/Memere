@@ -70,7 +70,7 @@ func (f *FFmpeg) ToHLS(ctx context.Context, src, workDir string) (*Renditions, e
 	}
 
 	args := []string{
-		"-y", "-i", src,
+		"-y", "-threads", "1", "-i", src,
 		"-filter_complex",
 		"[0:v]split=3[v1][v2][v3];" +
 			"[v1]scale=w=854:h=480[v480];" +
@@ -84,6 +84,7 @@ func (f *FFmpeg) ToHLS(ctx context.Context, src, workDir string) (*Renditions, e
 		"-map", "[v1080]", "-map", "0:a:0?", "-c:v:2", "libx264", "-b:v:2", "3000k", "-maxrate:v:2", "3200k", "-bufsize:v:2", "4200k",
 		"-c:a", "aac", "-b:a:0", "96k", "-b:a:1", "128k", "-b:a:2", "128k",
 		"-preset", "veryfast",
+		"-max_muxing_queue_size", "1024",
 		"-f", "hls",
 		"-hls_time", "6",
 		"-hls_playlist_type", "vod",

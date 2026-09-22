@@ -17,7 +17,7 @@ INSERT INTO courses.courses (
     thumbnail_url, price, currency, is_free, is_published, language, level,
     metadata
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb
 )
 RETURNING id, teacher_id, title, slug, description, short_description, subject, grade, thumbnail_url, price, currency, is_free, is_published, language, level, total_duration_seconds, total_lessons, rating_avg, enrollment_count, metadata, created_at, updated_at, deleted_at
 `
@@ -284,7 +284,7 @@ SET title = $2,
     is_published = $11,
     language = $12,
     level = $13,
-    metadata = $14
+    metadata = $14::jsonb
 WHERE id = $1 AND deleted_at IS NULL
 RETURNING id, teacher_id, title, slug, description, short_description, subject, grade, thumbnail_url, price, currency, is_free, is_published, language, level, total_duration_seconds, total_lessons, rating_avg, enrollment_count, metadata, created_at, updated_at, deleted_at
 `

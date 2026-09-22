@@ -4,7 +4,7 @@ INSERT INTO courses.courses (
     thumbnail_url, price, currency, is_free, is_published, language, level,
     metadata
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15::jsonb
 )
 RETURNING *;
 
@@ -46,7 +46,7 @@ SET title = $2,
     is_published = $11,
     language = $12,
     level = $13,
-    metadata = $14
+    metadata = $14::jsonb
 WHERE id = $1 AND deleted_at IS NULL
 RETURNING *;
 

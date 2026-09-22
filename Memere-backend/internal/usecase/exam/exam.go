@@ -38,15 +38,16 @@ func (noopExamNotifier) ExamGraded(context.Context, uuid.UUID, uuid.UUID, float6
 // the shared Redis attempt-state store. now is injectable so tests drive the
 // server-side timer with a fake clock.
 type Service struct {
-	exams    repository.ExamRepository
-	attempts repository.ExamAttemptRepository
-	courses  repository.CourseRepository
-	state    repository.AttemptStateStore
-	ranking  repository.ScoreRanking
-	tx       repository.TxManager
-	access   CourseAccess
-	notify   Notifier
-	now      func() time.Time
+	exams     repository.ExamRepository
+	attempts  repository.ExamAttemptRepository
+	courses   repository.CourseRepository
+	questions repository.QuestionRepository
+	state     repository.AttemptStateStore
+	ranking   repository.ScoreRanking
+	tx        repository.TxManager
+	access    CourseAccess
+	notify    Notifier
+	now       func() time.Time
 }
 
 // NewService wires the exam usecase with its dependencies. ranking and notify
@@ -75,6 +76,12 @@ func NewService(
 		notify:   notify,
 		now:      time.Now,
 	}
+}
+
+// WithQuestionRepo attaches a QuestionRepository to allow creating questions directly.
+func (s *Service) WithQuestionRepo(q repository.QuestionRepository) *Service {
+	s.questions = q
+	return s
 }
 
 // ListByCourse returns all exams for a course. Used by the teacher authoring UI.

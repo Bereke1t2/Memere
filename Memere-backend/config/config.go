@@ -415,28 +415,6 @@ func (c *Config) ValidateProduction() error {
 	if c.Stripe.SecretKey != "" && c.Stripe.WebhookSecret == "" {
 		errs = append(errs, "STRIPE_WEBHOOK_SECRET required when STRIPE_SECRET_KEY is set")
 	}
-	if c.Storage.Provider == "gdrive" {
-		if c.GoogleDrive.ClientID == "" || c.GoogleDrive.ClientSecret == "" {
-			errs = append(errs, "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are required when STORAGE_PROVIDER=gdrive")
-		}
-		if c.GoogleDrive.RootFolderID == "" {
-			errs = append(errs, "GOOGLE_DRIVE_ROOT_FOLDER_ID is required when STORAGE_PROVIDER=gdrive")
-		}
-	}
-	if c.Storage.Provider == "b2" {
-		if c.Storage.B2KeyID == "" || c.Storage.B2AppKey == "" {
-			errs = append(errs, "B2_APPLICATION_KEY_ID and B2_APPLICATION_KEY are required when STORAGE_PROVIDER=b2")
-		}
-		if c.Storage.B2Bucket == "" {
-			errs = append(errs, "B2_BUCKET is required when STORAGE_PROVIDER=b2")
-		}
-		if c.Storage.B2Endpoint == "" {
-			errs = append(errs, "B2_ENDPOINT is required when STORAGE_PROVIDER=b2 (e.g. s3.us-west-004.backblazeb2.com)")
-		}
-		if c.Storage.B2Region == "" {
-			errs = append(errs, "B2_REGION is required when STORAGE_PROVIDER=b2 (e.g. us-west-004)")
-		}
-	}
 	if len(errs) > 0 {
 		return fmt.Errorf("production config invalid:\n  - %s", joinErrs(errs))
 	}

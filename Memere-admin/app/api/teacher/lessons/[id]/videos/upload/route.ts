@@ -1,4 +1,4 @@
-import { requireStaff } from "@/lib/auth/session";
+import { getRouteStaffSession } from "@/lib/auth/session";
 import { canManageContent } from "@/lib/auth/roles";
 import { requestVideoUpload, confirmVideoUpload } from "@/lib/api/endpoints";
 import { ApiError, friendlyMessage } from "@/lib/api/errors";
@@ -7,8 +7,9 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const { user } = await requireStaff();
-    if (!canManageContent(user)) return Response.json({ message: "Forbidden" }, { status: 403 });
+    const session = await getRouteStaffSession();
+    if (!session) return Response.json({ message: "Unauthorized", code: "UNAUTHORIZED" }, { status: 401 });
+    if (!canManageContent(session.user)) return Response.json({ message: "Forbidden" }, { status: 403 });
 
     const { id: lessonId } = await params;
     const formData = await req.formData();

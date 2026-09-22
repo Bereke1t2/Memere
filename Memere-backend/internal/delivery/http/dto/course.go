@@ -47,6 +47,14 @@ type CreateSectionRequest struct {
 	OrderIndex  *int    `json:"order_index"`
 }
 
+// UpdateSectionRequest is the body of PUT /sections/:id.
+type UpdateSectionRequest struct {
+	Title       string  `json:"title"`
+	Description *string `json:"description"`
+	IsPublished bool    `json:"is_published"`
+	OrderIndex  *int    `json:"order_index"`
+}
+
 // CreateLessonRequest is the body of POST /sections/:id/lessons.
 type CreateLessonRequest struct {
 	Title           string  `json:"title"`

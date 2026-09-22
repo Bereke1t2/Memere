@@ -9,6 +9,7 @@ import (
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/delivery/http/dto"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/delivery/middleware"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/exam"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
@@ -81,7 +82,7 @@ func (h *ExamHandler) CreateExam(c *gin.Context) {
 }
 
 // AddQuestion handles POST /exams/:id/questions → 201 (references an existing
-// question by id; returns the updated exam with recomputed total_marks).
+// question by id or creates an inline question; returns updated exam).
 func (h *ExamHandler) AddQuestion(c *gin.Context) {
 	examID, err := parseUUIDParam(c, "id")
 	if err != nil {
@@ -93,13 +94,86 @@ func (h *ExamHandler) AddQuestion(c *gin.Context) {
 		respondError(c, apperror.BadRequest("invalid request body", err))
 		return
 	}
-	updated, err := h.svc.AddExamQuestion(c.Request.Context(), examActor(c), examID, req.QuestionID, req.Marks, req.OrderIndex)
+
+	var updated *entity.Exam
+	if req.QuestionID != nil && *req.QuestionID != uuid.Nil {
+		updated, err = h.svc.AddExamQuestion(c.Request.Context(), examActor(c), examID, *req.QuestionID, req.Marks, req.OrderIndex)
+	} else if req.Text != nil && *req.Text != "" {
+		answers := make([]exam.InlineAnswerInput, 0, len(req.Answers))
+		for _, a := range req.Answers {
+			answers = append(answers, exam.InlineAnswerInput{
+				Text:       a.Text,
+				IsCorrect:  a.IsCorrect,
+				OrderIndex: a.OrderIndex,
+			})
+		}
+		qType := entity.QuestionMultipleChoice
+		if req.Type != nil && *req.Type != "" {
+			qType = entity.QuestionType(*req.Type)
+		}
+		updated, err = h.svc.AddInlineExamQuestion(c.Request.Context(), examActor(c), examID, exam.AddInlineQuestionInput{
+			Text:        *req.Text,
+			Type:        qType,
+			Marks:       req.Marks,
+			Explanation: req.Explanation,
+			OrderIndex:  req.OrderIndex,
+			Subject:     req.Subject,
+			Topic:       req.Topic,
+			Answers:     answers,
+		})
+	} else {
+		respondError(c, apperror.BadRequest("either question_id or text is required", nil))
+		return
+	}
+
 	if err != nil {
 		respondError(c, err)
 		return
 	}
 	resp := dto.NewExamResponse(updated)
 	respondJSON(c, http.StatusCreated, &resp)
+}
+
+// UpdateExam handles PUT /exams/:id → 200.
+func (h *ExamHandler) UpdateExam(c *gin.Context) {
+	examID, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	var req dto.UpdateExamRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, apperror.BadRequest("invalid request body", err))
+		return
+	}
+	updated, err := h.svc.UpdateExam(c.Request.Context(), examActor(c), examID, exam.UpdateExamInput{
+		Title:           req.Title,
+		Subject:         req.Subject,
+		Grade:           req.Grade,
+		DurationMinutes: req.DurationMinutes,
+		PassMarks:       req.PassMarks,
+		Instructions:    req.Instructions,
+	})
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	resp := dto.NewExamResponse(updated)
+	respondJSON(c, http.StatusOK, &resp)
+}
+
+// DeleteExam handles DELETE /exams/:id → 204.
+func (h *ExamHandler) DeleteExam(c *gin.Context) {
+	examID, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	if err := h.svc.DeleteExam(c.Request.Context(), examActor(c), examID); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
 }
 
 // Publish handles POST /exams/:id/publish → 200. Required for an exam to appear

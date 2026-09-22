@@ -54,7 +54,7 @@ export const CourseSchema = z.object({
   currency: z.string().optional().default("ETB"),
   is_free: z.boolean().optional().default(false),
   is_published: z.boolean().optional().default(false),
-  language: z.string().optional().nullable(),
+  language: z.string().optional().nullable().default("en"),
   level: z.string().optional().nullable(),
   total_duration_seconds: z.number().optional(),
   total_lessons: z.number().optional(),
@@ -86,6 +86,15 @@ export const SectionListResponseSchema = z.object({
   data: SectionSchema.array(),
 });
 
+export const AddSectionInputSchema = z.object({
+  title: z.string().min(1, "Title is required").max(200),
+  description: z.string().max(1000).optional().nullable(),
+  order_index: z.number().int().min(0).optional(),
+  order: z.number().int().min(0).optional(),
+  is_published: z.boolean().optional(),
+});
+export type AddSectionInput = z.infer<typeof AddSectionInputSchema>;
+
 // ---- Lesson -------------------------------------------------------------------
 
 export const LessonSchema = z.object({
@@ -99,6 +108,7 @@ export const LessonSchema = z.object({
   duration_seconds: z.number().optional(),
   is_published: z.boolean().optional(),
   video_id: z.string().optional().nullable(),
+  quiz_id: z.string().optional().nullable(),
   content: z.string().optional().nullable(),
   pdf_url: z.string().optional().nullable(),
   created_at: z.string().optional(),
@@ -109,13 +119,15 @@ export type Lesson = z.infer<typeof LessonSchema>;
 export const LessonListResponseSchema = z.object({ data: LessonSchema.array() });
 
 export const AddLessonInputSchema = z.object({
-  title: z.string().min(1, "Title is required"),
+  title: z.string().min(1, "Title is required").max(200),
   type: z.enum(["video", "note", "quiz", "mixed"]),
-  is_free_preview: z.boolean(),
+  is_free_preview: z.boolean().optional(),
   duration_seconds: z.number().min(0).optional(),
   is_published: z.boolean().optional(),
-  content: z.string().optional(),
-  pdf_url: z.string().optional(),
+  order_index: z.number().int().min(0).optional(),
+  quiz_id: z.string().optional().nullable(),
+  content: z.string().optional().nullable(),
+  pdf_url: z.string().optional().nullable(),
 });
 export type AddLessonInput = z.infer<typeof AddLessonInputSchema>;
 
@@ -124,11 +136,12 @@ export type AddLessonInput = z.infer<typeof AddLessonInputSchema>;
 export const QuizSchema = z.object({
   id: z.string(),
   course_id: z.string().optional(),
+  lesson_id: z.string().optional().nullable(),
   title: z.string(),
-  time_limit_seconds: z.number().optional(),
-  pass_percentage: z.number().optional(),
-  randomize_questions: z.boolean().optional(),
-  max_attempts: z.number().optional(),
+  time_limit_seconds: z.number().optional().nullable(),
+  pass_percentage: z.number().optional().default(60),
+  randomize_questions: z.boolean().optional().default(false),
+  max_attempts: z.number().optional().nullable(),
   question_count: z.number().optional(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
@@ -138,17 +151,18 @@ export type Quiz = z.infer<typeof QuizSchema>;
 export const QuizListResponseSchema = z.object({ data: QuizSchema.array() });
 
 export const CreateQuizInputSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  time_limit_seconds: z.number().min(0),
-  pass_percentage: z.number().min(0).max(100),
-  randomize_questions: z.boolean(),
-  max_attempts: z.number().min(1),
+  title: z.string().min(1, "Title is required").max(200),
+  lesson_id: z.string().optional().nullable(),
+  time_limit_seconds: z.number().min(0).optional().nullable(),
+  pass_percentage: z.number().min(0).max(100).optional(),
+  randomize_questions: z.boolean().optional(),
+  max_attempts: z.number().min(1).optional().nullable(),
 });
 export type CreateQuizInput = z.infer<typeof CreateQuizInputSchema>;
 
 export const AnswerSchema = z.object({
-  text: z.string().min(1),
-  is_correct: z.boolean(),
+  text: z.string().min(1, "Answer text is required"),
+  is_correct: z.boolean().optional(),
 });
 export type Answer = z.infer<typeof AnswerSchema>;
 
@@ -168,12 +182,12 @@ export type QuizQuestion = z.infer<typeof QuizQuestionSchema>;
 
 export const AddQuizQuestionInputSchema = z.object({
   text: z.string().min(1, "Question text is required"),
-  type: z.enum(["multiple_choice", "true_false"]),
-  points: z.number().min(1),
-  explanation: z.string().optional(),
-  order_index: z.number().min(0),
-  subject: z.string().optional(),
-  topic: z.string().optional(),
+  type: z.enum(["multiple_choice", "true_false"]).optional(),
+  points: z.number().min(1).optional(),
+  explanation: z.string().optional().nullable(),
+  order_index: z.number().int().min(0).optional(),
+  subject: z.string().optional().nullable(),
+  topic: z.string().optional().nullable(),
   answers: AnswerSchema.array().min(2, "At least 2 answers required"),
 });
 export type AddQuizQuestionInput = z.infer<typeof AddQuizQuestionInputSchema>;
@@ -182,11 +196,12 @@ export type AddQuizQuestionInput = z.infer<typeof AddQuizQuestionInputSchema>;
 
 export const ExamSchema = z.object({
   id: z.string(),
-  course_id: z.string().optional(),
+  course_id: z.string().optional().nullable(),
   title: z.string(),
   subject: z.string().optional(),
   grade: z.number().optional(),
   duration_minutes: z.number().optional(),
+  total_marks: z.number().optional(),
   pass_marks: z.number().optional(),
   instructions: z.string().optional().nullable(),
   is_published: z.boolean().optional(),
@@ -198,12 +213,12 @@ export type Exam = z.infer<typeof ExamSchema>;
 export const ExamListResponseSchema = z.object({ data: ExamSchema.array() });
 
 export const CreateExamInputSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  subject: z.string().min(1, "Subject is required"),
+  title: z.string().min(1, "Title is required").max(200),
+  subject: z.string().min(1, "Subject is required").max(100),
   grade: z.number().int().min(1).max(12),
-  duration_minutes: z.number().min(1),
-  pass_marks: z.number().min(0),
-  instructions: z.string().optional(),
+  duration_minutes: z.number().min(1).optional(),
+  pass_marks: z.number().min(0).optional(),
+  instructions: z.string().max(5000).optional().nullable(),
 });
 export type CreateExamInput = z.infer<typeof CreateExamInputSchema>;
 
@@ -218,13 +233,15 @@ export const ExamStatsSchema = z.object({
 export type ExamStats = z.infer<typeof ExamStatsSchema>;
 
 export const ExamQuestionInputSchema = z.object({
-  text: z.string().min(1, "Question text is required"),
-  type: z.enum(["multiple_choice", "true_false"]),
-  marks: z.number().min(1),
-  order_index: z.number().min(0),
-  answers: AnswerSchema.array().min(2, "At least 2 answers required"),
-  explanation: z.string().optional(),
   question_id: z.string().optional(),
+  marks: z.number().min(1).optional(),
+  order_index: z.number().int().min(0).optional(),
+  text: z.string().min(1, "Question text is required").optional(),
+  type: z.enum(["multiple_choice", "true_false"]).optional(),
+  explanation: z.string().optional().nullable(),
+  subject: z.string().optional().nullable(),
+  topic: z.string().optional().nullable(),
+  answers: AnswerSchema.array().min(2, "At least 2 answers required").optional(),
 });
 export type ExamQuestionInput = z.infer<typeof ExamQuestionInputSchema>;
 
@@ -354,11 +371,16 @@ export type TeacherCourseList = z.infer<typeof TeacherCourseListSchema>;
 export const CreateCourseInputSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters").max(200),
   description: z.string().min(10, "Description must be at least 10 characters"),
+  short_description: z.string().max(300).optional().nullable(),
   subject: z.string().min(1, "Subject is required"),
   grade: z.number().int().min(1, "Grade is required").max(12),
   level: z.enum(["beginner", "intermediate", "advanced"]),
-  price: z.number().min(0),
-  language: z.string(),
+  price: z.number().min(0).optional(),
+  currency: z.string().optional(),
+  is_free: z.boolean().optional(),
+  language: z.string().optional(),
+  thumbnail_url: z.string().optional().nullable(),
+  metadata: z.record(z.string(), z.unknown()).optional().nullable(),
 });
 export type CreateCourseInput = z.infer<typeof CreateCourseInputSchema>;
 

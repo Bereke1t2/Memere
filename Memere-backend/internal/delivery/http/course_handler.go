@@ -240,6 +240,46 @@ func (h *CourseHandler) ListSections(c *gin.Context) {
 	respondJSON(c, http.StatusOK, gin.H{"data": dto.NewSectionListResponse(sections)})
 }
 
+// UpdateSection handles PUT /sections/:id → 200.
+func (h *CourseHandler) UpdateSection(c *gin.Context) {
+	sectionID, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	var req dto.UpdateSectionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, apperror.BadRequest("invalid request body", err))
+		return
+	}
+	sec, err := h.svc.UpdateSection(c.Request.Context(), actor(c), sectionID, course.SectionInput{
+		Title:       req.Title,
+		Description: req.Description,
+		IsPublished: req.IsPublished,
+		OrderIndex:  req.OrderIndex,
+	})
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	resp := dto.NewSectionResponse(sec)
+	respondJSON(c, http.StatusOK, &resp)
+}
+
+// DeleteSection handles DELETE /sections/:id → 204.
+func (h *CourseHandler) DeleteSection(c *gin.Context) {
+	sectionID, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	if err := h.svc.DeleteSection(c.Request.Context(), actor(c), sectionID); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 // AddLesson handles POST /sections/:id/lessons → 201.
 func (h *CourseHandler) AddLesson(c *gin.Context) {
 	sectionID, err := parseUUIDParam(c, "id")

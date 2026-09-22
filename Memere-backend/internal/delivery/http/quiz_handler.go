@@ -141,6 +141,20 @@ func (h *QuizHandler) UpdateQuiz(c *gin.Context) {
 	respondJSON(c, http.StatusOK, &resp)
 }
 
+// DeleteQuiz handles DELETE /quizzes/:id → 204.
+func (h *QuizHandler) DeleteQuiz(c *gin.Context) {
+	quizID, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	if err := h.svc.DeleteQuiz(c.Request.Context(), quizActor(c), quizID); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
 // GetQuiz handles GET /quizzes/:id → 200 (student metadata, no answer keys).
 func (h *QuizHandler) GetQuiz(c *gin.Context) {
 	quizID, err := parseUUIDParam(c, "id")

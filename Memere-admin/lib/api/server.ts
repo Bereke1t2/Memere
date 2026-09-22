@@ -26,7 +26,10 @@ export async function apiFetch<T extends z.ZodTypeAny>(
   const url = `${env.API_BASE_URL}/api/v1${path}`;
 
   async function doFetch(bearer: string | undefined) {
-    const headers: HeadersInit = { "Content-Type": "application/json" };
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      "User-Agent": "Memere-Admin/1.0",
+    };
     if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
     return fetch(url, {
       method,
@@ -67,7 +70,11 @@ export async function apiFetch<T extends z.ZodTypeAny>(
         parsed.data.details
       );
     }
-    throw new ApiError("UNKNOWN_ERROR", "An unexpected error occurred.", res.status);
+    const fallbackMsg =
+      (json && typeof json === "object" && ("message" in json || "error" in json) &&
+        ((json as { message?: string; error?: string }).message || (json as { message?: string; error?: string }).error)) ||
+      `Request failed with status ${res.status}`;
+    throw new ApiError("API_ERROR", fallbackMsg, res.status, json);
   }
 
   if (schema) {

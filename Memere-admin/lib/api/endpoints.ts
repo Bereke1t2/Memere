@@ -12,6 +12,7 @@ import {
   ReconcileResponseSchema,
   CourseSchema,
   SectionSchema,
+  AddSectionInputSchema,
   TeacherCourseListSchema,
   SectionListResponseSchema,
   LessonSchema,
@@ -39,6 +40,7 @@ import {
   type ReconcileResponse,
   type Course,
   type Section,
+  type AddSectionInput,
   type TeacherCourseList,
   type CreateCourseInput,
   type Lesson,
@@ -294,6 +296,30 @@ export async function getCourseSales(courseId: string): Promise<CourseSales> {
   return data!;
 }
 
+// ---- Teacher: Sections --------------------------------------------------------
+
+export async function createSection(courseId: string, input: AddSectionInput): Promise<Section> {
+  const data = await apiFetch(`/courses/${courseId}/sections`, {
+    method: "POST",
+    body: input,
+    schema: SectionSchema,
+  });
+  return data!;
+}
+
+export async function updateSection(sectionId: string, input: Partial<AddSectionInput>): Promise<Section> {
+  const data = await apiFetch(`/sections/${sectionId}`, {
+    method: "PUT",
+    body: input,
+    schema: SectionSchema,
+  });
+  return data!;
+}
+
+export async function deleteSection(sectionId: string): Promise<void> {
+  await apiFetch(`/sections/${sectionId}`, { method: "DELETE" });
+}
+
 // ---- Teacher: Lessons (Phase 5 Skill 6) ----------------------------------------
 
 export async function listLessons(sectionId: string): Promise<Lesson[]> {
@@ -306,6 +332,17 @@ export async function addLesson(sectionId: string, input: AddLessonInput): Promi
     method: "POST", body: input, schema: LessonSchema,
   });
   return data!;
+}
+
+export async function updateLesson(lessonId: string, input: Partial<AddLessonInput>): Promise<Lesson> {
+  const data = await apiFetch(`/lessons/${lessonId}`, {
+    method: "PUT", body: input, schema: LessonSchema,
+  });
+  return data!;
+}
+
+export async function deleteLesson(lessonId: string): Promise<void> {
+  await apiFetch(`/lessons/${lessonId}`, { method: "DELETE" });
 }
 
 // ---- Teacher: Quizzes (Phase 5 Skill 6) ----------------------------------------
@@ -335,6 +372,10 @@ export async function updateQuiz(quizId: string, input: Partial<CreateQuizInput>
   return data!;
 }
 
+export async function deleteQuiz(quizId: string): Promise<void> {
+  await apiFetch(`/quizzes/${quizId}`, { method: "DELETE" });
+}
+
 export async function addQuizQuestion(quizId: string, input: AddQuizQuestionInput): Promise<QuizQuestion> {
   const data = await apiFetch(`/quizzes/${quizId}/questions`, {
     method: "POST", body: input, schema: QuizQuestionSchema,
@@ -360,6 +401,17 @@ export async function createExam(courseId: string, input: CreateExamInput): Prom
     method: "POST", body: input, schema: ExamSchema,
   });
   return data!;
+}
+
+export async function updateExam(examId: string, input: Partial<CreateExamInput>): Promise<Exam> {
+  const data = await apiFetch(`/exams/${examId}`, {
+    method: "PUT", body: input, schema: ExamSchema,
+  });
+  return data!;
+}
+
+export async function deleteExam(examId: string): Promise<void> {
+  await apiFetch(`/exams/${examId}`, { method: "DELETE" });
 }
 
 export async function addExamQuestion(examId: string, input: ExamQuestionInput): Promise<void> {

@@ -21,6 +21,7 @@ import { CreateCourseInputSchema, type CreateCourseInput } from "@/lib/api/schem
 
 export function CreateCourseDialog() {
   const [open, setOpen] = useState(false);
+  const [tagsInput, setTagsInput] = useState("");
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -28,20 +29,43 @@ export function CreateCourseDialog() {
     register,
     handleSubmit,
     setValue,
+    watch,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<CreateCourseInput>({
     resolver: zodResolver(CreateCourseInputSchema),
-    defaultValues: { price: 0, language: "en" },
+    defaultValues: { price: 0, currency: "ETB", language: "en", is_free: false, level: "beginner", grade: 12 },
   });
+
+  const isFree = watch("is_free");
 
   async function onSubmit(values: CreateCourseInput) {
     try {
-      await clientAction("/api/teacher/courses", values);
+      const tags = tagsInput
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
+
+      const payload: CreateCourseInput = {
+        title: values.title.trim(),
+        description: values.description.trim(),
+        short_description: values.short_description?.trim() || undefined,
+        subject: values.subject.trim(),
+        grade: Number(values.grade) || 12,
+        level: values.level || "beginner",
+        language: values.language || "en",
+        currency: values.currency || "ETB",
+        price: isFree ? 0 : (typeof values.price === "number" && !Number.isNaN(values.price) ? values.price : 0),
+        is_free: isFree,
+      };
+
+      await clientAction("/api/teacher/courses", payload);
       toast.success("Course created.");
       setOpen(false);
       reset();
+      setTagsInput("");
       await queryClient.invalidateQueries({ queryKey: ["teacher-courses"] });
+      await queryClient.invalidateQueries({ queryKey: ["courses"] });
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create course.");
@@ -56,24 +80,34 @@ export function CreateCourseDialog() {
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg" aria-describedby={undefined}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>Create Course</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4 py-2">
             <div className="grid gap-1.5">
-              <Label htmlFor="title">Title</Label>
-              <Input id="title" placeholder="e.g. Grade 12 Mathematics" {...register("title")} />
+              <Label htmlFor="title">Course Title</Label>
+              <Input id="title" placeholder="e.g. Grade 12 National Exam Preparation - Mathematics" {...register("title")} />
               {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
             </div>
 
             <div className="grid gap-1.5">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="short_description">Short Summary / Tagline (optional)</Label>
+              <Input
+                id="short_description"
+                placeholder="A brief 1-sentence overview for course cards"
+                {...register("short_description")}
+              />
+              {errors.short_description && <p className="text-xs text-destructive">{errors.short_description.message}</p>}
+            </div>
+
+            <div className="grid gap-1.5">
+              <Label htmlFor="description">Full Description</Label>
               <textarea
                 id="description"
                 rows={3}
-                placeholder="What will students learn?"
+                placeholder="What will students learn in this course?"
                 className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-none"
                 {...register("description")}
               />
@@ -87,8 +121,8 @@ export function CreateCourseDialog() {
                 {errors.subject && <p className="text-xs text-destructive">{errors.subject.message}</p>}
               </div>
               <div className="grid gap-1.5">
-                <Label>Grade</Label>
-                <Select onValueChange={(v) => setValue("grade", Number(v))}>
+                <Label>Grade Level</Label>
+                <Select defaultValue="12" onValueChange={(v) => setValue("grade", Number(v))}>
                   <SelectTrigger><SelectValue placeholder="Select grade" /></SelectTrigger>
                   <SelectContent>
                     {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
@@ -102,8 +136,8 @@ export function CreateCourseDialog() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-1.5">
-                <Label>Level</Label>
-                <Select onValueChange={(v) => setValue("level", v as CreateCourseInput["level"])}>
+                <Label>Difficulty Level</Label>
+                <Select defaultValue="beginner" onValueChange={(v) => setValue("level", v as CreateCourseInput["level"])}>
                   <SelectTrigger><SelectValue placeholder="Select level" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="beginner">Beginner</SelectItem>
@@ -114,13 +148,78 @@ export function CreateCourseDialog() {
                 {errors.level && <p className="text-xs text-destructive">{errors.level.message}</p>}
               </div>
               <div className="grid gap-1.5">
-                <Label htmlFor="price">Price (ETB, 0 = free)</Label>
-                <Input id="price" type="number" min="0" placeholder="0" {...register("price", { valueAsNumber: true })} />
+                <Label>Language</Label>
+                <Select defaultValue="en" onValueChange={(v) => setValue("language", v)}>
+                  <SelectTrigger><SelectValue placeholder="Select language" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en">English (EN)</SelectItem>
+                    <SelectItem value="am">Amharic (AM)</SelectItem>
+                    <SelectItem value="om">Afaan Oromo (OM)</SelectItem>
+                    <SelectItem value="ti">Tigrinya (TI)</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.language && <p className="text-xs text-destructive">{errors.language.message}</p>}
               </div>
             </div>
 
+            <div className="rounded-lg border p-3 flex flex-col gap-3 bg-muted/20">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="is_free"
+                  checked={isFree}
+                  onChange={(e) => {
+                    setValue("is_free", e.target.checked);
+                    if (e.target.checked) setValue("price", 0);
+                  }}
+                  className="rounded h-4 w-4"
+                />
+                <Label htmlFor="is_free" className="text-xs font-semibold cursor-pointer">
+                  This is a Free Course (Open to all students)
+                </Label>
+              </div>
+
+              {!isFree && (
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="price" className="text-xs">Price</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      min="0"
+                      step="any"
+                      placeholder="e.g. 250"
+                      {...register("price", { valueAsNumber: true })}
+                    />
+                    {errors.price && <p className="text-xs text-destructive">{errors.price.message}</p>}
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">Currency</Label>
+                    <Select defaultValue="ETB" onValueChange={(v) => setValue("currency", v)}>
+                      <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="ETB">ETB (Ethiopian Birr)</SelectItem>
+                        <SelectItem value="USD">USD ($)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="grid gap-1.5">
+              <Label htmlFor="tags" className="text-xs">Tags / Keywords (comma-separated, optional)</Label>
+              <Input
+                id="tags"
+                placeholder="e.g. National Exam, Calculus, Unit 1"
+                value={tagsInput}
+                onChange={(e) => setTagsInput(e.target.value)}
+                className="text-xs"
+              />
+            </div>
+
             <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => { setOpen(false); reset(); }}>
+              <Button type="button" variant="outline" onClick={() => { setOpen(false); reset(); setTagsInput(""); }}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>

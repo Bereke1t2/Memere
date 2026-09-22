@@ -1,7 +1,12 @@
 import { notFound, redirect } from "next/navigation";
+import Image from "next/image";
 import { requireStaff } from "@/lib/auth/session";
 import {
-  getCourse, getCourseSections, listLessons, listQuizzes, listExams,
+  getCourse,
+  getCourseSections,
+  listLessons,
+  listQuizzes,
+  listExams,
 } from "@/lib/api/endpoints";
 import { BreadcrumbSetter } from "@/lib/breadcrumb-context";
 import { SectionsList } from "@/components/courses/sections-list";
@@ -46,6 +51,8 @@ export default async function MyCourseDetailPage({
   const lessonsBySectionId: Record<string, Lesson[]> = Object.fromEntries(
     sections.map((s, i) => [s.id, lessonArrays[i]])
   );
+  const allLessons = Object.values(lessonsBySectionId).flat();
+  const tags: string[] = Array.isArray(course.metadata?.tags) ? course.metadata.tags : [];
 
   return (
     <>
@@ -54,20 +61,51 @@ export default async function MyCourseDetailPage({
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           {!isOwner && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-200 mb-2 w-full">
-            This course belongs to another teacher. You can view it but cannot make changes.
-          </div>
-        )}
-        <div className="flex flex-col gap-1">
-            <h1 className="text-2xl font-semibold tracking-tight">{course.title}</h1>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant={course.is_published ? "default" : "secondary"} className="text-xs">
-                {course.is_published ? "Published" : "Draft"}
-              </Badge>
-              <span className="text-xs text-muted-foreground">{course.subject} · Grade {course.grade}</span>
-              {course.level && (
-                <span className="text-xs text-muted-foreground capitalize">{course.level}</span>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-4 py-3 text-sm text-amber-800 dark:text-amber-200 mb-2 w-full">
+              This course belongs to another teacher. You can view it but cannot make changes.
+            </div>
+          )}
+          <div className="flex gap-4 items-start flex-1 min-w-0">
+            {course.thumbnail_url ? (
+              <div className="relative h-20 w-32 shrink-0 rounded-lg overflow-hidden border bg-muted">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={course.thumbnail_url}
+                  alt={course.title}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            ) : null}
+            <div className="flex flex-col gap-1 min-w-0">
+              <h1 className="text-2xl font-semibold tracking-tight">{course.title}</h1>
+              {course.short_description && (
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {course.short_description}
+                </p>
               )}
+              <div className="flex items-center gap-2 flex-wrap mt-1">
+                <Badge variant={course.is_published ? "default" : "secondary"} className="text-xs">
+                  {course.is_published ? "Published" : "Draft"}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {course.subject} · Grade {course.grade}
+                </span>
+                {course.level && (
+                  <span className="text-xs text-muted-foreground capitalize">
+                    {course.level}
+                  </span>
+                )}
+                {course.language && (
+                  <span className="text-xs text-muted-foreground uppercase font-mono">
+                    [{course.language}]
+                  </span>
+                )}
+                {tags.map((tag) => (
+                  <Badge key={tag} variant="outline" className="text-xs">
+                    #{tag}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </div>
           {isOwner && <TeacherCourseActions course={course} />}
@@ -78,7 +116,11 @@ export default async function MyCourseDetailPage({
           <CardContent className="p-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-6 text-sm">
             <div>
               <p className="text-muted-foreground mb-0.5">Price</p>
-              <p className="font-medium">{course.is_free || course.price === 0 ? "Free" : `${course.currency} ${course.price}`}</p>
+              <p className="font-medium">
+                {course.is_free || course.price === 0
+                  ? "Free"
+                  : `${course.currency ?? "ETB"} ${course.price}`}
+              </p>
             </div>
             <div>
               <p className="text-muted-foreground mb-0.5">Language</p>
@@ -92,10 +134,12 @@ export default async function MyCourseDetailPage({
               <p className="text-muted-foreground mb-0.5">Enrolled</p>
               <p className="font-medium tabular-nums">{course.enrollment_count ?? 0}</p>
             </div>
-            <div className="sm:col-span-2 lg:col-span-4">
-              <p className="text-muted-foreground mb-0.5">Description</p>
-              <p className="leading-relaxed">{course.description}</p>
-            </div>
+            {course.description && (
+              <div className="sm:col-span-2 lg:col-span-4">
+                <p className="text-muted-foreground mb-0.5">Description</p>
+                <p className="leading-relaxed text-sm whitespace-pre-line">{course.description}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -121,12 +165,18 @@ export default async function MyCourseDetailPage({
               courseId={id}
               sections={sections}
               lessonsBySectionId={lessonsBySectionId}
+              quizzes={quizzes}
               canEdit={isOwner}
             />
           </TabsContent>
 
           <TabsContent value="quizzes">
-            <QuizzesPanel courseId={id} quizzes={quizzes} canEdit={isOwner} />
+            <QuizzesPanel
+              courseId={id}
+              quizzes={quizzes}
+              lessons={allLessons}
+              canEdit={isOwner}
+            />
           </TabsContent>
 
           <TabsContent value="exams">

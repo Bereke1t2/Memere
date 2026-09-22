@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { DataTable } from "@/components/data-table/data-table";
 import { Pagination } from "@/components/data-table/pagination";
 import { useCursorList, type CursorPage } from "@/lib/hooks/use-cursor-list";
+import { CreateCourseDialog } from "@/components/courses/create-course-dialog";
 import { courseColumns } from "./columns";
 import type { Course } from "@/lib/api/schemas";
 
@@ -25,12 +26,15 @@ export function CoursesClient({ initialData }: CoursesClientProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-end">
-        {data && (
-          <p className="text-xs text-muted-foreground">
-            Showing {items.length} course{items.length !== 1 ? "s" : ""}
-          </p>
-        )}
+      <div className="flex items-center justify-between">
+        <div>
+          {data && (
+            <p className="text-xs text-muted-foreground">
+              Showing {items.length} course{items.length !== 1 ? "s" : ""}
+            </p>
+          )}
+        </div>
+        <CreateCourseDialog />
       </div>
 
       <DataTable

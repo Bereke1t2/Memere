@@ -159,11 +159,13 @@ func NewRouter(deps Deps) *gin.Engine {
 		courses.POST("/:id/thumbnail", requireAuth, teacherOrAdmin, deps.Courses.UploadCourseThumbnail)
 	}
 
-	// Section-scoped lesson routes.
+	// Section-scoped lesson routes & section update/delete.
 	sections := v1.Group("/sections")
 	{
 		sections.GET("/:id/lessons", optionalAuth, deps.Courses.ListLessons)
 		sections.POST("/:id/lessons", requireAuth, teacherOrAdmin, deps.Courses.AddLesson)
+		sections.PUT("/:id", requireAuth, teacherOrAdmin, deps.Courses.UpdateSection)
+		sections.DELETE("/:id", requireAuth, teacherOrAdmin, deps.Courses.DeleteSection)
 	}
 
 	// Lesson update/delete and PDF routes.
@@ -188,6 +190,7 @@ func NewRouter(deps Deps) *gin.Engine {
 	{
 		quizzes.POST("/:id/questions", requireAuth, teacherOrAdmin, deps.Quizzes.AddQuestion)
 		quizzes.PUT("/:id", requireAuth, teacherOrAdmin, deps.Quizzes.UpdateQuiz)
+		quizzes.DELETE("/:id", requireAuth, teacherOrAdmin, deps.Quizzes.DeleteQuiz)
 		quizzes.GET("/:id", optionalAuth, deps.Quizzes.GetQuiz)
 		quizzes.POST("/:id/attempts", optionalAuth, deps.Quizzes.StartAttempt)
 		// Offline download: full quiz WITH answer keys, for on-device grading. The
@@ -206,6 +209,8 @@ func NewRouter(deps Deps) *gin.Engine {
 	exams := v1.Group("/exams")
 	{
 		exams.POST("/:id/questions", requireAuth, teacherOrAdmin, deps.Exams.AddQuestion)
+		exams.PUT("/:id", requireAuth, teacherOrAdmin, deps.Exams.UpdateExam)
+		exams.DELETE("/:id", requireAuth, teacherOrAdmin, deps.Exams.DeleteExam)
 		exams.POST("/:id/publish", requireAuth, teacherOrAdmin, deps.Exams.Publish)
 		exams.GET("/:id/stats", requireAuth, teacherOrAdmin, deps.Analytics.ExamStats)
 		// Leaderboard: top-N + caller's own rank. Any authenticated student may view.
