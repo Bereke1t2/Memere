@@ -33,7 +33,7 @@ func (r *QuestionRepo) Create(ctx context.Context, q *entity.Question, answers [
 	queries := queriesFor(ctx, r.q)
 
 	row, err := queries.CreateQuestion(ctx, sqlcgen.CreateQuestionParams{
-		QuizID:      toPgUUID(q.QuizID),
+		QuizID:      toPgUUIDNullable(q.QuizID),
 		Text:        q.Text,
 		Type:        string(q.Type),
 		Points:      int32(q.Points),

@@ -21,6 +21,14 @@ func toPgUUID(id uuid.UUID) pgtype.UUID {
 	return pgtype.UUID{Bytes: id, Valid: true}
 }
 
+// toPgUUIDNullable wraps a domain uuid.UUID as a pgtype.UUID, mapping uuid.Nil to SQL NULL.
+func toPgUUIDNullable(id uuid.UUID) pgtype.UUID {
+	if id == uuid.Nil {
+		return pgtype.UUID{Valid: false}
+	}
+	return pgtype.UUID{Bytes: id, Valid: true}
+}
+
 // fromPgUUID unwraps a pgtype.UUID. An invalid (NULL) value yields the zero
 // uuid.UUID, which the schema never produces for a NOT NULL primary key.
 func fromPgUUID(v pgtype.UUID) uuid.UUID {
