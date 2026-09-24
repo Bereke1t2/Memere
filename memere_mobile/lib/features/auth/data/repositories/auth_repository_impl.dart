@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:fpdart/fpdart.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/storage/offline_storage_cleanup_service.dart';
 import '../../../../core/storage/secure_storage_service.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -90,9 +91,11 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       final refreshToken = await _secureStorage.getRefreshToken();
       if (refreshToken != null) await _remote.logout(refreshToken);
+      await OfflineStorageCleanupService.purgePaidDownloads();
       await _secureStorage.clearAll();
       return const Right(null);
     } catch (e) {
+      await OfflineStorageCleanupService.purgePaidDownloads();
       await _secureStorage.clearAll(); // always clear locally
       return const Right(null);
     }

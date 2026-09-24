@@ -9,6 +9,7 @@ import '../../../../core/offline/offline_providers.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../core/storage/hive/models/downloaded_item.dart';
 import '../../../../core/storage/hive/models/saved_item.dart';
+import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../../exam/presentation/providers/exam_attempt_provider.dart';
 import '../../../exam/presentation/providers/exam_download_provider.dart';
 import '../../../exam/presentation/widgets/exam_empty_state.dart';
@@ -52,13 +53,22 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final authState = ref.watch(authStateProvider).valueOrNull;
+    final isAuthenticated = authState?.isAuthenticated ?? false;
+
     final coursesAsync = ref.watch(savedCoursesProvider);
     final quizzesAsync = ref.watch(downloadedQuizzesProvider);
     final examsAsync = ref.watch(downloadedExamsProvider);
 
-    final courses = coursesAsync.valueOrNull ?? const [];
-    final quizzes = quizzesAsync.valueOrNull ?? const [];
-    final exams = examsAsync.valueOrNull ?? const [];
+    final courses = isAuthenticated
+        ? (coursesAsync.valueOrNull ?? const <SavedItem>[])
+        : const <SavedItem>[];
+    final quizzes = isAuthenticated
+        ? (quizzesAsync.valueOrNull ?? const <DownloadedItem>[])
+        : const <DownloadedItem>[];
+    final exams = isAuthenticated
+        ? (examsAsync.valueOrNull ?? const <DownloadedItem>[])
+        : const <DownloadedItem>[];
 
     final allItems = <_SavedCardData>[
       ...courses.map((c) => _SavedCardData(
@@ -100,7 +110,8 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
       }
     }).toList();
 
-    final isLoading = allItems.isEmpty &&
+    final isLoading = isAuthenticated &&
+        allItems.isEmpty &&
         (coursesAsync.isLoading ||
             quizzesAsync.isLoading ||
             examsAsync.isLoading);
@@ -133,7 +144,19 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
               ),
 
               // 2. 2-Column Grid of Vibrant Gradient Cards or Empty State
-              if (isLoading)
+              if (!isAuthenticated)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: ExamEmptyState(
+                    icon: Icons.lock_outline_rounded,
+                    title: 'Sign in to access saved items',
+                    body:
+                        'Your saved courses, notes, and offline materials are secured to your active device session. Sign in to access them.',
+                    buttonLabel: 'Sign In',
+                    onPressed: () => context.push(AppRoutes.login),
+                  ),
+                )
+              else if (isLoading)
                 const SliverFillRemaining(
                   child: Center(
                     child: CircularProgressIndicator(

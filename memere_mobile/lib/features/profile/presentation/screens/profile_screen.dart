@@ -441,13 +441,50 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ],
         ),
-        content: const Text(
-          'Are you sure you want to sign out? You can sign back in anytime to access your courses, mock exams, and saved study materials.',
-          style: TextStyle(
-            fontSize: 13.5,
-            color: AppColors.textSecondary,
-            height: 1.45,
-          ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Are you sure you want to sign out of Memere on this device?',
+              style: TextStyle(
+                fontSize: 13.5,
+                color: AppColors.textSecondary,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0x1DEF4444),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0x55EF4444)),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    color: Color(0xFFEF4444),
+                    size: 20,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Warning: To protect course materials, signing out will erase all offline downloaded videos, PDF/HTML study notes, and mock exams from this device.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFFFCA5A5),
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         actionsPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

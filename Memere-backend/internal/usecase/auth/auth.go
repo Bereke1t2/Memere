@@ -210,6 +210,20 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*AuthTokens, *entit
 		_ = s.sessions.ClearLoginFailures(ctx, u.ID)
 	}
 
+	// Check for active session on another device (Single-Device Policy).
+	activeSession, err := s.sessions.GetSession(ctx, u.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if activeSession != "" {
+		return nil, nil, apperror.New(
+			http.StatusConflict,
+			"ACTIVE_SESSION_EXISTS",
+			"This account is currently active on another device. Please log out from that device first before logging in here.",
+			nil,
+		)
+	}
+
 	tokens, err := s.issueTokens(ctx, u, in.DeviceInfo)
 	if err != nil {
 		return nil, nil, err

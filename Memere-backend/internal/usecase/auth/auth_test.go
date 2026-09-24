@@ -373,3 +373,44 @@ func TestRevokeAccessToken_DeniesSubsequentCheck(t *testing.T) {
 		t.Error("access token JTI must be on the denylist after revocation")
 	}
 }
+
+func TestLogin_RejectWhenActiveSessionExists(t *testing.T) {
+	svc, _, _, _ := newTestService()
+	ctx := context.Background()
+
+	if _, err := svc.Register(ctx, validRegisterInput()); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	// 1. First device logs in -> Success
+	tok1, u, err := svc.Login(ctx, LoginInput{Email: "student@example.com", Password: "correct horse battery"})
+	if err != nil {
+		t.Fatalf("first login failed: %v", err)
+	}
+	if tok1.AccessToken == "" {
+		t.Fatal("first login should return access token")
+	}
+
+	// 2. Second device tries to log in while first device is active -> Rejected with ACTIVE_SESSION_EXISTS
+	_, _, err = svc.Login(ctx, LoginInput{Email: "student@example.com", Password: "correct horse battery"})
+	if err == nil {
+		t.Fatal("second login should be rejected while active session exists")
+	}
+	if !apperror.IsCode(err, "ACTIVE_SESSION_EXISTS") {
+		t.Fatalf("expected ACTIVE_SESSION_EXISTS, got %v", err)
+	}
+
+	// 3. First device logs out -> Success
+	if err := svc.Logout(ctx, u.ID, tok1.RefreshToken); err != nil {
+		t.Fatalf("logout failed: %v", err)
+	}
+
+	// 4. Second device logs in after logout -> Success
+	tok2, _, err := svc.Login(ctx, LoginInput{Email: "student@example.com", Password: "correct horse battery"})
+	if err != nil {
+		t.Fatalf("login after logout should succeed, got: %v", err)
+	}
+	if tok2.AccessToken == "" {
+		t.Fatal("second device login should return access token")
+	}
+}

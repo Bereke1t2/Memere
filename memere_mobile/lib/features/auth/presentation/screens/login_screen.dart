@@ -56,9 +56,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         var message = 'Invalid email or password. Please check your credentials or tap Create Account below.';
         IconData icon = Icons.lock_reset_rounded;
 
-        if (error is ServerFailure && error.statusCode != 401) {
-          message = error.message;
-          icon = Icons.error_outline_rounded;
+        if (error is ServerFailure) {
+          if (error.code == 'ACTIVE_SESSION_EXISTS' ||
+              error.message.toLowerCase().contains('active on another device') ||
+              error.message.toLowerCase().contains('already logged in')) {
+            message =
+                'Account Active on Another Device: This account is currently logged in on another phone. Please log out from that phone first before logging in here.';
+            icon = Icons.phonelink_lock_rounded;
+          } else if (error.statusCode != 401) {
+            message = error.message;
+            icon = Icons.error_outline_rounded;
+          }
         } else if (error.toString().contains('Connection refused')) {
           message = 'Cannot connect to backend server. Make sure backend is running!';
           icon = Icons.wifi_off_rounded;

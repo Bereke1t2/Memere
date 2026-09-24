@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import '../../constants/env.dart';
+import '../../storage/offline_storage_cleanup_service.dart';
 import '../../storage/secure_storage_service.dart';
 import '../../utils/media_url_helper.dart';
 
@@ -74,6 +75,7 @@ class AuthInterceptor extends Interceptor {
   }
 
   Future<void> _clearTokensAndRedirect() async {
+    await OfflineStorageCleanupService.purgePaidDownloads();
     await _secureStorage.clearTokens();
   }
 }
