@@ -69,7 +69,7 @@ export function LoginForm() {
             <GraduationCap className="h-8 w-8 text-white" />
           </div>
           <div className="text-center">
-            <h1 className="text-2xl font-bold">Memere Admin</h1>
+            <h1 className="text-2xl font-bold">Mirkuz Admin</h1>
             <p className="mt-1 text-sm text-muted-foreground">Sign in to your admin account</p>
           </div>
         </div>

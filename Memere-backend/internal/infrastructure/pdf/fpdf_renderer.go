@@ -37,7 +37,7 @@ func (FPDFRenderer) Certificate(_ context.Context, data certificate.CertData) ([
 	// --- Logo / header ---
 	pdf.SetFont("Arial", "B", 28)
 	pdf.SetTextColor(0, 100, 0)
-	pdf.CellFormat(277, 20, "Memere — ExamPrep", "", 1, "C", false, 0, "")
+	pdf.CellFormat(277, 20, "Mirkuz — ExamPrep", "", 1, "C", false, 0, "")
 
 	// --- Title ---
 	pdf.SetFont("Arial", "", 16)

@@ -12,7 +12,7 @@ interface SidebarProps {
   role: string;
 }
 
-export function Sidebar({ appName = "Memere", role }: SidebarProps) {
+export function Sidebar({ appName = "Mirkuz", role }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
@@ -64,7 +64,7 @@ export function Sidebar({ appName = "Memere", role }: SidebarProps) {
 export function MobileSidebar({
   open,
   onClose,
-  appName = "Memere",
+  appName = "Mirkuz",
   role,
 }: {
   open: boolean;

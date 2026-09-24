@@ -25,7 +25,7 @@ export async function refreshAccessToken(): Promise<string | undefined> {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "User-Agent": "Memere-Admin/1.0",
+        "User-Agent": "Mirkuz-Admin/1.0",
       },
       body: JSON.stringify({ refresh_token: refreshToken }),
       cache: "no-store",

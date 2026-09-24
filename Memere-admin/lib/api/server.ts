@@ -28,7 +28,7 @@ export async function apiFetch<T extends z.ZodTypeAny>(
   async function doFetch(bearer: string | undefined) {
     const headers: HeadersInit = {
       "Content-Type": "application/json",
-      "User-Agent": "Memere-Admin/1.0",
+      "User-Agent": "Mirkuz-Admin/1.0",
     };
     if (bearer) headers["Authorization"] = `Bearer ${bearer}`;
     return fetch(url, {
