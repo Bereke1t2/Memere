@@ -18,6 +18,7 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/service"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/access"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/course"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/pagination"
@@ -25,8 +26,9 @@ import (
 
 // CourseHandler adapts the course usecase to HTTP.
 type CourseHandler struct {
-	svc   *course.Service
-	store service.ObjectStore
+	svc    *course.Service
+	access *access.Service
+	store  service.ObjectStore
 	// publicURL is the API's externally reachable base URL (config APP_PUBLIC_URL).
 	// It builds the absolute, backend-served thumbnail URL persisted on the course
 	// so a Drive/S3-backed image is fetched via GET /courses/:id/thumbnail.
@@ -35,18 +37,26 @@ type CourseHandler struct {
 
 // NewCourseHandler builds a CourseHandler. publicURL is the API base URL used to
 // construct thumbnail URLs; store is optional (nil disables file endpoints).
-func NewCourseHandler(svc *course.Service, publicURL string, store ...service.ObjectStore) *CourseHandler {
+func NewCourseHandler(svc *course.Service, accessSvc *access.Service, publicURL string, store ...service.ObjectStore) *CourseHandler {
 	var s service.ObjectStore
 	if len(store) > 0 {
 		s = store[0]
 	}
-	return &CourseHandler{svc: svc, store: s, publicURL: publicURL}
+	return &CourseHandler{svc: svc, access: accessSvc, store: s, publicURL: publicURL}
 }
 
 // actor pulls the authenticated caller from context (nil for anonymous).
 func actor(c *gin.Context) *course.Actor {
 	a, _ := middleware.ActorFromContext(c)
 	return a
+}
+
+// toAccessActor converts the HTTP middleware caller to an access.Actor.
+func toAccessActor(a *course.Actor) access.Actor {
+	if a == nil {
+		return access.Actor{}
+	}
+	return access.Actor{UserID: a.UserID, Role: a.Role}
 }
 
 // List handles GET /courses → paginated, visibility-filtered course list.
@@ -100,7 +110,16 @@ func (h *CourseHandler) Get(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	respondJSON(c, http.StatusOK, dto.NewCourseDetailResponse(content))
+
+	hasFullAccess := content.Course.IsFree
+	if !hasFullAccess && h.access != nil {
+		lvl, err := h.access.CanAccessCourse(c.Request.Context(), toAccessActor(actor(c)), content.Course.ID)
+		if err == nil && lvl == access.FullAccess {
+			hasFullAccess = true
+		}
+	}
+
+	respondJSON(c, http.StatusOK, dto.NewCourseDetailResponseWithAccess(content, hasFullAccess))
 }
 
 // Create handles POST /courses → 201.
@@ -366,7 +385,18 @@ func (h *CourseHandler) ListLessons(c *gin.Context) {
 		respondError(c, err)
 		return
 	}
-	respondJSON(c, http.StatusOK, gin.H{"data": dto.NewLessonListResponse(lessons)})
+
+	hasFullAccess := false
+	if len(lessons) > 0 && h.access != nil {
+		lvl, err := h.access.CanAccessCourse(c.Request.Context(), toAccessActor(actor(c)), lessons[0].CourseID)
+		if err == nil && lvl == access.FullAccess {
+			hasFullAccess = true
+		}
+	} else if len(lessons) == 0 {
+		hasFullAccess = true
+	}
+
+	respondJSON(c, http.StatusOK, gin.H{"data": dto.NewLessonListResponseWithAccess(lessons, hasFullAccess)})
 }
 
 // parseUUIDParam parses a path parameter as a UUID, returning a clean 400
@@ -475,6 +505,18 @@ func (h *CourseHandler) DownloadLessonPDF(c *gin.Context) {
 	if err != nil {
 		respondError(c, err)
 		return
+	}
+
+	if h.access != nil {
+		canAccess, err := h.access.CanAccessLesson(c.Request.Context(), toAccessActor(actor(c)), l)
+		if err != nil {
+			respondError(c, err)
+			return
+		}
+		if !canAccess {
+			respondError(c, apperror.New(http.StatusForbidden, "NOT_ENROLLED", "you must enroll in this course to access this document", nil))
+			return
+		}
 	}
 
 	if l.PdfURL == nil || strings.TrimSpace(*l.PdfURL) == "" {

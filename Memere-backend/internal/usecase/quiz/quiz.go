@@ -380,10 +380,14 @@ func (s *Service) ListMyAttempts(ctx context.Context, actor *Actor, quizID uuid.
 // shared access.Service. PreviewAccess is deliberately insufficient: previews
 // are for watching sample lessons, never for graded attempts.
 func (s *Service) assertCourseAccess(ctx context.Context, actor *Actor, courseID uuid.UUID) error {
-	if access.DisableEnrollmentCheck || actor == nil {
+	if access.DisableEnrollmentCheck {
 		return nil
 	}
-	return s.access.RequireFullAccess(ctx, access.Actor{UserID: actor.UserID, Role: actor.Role}, courseID)
+	var act access.Actor
+	if actor != nil {
+		act = access.Actor{UserID: actor.UserID, Role: actor.Role}
+	}
+	return s.access.RequireFullAccess(ctx, act, courseID)
 }
 
 // expired reports whether a timed attempt is past its server-side deadline.

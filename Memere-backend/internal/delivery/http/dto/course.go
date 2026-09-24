@@ -178,8 +178,14 @@ func NewSectionResponse(s *entity.CourseSection) SectionResponse {
 	}
 }
 
-// NewLessonResponse maps a domain lesson to its projection.
+// NewLessonResponse maps a domain lesson to its projection with full access.
 func NewLessonResponse(l *entity.Lesson) LessonResponse {
+	return NewLessonResponseWithAccess(l, true)
+}
+
+// NewLessonResponseWithAccess maps a domain lesson to its projection, redacting
+// the content and pdf_url if the caller lacks full access and the lesson is not a free preview.
+func NewLessonResponseWithAccess(l *entity.Lesson, fullAccess bool) LessonResponse {
 	var videoID *string
 	if l.VideoID != nil {
 		str := l.VideoID.String()
@@ -190,6 +196,14 @@ func NewLessonResponse(l *entity.Lesson) LessonResponse {
 		str := l.QuizID.String()
 		quizID = &str
 	}
+
+	content := l.Content
+	pdfURL := l.PdfURL
+	if !fullAccess && !l.IsFreePreview {
+		content = nil
+		pdfURL = nil
+	}
+
 	return LessonResponse{
 		ID:              l.ID.String(),
 		SectionID:       l.SectionID.String(),
@@ -202,8 +216,8 @@ func NewLessonResponse(l *entity.Lesson) LessonResponse {
 		IsPublished:     l.IsPublished,
 		VideoID:         videoID,
 		QuizID:          quizID,
-		Content:         l.Content,
-		PdfURL:          l.PdfURL,
+		Content:         content,
+		PdfURL:          pdfURL,
 		CreatedAt:       l.CreatedAt,
 		UpdatedAt:       l.UpdatedAt,
 	}
@@ -227,22 +241,33 @@ func NewSectionListResponse(sections []*entity.CourseSection) []SectionResponse 
 	return out
 }
 
-// NewLessonListResponse maps a slice of lessons to projections.
+// NewLessonListResponse maps a slice of lessons to projections with full access.
 func NewLessonListResponse(lessons []*entity.Lesson) []LessonResponse {
+	return NewLessonListResponseWithAccess(lessons, true)
+}
+
+// NewLessonListResponseWithAccess maps a slice of lessons to projections with access gating.
+func NewLessonListResponseWithAccess(lessons []*entity.Lesson, fullAccess bool) []LessonResponse {
 	out := make([]LessonResponse, len(lessons))
 	for i, l := range lessons {
-		out[i] = NewLessonResponse(l)
+		out[i] = NewLessonResponseWithAccess(l, fullAccess)
 	}
 	return out
 }
 
-// NewCourseDetailResponse maps the nested course view to its wire shape.
+// NewCourseDetailResponse maps the nested course view to its wire shape with full access.
 func NewCourseDetailResponse(content *repository.CourseWithContent) CourseDetailResponse {
+	return NewCourseDetailResponseWithAccess(content, true)
+}
+
+// NewCourseDetailResponseWithAccess maps the nested course view to its wire shape,
+// redacting content and pdf_url on non-preview lessons if fullAccess is false.
+func NewCourseDetailResponseWithAccess(content *repository.CourseWithContent, fullAccess bool) CourseDetailResponse {
 	sections := make([]SectionDetailResponse, len(content.Sections))
 	for i, sec := range content.Sections {
 		sections[i] = SectionDetailResponse{
 			SectionResponse: NewSectionResponse(sec.Section),
-			Lessons:         NewLessonListResponse(sec.Lessons),
+			Lessons:         NewLessonListResponseWithAccess(sec.Lessons, fullAccess),
 		}
 	}
 	return CourseDetailResponse{
