@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 
-/// Reusable AI Robot Persona Mascot widget for Memere.
+/// Reusable AI Robot Persona Mascot widget for Mirkuz.
 ///
 /// Can be rendered as:
 /// - Avatar / Icon Tile

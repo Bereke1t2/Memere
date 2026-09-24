@@ -3,8 +3,8 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "Memere Admin",
-  description: "Admin dashboard for Memere (ExamPrep) platform",
+  title: "Mirkuz Admin",
+  description: "Admin dashboard for Mirkuz (ExamPrep) platform",
 };
 
 export default function RootLayout({

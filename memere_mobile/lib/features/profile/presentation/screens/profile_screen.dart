@@ -9,7 +9,7 @@ import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../../payment/presentation/providers/purchase_history_provider.dart';
 import '../../../progress/presentation/providers/progress_providers.dart';
 
-/// Refined Profile Screen for Memere adapted directly from the reference UI design.
+/// Refined Profile Screen for Mirkuz adapted directly from the reference UI design.
 ///
 /// Design Highlights:
 /// - Top patterned header banner with settings icon & approval status indicator
@@ -446,7 +446,7 @@ class ProfileScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Are you sure you want to sign out of Memere on this device?',
+              'Are you sure you want to sign out of Mirkuz on this device?',
               style: TextStyle(
                 fontSize: 13.5,
                 color: AppColors.textSecondary,
@@ -543,7 +543,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ),
         content: const Text(
-          'Need help with course materials, mock exams, or payment confirmations? Contact the Memere academic support team at support@memere.et.',
+          'Need help with course materials, mock exams, or payment confirmations? Contact the Mirkuz academic support team at support@mirkuz.et.',
           style: TextStyle(
             fontSize: 13.5,
             color: AppColors.textSecondary,
@@ -1317,7 +1317,7 @@ class _GuestProfileView extends StatelessWidget {
                   const SizedBox(height: 32),
                   const Center(
                     child: Text(
-                      'Memere • Interactive Course Learning Platform',
+                      'Mirkuz • Interactive Course Learning Platform',
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,

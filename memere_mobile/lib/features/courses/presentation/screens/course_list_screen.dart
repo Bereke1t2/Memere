@@ -21,10 +21,10 @@ import '../widgets/course_list_skeleton.dart';
 const _kAllGrade = 0;
 const _kFreshmanGrade = 13;
 
-/// Clean, professional Home Screen for Memere.
+/// Clean, professional Home Screen for Mirkuz.
 ///
 /// Features:
-/// - Minimalist App Bar: 'Memere' on left, Profile avatar on right (navigates to Account)
+/// - Minimalist App Bar: 'Mirkuz' on left, Profile avatar on right (navigates to Account)
 /// - Overflow-Safe Hero Featured Banner with animated MemereMascot
 /// - Grade-level filter chips (All, Freshman, Grade 12–9) + Subject chooser navigation underneath
 /// - Unique, non-video Course Cards with optional thumbnail support
@@ -186,7 +186,7 @@ class _CourseListContent extends ConsumerWidget {
         controller: controller,
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          // 1. Minimalist App Bar (Memere left, Profile right)
+          // 1. Minimalist App Bar (Mirkuz left, Profile right)
           const SliverToBoxAdapter(
             child: _HomeTopBar(),
           ),
@@ -342,7 +342,7 @@ class _CourseListContent extends ConsumerWidget {
   }
 }
 
-/// Minimalist App Bar: 'Memere' on left, Profile avatar on right (only if signed in)
+/// Minimalist App Bar: 'Mirkuz' on left, Profile avatar on right (only if signed in)
 class _HomeTopBar extends ConsumerWidget {
   const _HomeTopBar();
 

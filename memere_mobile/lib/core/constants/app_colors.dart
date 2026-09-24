@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Memere Professional Color System — Duolingo Obsidian Dark with Strict Level Color Scoping.
+/// Mirkuz Professional Color System — Duolingo Obsidian Dark with Strict Level Color Scoping.
 ///
 /// Green & Amber are used VERY WISELY (reserved primarily for Level Badges & CTAs):
 /// - Beginner: `#10B981` (Emerald Green)

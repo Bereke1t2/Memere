@@ -1,4 +1,4 @@
-/// Screen Security Service for Memere Mobile
+/// Screen Security Service for Mirkuz Mobile
 ///
 /// Native Platform Protection:
 /// - **Android**: Enforces `WindowManager.LayoutParams.FLAG_SECURE` in `MainActivity.kt`.

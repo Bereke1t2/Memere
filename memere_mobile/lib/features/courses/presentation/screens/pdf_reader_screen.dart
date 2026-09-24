@@ -15,7 +15,7 @@ import '../../../../core/storage/secure_pdf_storage.dart';
 import '../../../../shared/widgets/ai_robot_mascot.dart';
 import '../providers/completed_lessons_provider.dart';
 
-/// In-App PDF & Study Notes Reader for Memere.
+/// In-App PDF & Study Notes Reader for Mirkuz.
 /// Uses the high-performance native PDFView background engine (from btluBook-Store)
 /// while maintaining the full Obsidian header, dual-mode tabs, font controls,
 /// and note-taking UI.

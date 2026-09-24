@@ -27,7 +27,7 @@ class PdfDownloadException implements Exception {
 
 /// Secure Local PDF Storage Service.
 /// Downloads, validates, and stores PDF files in app-private sandbox storage
-/// (`/data/user/0/.../app_flutter/pdfs/`), preventing raw files from being shared outside Memere.
+/// (`/data/user/0/.../app_flutter/pdfs/`), preventing raw files from being shared outside Mirkuz.
 class SecurePdfStorage {
   /// Checks if a given URL or filename is HTML format
   static bool isHtmlUrl(String url) {
@@ -321,7 +321,7 @@ class SecurePdfStorage {
 
 1. Read question stems attentively to identify core requirements and given conditions.
 2. Break down multi-step problems systematically before selecting your answer.
-3. Review related practice questions and flashcard concepts in the Memere library.
+3. Review related practice questions and flashcard concepts in the Mirkuz library.
 
 ### 4. Summary & Action Steps
 - Consolidate your notes and formulas into quick-reference review cards.

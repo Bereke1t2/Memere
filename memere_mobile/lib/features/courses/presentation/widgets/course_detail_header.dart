@@ -6,6 +6,7 @@ import '../../../../core/constants/app_motion.dart';
 import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../core/utils/media_url_helper.dart';
 import '../../../../shared/widgets/app_surface.dart';
 import '../../domain/entities/course_entity.dart';
 import 'course_card.dart';
@@ -344,12 +345,17 @@ class _PreviewImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (course.thumbnailUrl == null || course.thumbnailUrl!.trim().isEmpty) {
+    final rawThumbnail = course.thumbnailUrl;
+    final cleanThumbnail = (rawThumbnail != null && rawThumbnail.trim().isNotEmpty)
+        ? fixMediaUrl(rawThumbnail)
+        : null;
+
+    if (cleanThumbnail == null || cleanThumbnail.isEmpty) {
       return _FallbackHeader(subject: course.subject, color: color);
     }
 
     return CachedNetworkImage(
-      imageUrl: course.thumbnailUrl!,
+      imageUrl: cleanThumbnail,
       fit: BoxFit.cover,
       placeholder: (_, __) => ColoredBox(color: color.withAlpha(24)),
       errorWidget: (_, __, ___) => _FallbackHeader(
