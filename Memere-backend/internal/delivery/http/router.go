@@ -45,6 +45,7 @@ type Deps struct {
 	Notifications *NotificationHandler
 	Certificates  *CertificateHandler
 	Admin         *AdminHandler
+	CourseAccess  *CourseAccessHandler
 
 	// Google Drive object-storage backend (STORAGE_PROVIDER=gdrive). Both are nil
 	// for the S3/MinIO backend, leaving their routes unregistered.
@@ -157,6 +158,11 @@ func NewRouter(deps Deps) *gin.Engine {
 		courses.POST("/:id/publish", requireAuth, teacherOrAdmin, deps.Courses.Publish)
 		courses.POST("/:id/sections", requireAuth, teacherOrAdmin, deps.Courses.AddSection)
 		courses.POST("/:id/thumbnail", requireAuth, teacherOrAdmin, deps.Courses.UploadCourseThumbnail)
+
+		if deps.CourseAccess != nil {
+			courses.GET("/:id/access-status", optionalAuth, deps.CourseAccess.GetAccessStatus)
+			courses.POST("/:id/request-access", requireAuth, deps.CourseAccess.RequestAccess)
+		}
 	}
 
 	// Section-scoped lesson routes & section update/delete.
@@ -328,14 +334,34 @@ func NewRouter(deps Deps) *gin.Engine {
 		v1.GET("/certificates/:id/download", requireAuth, deps.Certificates.GetDownloadURL)
 	}
 
+	if deps.CourseAccess != nil {
+		v1.GET("/me/course-requests", requireAuth, deps.CourseAccess.ListMyRequests)
+
+		teacher := v1.Group("/teacher", requireAuth, teacherOrAdmin)
+		{
+			teacher.GET("/course-requests", deps.CourseAccess.ListTeacherRequests)
+			teacher.POST("/course-requests/:id/approve", deps.CourseAccess.ApproveTeacherRequest)
+			teacher.POST("/course-requests/:id/reject", deps.CourseAccess.RejectTeacherRequest)
+		}
+	}
+
 	if deps.Admin != nil {
 		adminGroup := v1.Group("/admin", requireAuth, adminOnly)
 		{
 			adminGroup.GET("/users", deps.Admin.ListUsers)
 			adminGroup.GET("/users/:id", deps.Admin.GetUser)
+			adminGroup.POST("/users/:id/approve", deps.Admin.ApproveUser)
+			adminGroup.POST("/users/:id/reject", deps.Admin.RejectUser)
+			adminGroup.GET("/users/:id/courses", deps.Admin.GetUserCourses)
+			adminGroup.POST("/users/:id/grant-access", deps.Admin.GrantCourseAccess)
+			adminGroup.POST("/users/:id/revoke-access", deps.Admin.RevokeCourseAccess)
 			adminGroup.POST("/users/:id/suspend", deps.Admin.SuspendUser)
 			adminGroup.POST("/users/:id/reactivate", deps.Admin.ReactivateUser)
 			adminGroup.POST("/users/:id/role", deps.Admin.ChangeRole)
+
+			adminGroup.GET("/course-requests", deps.Admin.ListCourseRequests)
+			adminGroup.POST("/course-requests/:id/approve", deps.Admin.ApproveCourseRequest)
+			adminGroup.POST("/course-requests/:id/reject", deps.Admin.RejectCourseRequest)
 
 			adminGroup.GET("/courses", deps.Admin.ListCourses)
 			adminGroup.POST("/courses/:id/unpublish", deps.Admin.UnpublishCourse)

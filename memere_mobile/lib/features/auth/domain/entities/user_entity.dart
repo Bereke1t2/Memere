@@ -6,6 +6,7 @@ class UserEntity {
     required this.firstName,
     required this.lastName,
     required this.role,
+    this.approvalStatus = UserApprovalStatus.approved,
     this.phone,
     this.avatarUrl,
     this.isEmailVerified = false,
@@ -16,6 +17,7 @@ class UserEntity {
   final String firstName;
   final String lastName;
   final UserRole role;
+  final UserApprovalStatus approvalStatus;
   final String? phone;
   final String? avatarUrl;
   final bool isEmailVerified;
@@ -24,6 +26,11 @@ class UserEntity {
   bool get isStudent => role == UserRole.student;
   bool get isTeacher => role == UserRole.teacher;
   bool get isAdmin   => role == UserRole.admin;
+  bool get isApproved => approvalStatus == UserApprovalStatus.approved;
+  bool get isPendingApproval => approvalStatus == UserApprovalStatus.pending;
+  bool get isRejected => approvalStatus == UserApprovalStatus.rejected;
 }
 
 enum UserRole { student, teacher, admin }
+
+enum UserApprovalStatus { pending, approved, rejected }

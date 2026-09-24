@@ -59,6 +59,23 @@ func TestRegister_HappyPath(t *testing.T) {
 	if stored.IsEmailVerified {
 		t.Error("new user should be unverified")
 	}
+	if u.ApprovalStatus != entity.ApprovalStatusPending {
+		t.Errorf("expected approval status pending, got %q", u.ApprovalStatus)
+	}
+}
+
+func TestRegister_TeacherApprovalStatus(t *testing.T) {
+	svc, _, _, _ := newTestService()
+	in := validRegisterInput()
+	in.Email = "teacher@example.com"
+	in.Role = entity.RoleTeacher
+	u, err := svc.Register(context.Background(), in)
+	if err != nil {
+		t.Fatalf("Register teacher: %v", err)
+	}
+	if u.ApprovalStatus != entity.ApprovalStatusApproved {
+		t.Errorf("expected approved status for teacher, got %q", u.ApprovalStatus)
+	}
 }
 
 func TestRegister_DuplicateEmail(t *testing.T) {

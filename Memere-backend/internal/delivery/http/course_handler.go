@@ -422,14 +422,32 @@ func (h *CourseHandler) UploadLessonPDF(c *gin.Context) {
 	if limit > 1024 {
 		limit = 1024
 	}
-	if len(rawBytes) < 5 || !bytes.Contains(rawBytes[:limit], []byte("%PDF-")) {
-		respondError(c, apperror.BadRequest("uploaded file is not a valid PDF document", nil))
+
+	var (
+		key         string
+		contentType string
+	)
+	ext := strings.ToLower(filepath.Ext(header.Filename))
+	isPdf := bytes.Contains(rawBytes[:limit], []byte("%PDF-")) || ext == ".pdf"
+	isHtml := bytes.Contains(bytes.ToLower(rawBytes[:limit]), []byte("<!doctype html")) ||
+		bytes.Contains(bytes.ToLower(rawBytes[:limit]), []byte("<html")) ||
+		bytes.Contains(bytes.ToLower(rawBytes[:limit]), []byte("<head")) ||
+		bytes.Contains(bytes.ToLower(rawBytes[:limit]), []byte("<body")) ||
+		ext == ".html" || ext == ".htm"
+
+	if isPdf {
+		key = fmt.Sprintf("lessons/%s/notes.pdf", id.String())
+		contentType = "application/pdf"
+	} else if isHtml {
+		key = fmt.Sprintf("lessons/%s/notes.html", id.String())
+		contentType = "text/html; charset=utf-8"
+	} else {
+		respondError(c, apperror.BadRequest("uploaded file must be a valid PDF (.pdf) or HTML (.html) document", nil))
 		return
 	}
 
-	key := fmt.Sprintf("lessons/%s/notes.pdf", id.String())
 	if h.store != nil {
-		if err := h.store.Put(c.Request.Context(), key, "application/pdf", bytes.NewReader(rawBytes)); err != nil {
+		if err := h.store.Put(c.Request.Context(), key, contentType, bytes.NewReader(rawBytes)); err != nil {
 			respondError(c, apperror.Internal(err))
 			return
 		}
@@ -460,7 +478,7 @@ func (h *CourseHandler) DownloadLessonPDF(c *gin.Context) {
 	}
 
 	if l.PdfURL == nil || strings.TrimSpace(*l.PdfURL) == "" {
-		respondError(c, apperror.NotFound("no PDF attached to this lesson", nil))
+		respondError(c, apperror.NotFound("no document attached to this lesson", nil))
 		return
 	}
 
@@ -473,15 +491,19 @@ func (h *CourseHandler) DownloadLessonPDF(c *gin.Context) {
 	}
 
 	if h.store != nil {
-		// Stream the PDF bytes with an explicit Content-Length header via c.Data.
+		// Stream the document bytes with an explicit Content-Length header via c.Data.
 		// io.Copy uses chunked transfer encoding (no Content-Length), causing mobile Dio client to hang at ~100%.
 		rc, err := h.store.Get(c.Request.Context(), pdfPath)
 		if err == nil {
 			defer rc.Close()
 			data, rerr := io.ReadAll(rc)
 			if rerr == nil && len(data) > 0 {
+				contentType := "application/pdf"
+				if strings.HasSuffix(strings.ToLower(pdfPath), ".html") || strings.HasSuffix(strings.ToLower(pdfPath), ".htm") {
+					contentType = "text/html; charset=utf-8"
+				}
 				c.Header("Content-Disposition", fmt.Sprintf("inline; filename=%q", filepath.Base(pdfPath)))
-				c.Data(http.StatusOK, "application/pdf", data)
+				c.Data(http.StatusOK, contentType, data)
 				return
 			}
 		}

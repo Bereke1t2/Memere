@@ -24,7 +24,7 @@ import {
 import { clientAction } from "@/lib/client-action";
 import type { User } from "@/lib/api/schemas";
 
-type ActiveDialog = null | "suspend" | "reactivate" | "role";
+type ActiveDialog = null | "suspend" | "reactivate" | "role" | "approve" | "reject";
 
 interface UserActionsProps {
   user: User;
@@ -48,6 +48,22 @@ export function UserActions({ user }: UserActionsProps) {
     router.refresh();
     queryClient.invalidateQueries({ queryKey: ["users"] });
   }
+
+  const approveMutation = useMutation({
+    mutationFn: () =>
+      clientAction(`/api/admin/users/${user.id}/approve`),
+    onSuccess: () =>
+      afterSuccess(`${user.first_name} ${user.last_name}'s account has been approved.`),
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: () =>
+      clientAction(`/api/admin/users/${user.id}/reject`, { reason }),
+    onSuccess: () =>
+      afterSuccess(`${user.first_name} ${user.last_name}'s account has been rejected.`),
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   const suspendMutation = useMutation({
     mutationFn: () =>
@@ -76,6 +92,36 @@ export function UserActions({ user }: UserActionsProps) {
   return (
     <>
       <div className="flex flex-wrap gap-2">
+        {user.approval_status === "pending" && (
+          <>
+            <Button
+              variant="default"
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={() => setDialog("approve")}
+            >
+              Approve account
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:bg-destructive/10"
+              onClick={() => setDialog("reject")}
+            >
+              Reject account
+            </Button>
+          </>
+        )}
+        {user.approval_status === "rejected" && (
+          <Button
+            variant="default"
+            size="sm"
+            className="bg-green-600 hover:bg-green-700 text-white"
+            onClick={() => setDialog("approve")}
+          >
+            Re-approve account
+          </Button>
+        )}
         {user.is_active ? (
           <Button
             variant="destructive"
@@ -198,6 +244,72 @@ export function UserActions({ user }: UserActionsProps) {
               onClick={() => roleMutation.mutate()}
             >
               {roleMutation.isPending ? "Saving…" : "Save role"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Approve dialog */}
+      <Dialog open={dialog === "approve"} onOpenChange={(o) => !o && close()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Approve Account</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to approve the account for{" "}
+              <strong>
+                {user.first_name} {user.last_name}
+              </strong>
+              ? They will be able to log in and request access to courses.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={close}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white"
+              disabled={approveMutation.isPending}
+              onClick={() => approveMutation.mutate()}
+            >
+              {approveMutation.isPending ? "Approving…" : "Confirm Approval"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reject dialog */}
+      <Dialog open={dialog === "reject"} onOpenChange={(o) => !o && close()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Account</DialogTitle>
+            <DialogDescription>
+              Reject account application for{" "}
+              <strong>
+                {user.first_name} {user.last_name}
+              </strong>
+              . You can optionally provide a reason.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 py-2">
+            <Label htmlFor="reject-reason">Reason (optional)</Label>
+            <textarea
+              id="reject-reason"
+              className="min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="Enter rejection reason…"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={close}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={rejectMutation.isPending}
+              onClick={() => rejectMutation.mutate()}
+            >
+              {rejectMutation.isPending ? "Rejecting…" : "Confirm Rejection"}
             </Button>
           </DialogFooter>
         </DialogContent>

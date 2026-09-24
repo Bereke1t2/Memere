@@ -14,6 +14,12 @@ const ROLE_OPTIONS = [
   { label: "Admin", value: "admin" },
 ];
 
+const APPROVAL_OPTIONS = [
+  { label: "Pending Approval", value: "pending" },
+  { label: "Approved", value: "approved" },
+  { label: "Rejected", value: "rejected" },
+];
+
 interface UsersClientProps {
   initialData: CursorPage<User>;
 }
@@ -35,6 +41,7 @@ export function UsersClient({ initialData }: UsersClientProps) {
       <div className="flex items-center gap-2 flex-wrap">
         <SearchFilter placeholder="Search by name or email…" paramKey="q" />
         <SelectFilter options={ROLE_OPTIONS} placeholder="All roles" paramKey="role" />
+        <SelectFilter options={APPROVAL_OPTIONS} placeholder="All approval statuses" paramKey="approval_status" />
         {data && (
           <p className="ml-auto text-xs text-muted-foreground">
             Showing {items.length} user{items.length !== 1 ? "s" : ""}

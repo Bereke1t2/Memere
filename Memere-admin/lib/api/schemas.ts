@@ -18,6 +18,7 @@ export const UserSchema = z.object({
   first_name: z.string(),
   last_name: z.string(),
   avatar_url: z.string().optional().nullable(),
+  approval_status: z.enum(["pending", "approved", "rejected"]).optional().default("approved"),
   is_active: z.boolean(),
   is_email_verified: z.boolean(),
   last_login_at: z.string().optional().nullable(),
@@ -26,6 +27,11 @@ export const UserSchema = z.object({
 });
 
 export type User = z.infer<typeof UserSchema>;
+
+export const UserDetailResponseSchema = z.object({
+  user: UserSchema,
+});
+export type UserDetailResponse = z.infer<typeof UserDetailResponseSchema>;
 
 // ---- Auth ----------------------------------------------------------------------
 
@@ -404,3 +410,50 @@ export const CourseSalesSchema = z.object({
   units: z.number(),
 });
 export type CourseSales = z.infer<typeof CourseSalesSchema>;
+
+// ---- Course Access & Requests ------------------------------------------------
+
+export const UserCourseAccessItemSchema = z.object({
+  course_id: z.string(),
+  title: z.string().optional(),
+  course_title: z.string().optional(),
+  subject: z.string().optional(),
+  grade: z.number().optional(),
+  has_access: z.boolean(),
+  access_source: z.string().optional().nullable(),
+  is_free: z.boolean(),
+  price: z.union([z.string(), z.number()]),
+  currency: z.string(),
+  request_status: z.string().optional().nullable(),
+});
+export type UserCourseAccessItem = z.infer<typeof UserCourseAccessItemSchema>;
+
+export const UserCourseAccessListResponseSchema = z.object({
+  student_id: z.string().optional(),
+  courses: z.array(UserCourseAccessItemSchema),
+});
+export type UserCourseAccessListResponse = z.infer<typeof UserCourseAccessListResponseSchema>;
+
+export const CourseAccessRequestSchema = z.object({
+  id: z.string(),
+  student_id: z.string(),
+  student_name: z.string().optional(),
+  student_email: z.string().optional(),
+  course_id: z.string(),
+  course_title: z.string().optional(),
+  status: z.enum(["pending", "approved", "rejected"]),
+  reviewed_by: z.string().optional().nullable(),
+  reviewed_at: z.string().optional().nullable(),
+  rejection_reason: z.string().optional().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+export type CourseAccessRequest = z.infer<typeof CourseAccessRequestSchema>;
+
+export const CourseAccessRequestListResponseSchema = z.object({
+  requests: z.array(CourseAccessRequestSchema),
+  next: z.string().optional().nullable(),
+  total: z.number().optional(),
+});
+export type CourseAccessRequestListResponse = z.infer<typeof CourseAccessRequestListResponseSchema>;
+

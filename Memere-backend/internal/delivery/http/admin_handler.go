@@ -12,17 +12,19 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
 	adminuc "github.com/Bereke1t2/Memere/memere-backend/internal/usecase/admin"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/courseaccess"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/pagination"
 )
 
 // AdminHandler adapts the admin usecase to HTTP.
 type AdminHandler struct {
-	svc *adminuc.Service
+	svc             *adminuc.Service
+	courseAccessSvc *courseaccess.Service
 }
 
-func NewAdminHandler(svc *adminuc.Service) *AdminHandler {
-	return &AdminHandler{svc: svc}
+func NewAdminHandler(svc *adminuc.Service, courseAccessSvc *courseaccess.Service) *AdminHandler {
+	return &AdminHandler{svc: svc, courseAccessSvc: courseAccessSvc}
 }
 
 // adminActor converts the context actor to an admin.Actor.
@@ -47,6 +49,9 @@ func (h *AdminHandler) ListUsers(c *gin.Context) {
 	filter := repository.AdminUserFilter{}
 	if r := c.Query("role"); r != "" {
 		filter.Role = &r
+	}
+	if s := c.Query("approval_status"); s != "" {
+		filter.ApprovalStatus = &s
 	}
 
 	users, next, err := h.svc.ListUsers(c.Request.Context(), adminActor(c), filter, cursor, limit)
@@ -83,6 +88,186 @@ func (h *AdminHandler) GetUser(c *gin.Context) {
 	}
 	r := dto.NewUserResponse(u)
 	respondJSON(c, http.StatusOK, &r)
+}
+
+// ApproveUser handles POST /admin/users/:id/approve → 204
+func (h *AdminHandler) ApproveUser(c *gin.Context) {
+	userID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		respondError(c, apperror.BadRequest("invalid user id", err))
+		return
+	}
+	if err := h.svc.ApproveUser(c.Request.Context(), adminActor(c), userID); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// RejectUser handles POST /admin/users/:id/reject → 204
+func (h *AdminHandler) RejectUser(c *gin.Context) {
+	userID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		respondError(c, apperror.BadRequest("invalid user id", err))
+		return
+	}
+	var in dto.RejectRequestInput
+	_ = c.ShouldBindJSON(&in)
+	if err := h.svc.RejectUser(c.Request.Context(), adminActor(c), userID, in.Reason); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// GetUserCourses handles GET /admin/users/:id/courses
+func (h *AdminHandler) GetUserCourses(c *gin.Context) {
+	userID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		respondError(c, apperror.BadRequest("invalid user id", err))
+		return
+	}
+	items, err := h.svc.GetUserCourseAccessList(c.Request.Context(), adminActor(c), userID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	respondJSON(c, http.StatusOK, gin.H{"courses": dto.NewUserCourseAccessList(items)})
+}
+
+// GrantCourseAccess handles POST /admin/users/:id/grant-access → 204
+func (h *AdminHandler) GrantCourseAccess(c *gin.Context) {
+	userID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		respondError(c, apperror.BadRequest("invalid user id", err))
+		return
+	}
+	var req dto.GrantCourseAccessRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, apperror.BadRequest("invalid request body", err))
+		return
+	}
+
+	if req.GrantAll {
+		if err := h.svc.GrantAllCoursesAccess(c.Request.Context(), adminActor(c), userID); err != nil {
+			respondError(c, err)
+			return
+		}
+	} else {
+		courseIDs := make([]uuid.UUID, 0, len(req.CourseIDs))
+		for _, raw := range req.CourseIDs {
+			cid, err := uuid.Parse(raw)
+			if err != nil {
+				respondError(c, apperror.BadRequest("invalid course id: "+raw, err))
+				return
+			}
+			courseIDs = append(courseIDs, cid)
+		}
+		if err := h.svc.GrantCourseAccess(c.Request.Context(), adminActor(c), userID, courseIDs); err != nil {
+			respondError(c, err)
+			return
+		}
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// RevokeCourseAccess handles POST /admin/users/:id/revoke-access → 204
+func (h *AdminHandler) RevokeCourseAccess(c *gin.Context) {
+	userID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		respondError(c, apperror.BadRequest("invalid user id", err))
+		return
+	}
+	var req dto.RevokeCourseAccessRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, apperror.BadRequest("invalid request body", err))
+		return
+	}
+	courseID, err := uuid.Parse(req.CourseID)
+	if err != nil {
+		respondError(c, apperror.BadRequest("invalid course id", err))
+		return
+	}
+
+	if err := h.svc.RevokeCourseAccess(c.Request.Context(), adminActor(c), userID, courseID); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// ---- Course Requests management ---------------------------------------------
+
+// ListCourseRequests handles GET /admin/course-requests
+func (h *AdminHandler) ListCourseRequests(c *gin.Context) {
+	cursor, err := pagination.Decode(c.Query("after"))
+	if err != nil {
+		respondError(c, apperror.BadRequest("invalid cursor", err))
+		return
+	}
+	limit := pagination.NormalizeLimit(atoiDefault(c.Query("limit"), 0))
+
+	var status *string
+	if s := c.Query("status"); s != "" {
+		status = &s
+	}
+
+	actor := courseaccess.Actor{UserID: adminActor(c).UserID, Role: adminActor(c).Role}
+	requests, next, err := h.courseAccessSvc.ListAdminRequests(c.Request.Context(), actor, status, cursor, limit)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+
+	items := make([]dto.CourseAccessRequestResponse, 0, len(requests))
+	for _, req := range requests {
+		items = append(items, dto.NewCourseAccessRequestResponse(req))
+	}
+
+	nextCursor := ""
+	if next != nil {
+		nextCursor = next.Encode()
+	}
+
+	respondJSON(c, http.StatusOK, gin.H{
+		"requests": items,
+		"next":     nextCursor,
+	})
+}
+
+// ApproveCourseRequest handles POST /admin/course-requests/:id/approve → 204
+func (h *AdminHandler) ApproveCourseRequest(c *gin.Context) {
+	requestID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		respondError(c, apperror.BadRequest("invalid request id", err))
+		return
+	}
+
+	actor := courseaccess.Actor{UserID: adminActor(c).UserID, Role: adminActor(c).Role}
+	if err := h.courseAccessSvc.ApproveAdminRequest(c.Request.Context(), actor, requestID); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// RejectCourseRequest handles POST /admin/course-requests/:id/reject → 204
+func (h *AdminHandler) RejectCourseRequest(c *gin.Context) {
+	requestID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		respondError(c, apperror.BadRequest("invalid request id", err))
+		return
+	}
+
+	var in dto.RejectRequestInput
+	_ = c.ShouldBindJSON(&in)
+
+	actor := courseaccess.Actor{UserID: adminActor(c).UserID, Role: adminActor(c).Role}
+	if err := h.courseAccessSvc.RejectAdminRequest(c.Request.Context(), actor, requestID, in.Reason); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
 }
 
 // SuspendUser handles POST /admin/users/:id/suspend → 204

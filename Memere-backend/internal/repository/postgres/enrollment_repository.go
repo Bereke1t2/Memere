@@ -17,14 +17,15 @@ import (
 // EnrollmentRepo is the sqlc-backed implementation of
 // repository.EnrollmentRepository.
 type EnrollmentRepo struct {
-	q *sqlcgen.Queries
+	q    *sqlcgen.Queries
+	pool *pgxpool.Pool
 }
 
 var _ repository.EnrollmentRepository = (*EnrollmentRepo)(nil)
 
 // NewEnrollmentRepo builds an EnrollmentRepo over a pgx pool.
 func NewEnrollmentRepo(pool *pgxpool.Pool) *EnrollmentRepo {
-	return &EnrollmentRepo{q: sqlcgen.New(pool)}
+	return &EnrollmentRepo{q: sqlcgen.New(pool), pool: pool}
 }
 
 // Create grants access exactly once. The CreateEnrollment query is
@@ -91,6 +92,49 @@ func (r *EnrollmentRepo) ListByStudent(ctx context.Context, studentID uuid.UUID,
 		out[i] = enrollmentFromRow(row)
 	}
 	return out, nil
+}
+
+func (r *EnrollmentRepo) ListAllByStudent(ctx context.Context, studentID uuid.UUID) ([]*entity.Enrollment, error) {
+	query := `
+SELECT id, student_id, course_id, source, enrolled_at, expires_at, created_at, updated_at
+FROM payments.enrollments
+WHERE student_id = $1
+ORDER BY enrolled_at DESC;`
+
+	rows, err := r.pool.Query(ctx, query, studentID)
+	if err != nil {
+		return nil, apperror.Internal(err)
+	}
+	defer rows.Close()
+
+	var out []*entity.Enrollment
+	for rows.Next() {
+		var e entity.Enrollment
+		var sourceStr string
+		if err := rows.Scan(
+			&e.ID,
+			&e.StudentID,
+			&e.CourseID,
+			&sourceStr,
+			&e.EnrolledAt,
+			&e.ExpiresAt,
+			&e.CreatedAt,
+			&e.UpdatedAt,
+		); err != nil {
+			return nil, apperror.Internal(err)
+		}
+		e.Source = entity.EnrollmentSource(sourceStr)
+		out = append(out, &e)
+	}
+	return out, rows.Err()
+}
+
+func (r *EnrollmentRepo) Delete(ctx context.Context, studentID, courseID uuid.UUID) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM payments.enrollments WHERE student_id = $1 AND course_id = $2`, studentID, courseID)
+	if err != nil {
+		return apperror.Internal(err)
+	}
+	return nil
 }
 
 func enrollmentFromRow(row sqlcgen.PaymentsEnrollment) *entity.Enrollment {

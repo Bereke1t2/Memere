@@ -27,9 +27,10 @@ type AdminAuditFilter struct {
 
 // AdminUserFilter narrows user listing for admin views.
 type AdminUserFilter struct {
-	Role     *string
-	IsActive *bool
-	Email    *string
+	Role           *string
+	IsActive       *bool
+	Email          *string
+	ApprovalStatus *string
 }
 
 // AdminPaymentFilter narrows payment listing for reconciliation views.

@@ -46,6 +46,7 @@ type UserResponse struct {
 	Email           string     `json:"email"`
 	Phone           *string    `json:"phone,omitempty"`
 	Role            string     `json:"role"`
+	ApprovalStatus  string     `json:"approval_status"`
 	FirstName       string     `json:"first_name"`
 	LastName        string     `json:"last_name"`
 	AvatarURL       *string    `json:"avatar_url,omitempty"`
@@ -58,11 +59,20 @@ type UserResponse struct {
 
 // NewUserResponse maps a domain user to its public projection.
 func NewUserResponse(u *entity.User) UserResponse {
+	approvalStatus := string(u.ApprovalStatus)
+	if approvalStatus == "" {
+		if u.Role == entity.RoleStudent {
+			approvalStatus = string(entity.ApprovalStatusPending)
+		} else {
+			approvalStatus = string(entity.ApprovalStatusApproved)
+		}
+	}
 	return UserResponse{
 		ID:              u.ID.String(),
 		Email:           u.Email,
 		Phone:           u.Phone,
 		Role:            string(u.Role),
+		ApprovalStatus:  approvalStatus,
 		FirstName:       u.FirstName,
 		LastName:        u.LastName,
 		AvatarURL:       u.AvatarURL,

@@ -25,6 +25,25 @@ func (r Role) Valid() bool {
 	}
 }
 
+// ApprovalStatus represents the account moderation state.
+type ApprovalStatus string
+
+const (
+	ApprovalStatusPending  ApprovalStatus = "pending"
+	ApprovalStatusApproved ApprovalStatus = "approved"
+	ApprovalStatusRejected ApprovalStatus = "rejected"
+)
+
+// Valid reports whether s is a recognized approval status.
+func (s ApprovalStatus) Valid() bool {
+	switch s {
+	case ApprovalStatusPending, ApprovalStatusApproved, ApprovalStatusRejected:
+		return true
+	default:
+		return false
+	}
+}
+
 // User is the core account entity (spec §4.2.1). Pure domain type: no db/json
 // tags. Nullable columns are represented as pointers.
 type User struct {
@@ -33,6 +52,7 @@ type User struct {
 	Phone                  *string
 	PasswordHash           string
 	Role                   Role
+	ApprovalStatus         ApprovalStatus
 	FirstName              string
 	LastName               string
 	AvatarURL              *string
@@ -47,6 +67,23 @@ type User struct {
 	DeletedAt              *time.Time
 }
 
+// IsApproved reports whether the user account is approved. Admins and teachers
+// are always considered approved.
+func (u User) IsApproved() bool {
+	if u.Role == RoleAdmin || u.Role == RoleTeacher {
+		return true
+	}
+	return u.ApprovalStatus == ApprovalStatusApproved
+}
+
+// IsPending reports whether the user account is pending approval.
+func (u User) IsPending() bool {
+	if u.Role == RoleAdmin || u.Role == RoleTeacher {
+		return false
+	}
+	return u.ApprovalStatus == ApprovalStatusPending || u.ApprovalStatus == ""
+}
+
 // Sanitized returns a copy of the user with every secret field cleared
 // (password hash, email-verification and password-reset tokens). Usecases
 // return this to callers that may serialize the user, so a hash or token can
@@ -59,3 +96,4 @@ func (u User) Sanitized() User {
 	u.PasswordResetExpiresAt = nil
 	return u
 }
+

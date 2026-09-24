@@ -471,6 +471,17 @@ func (f *fakeEnrollRepo) GetActiveForStudent(_ context.Context, s, c uuid.UUID) 
 func (f *fakeEnrollRepo) ListByStudent(context.Context, uuid.UUID, int) ([]*entity.Enrollment, error) {
 	return nil, nil
 }
+func (f *fakeEnrollRepo) ListAllByStudent(context.Context, uuid.UUID) ([]*entity.Enrollment, error) {
+	var out []*entity.Enrollment
+	for _, e := range f.active {
+		out = append(out, e)
+	}
+	return out, nil
+}
+func (f *fakeEnrollRepo) Delete(_ context.Context, s, c uuid.UUID) error {
+	delete(f.active, [2]uuid.UUID{s, c})
+	return nil
+}
 
 type fakeSubRepo struct {
 	active map[uuid.UUID]*entity.Subscription

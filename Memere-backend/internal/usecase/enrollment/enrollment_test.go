@@ -48,6 +48,19 @@ func (f *fakeEnrollRepo) ListByStudent(_ context.Context, s uuid.UUID, _ int) ([
 	}
 	return out, nil
 }
+func (f *fakeEnrollRepo) ListAllByStudent(_ context.Context, s uuid.UUID) ([]*entity.Enrollment, error) {
+	var out []*entity.Enrollment
+	for k, e := range f.rows {
+		if k[0] == s {
+			out = append(out, e)
+		}
+	}
+	return out, nil
+}
+func (f *fakeEnrollRepo) Delete(_ context.Context, s, c uuid.UUID) error {
+	delete(f.rows, [2]uuid.UUID{s, c})
+	return nil
+}
 
 // ---- tests -------------------------------------------------------------------
 

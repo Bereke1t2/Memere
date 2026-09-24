@@ -15,8 +15,6 @@ class CourseDetailSkeleton extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.all(AppSizes.screenPaddingH),
         children: [
-          _block(height: 188),
-          const SizedBox(height: AppSizes.md),
           _block(height: 26, width: 180),
           const SizedBox(height: AppSizes.sm),
           _block(height: 20),

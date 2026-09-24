@@ -137,11 +137,17 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (*entity.User,
 	}
 	verifyToken := randomToken()
 
+	approvalStatus := entity.ApprovalStatusPending
+	if role != entity.RoleStudent {
+		approvalStatus = entity.ApprovalStatusApproved
+	}
+
 	u := &entity.User{
 		Email:                  email,
 		Phone:                  in.Phone,
 		PasswordHash:           hash,
 		Role:                   role,
+		ApprovalStatus:         approvalStatus,
 		FirstName:              strings.TrimSpace(in.FirstName),
 		LastName:               strings.TrimSpace(in.LastName),
 		IsActive:               true,

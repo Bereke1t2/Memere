@@ -9,10 +9,11 @@ export async function GET(req: Request) {
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 100);
   const after = searchParams.get("after") ?? undefined;
   const role = searchParams.get("role") ?? undefined;
+  const approval_status = searchParams.get("approval_status") ?? undefined;
   const q = (searchParams.get("q") ?? "").toLowerCase().trim();
 
   try {
-    const result = await listUsers({ limit, after, role });
+    const result = await listUsers({ limit, after, role, approval_status });
 
     // Backend has no full-text search — filter current page only.
     const items = q

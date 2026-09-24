@@ -53,6 +53,8 @@ type EnrollmentRepository interface {
 	// grants access now (unexpired), or apperror.NotFound.
 	GetActiveForStudent(ctx context.Context, studentID, courseID uuid.UUID) (*entity.Enrollment, error)
 	ListByStudent(ctx context.Context, studentID uuid.UUID, limit int) ([]*entity.Enrollment, error)
+	ListAllByStudent(ctx context.Context, studentID uuid.UUID) ([]*entity.Enrollment, error)
+	Delete(ctx context.Context, studentID, courseID uuid.UUID) error
 }
 
 // CouponRepository persists coupons. IncrementUse is guarded on max_uses so a

@@ -37,6 +37,12 @@ class LessonEntity {
   bool get hasQuiz => quizId != null && quizId!.trim().isNotEmpty;
   bool get hasContent => content != null && content!.trim().isNotEmpty;
   bool get hasPdf => pdfUrl != null && pdfUrl!.trim().isNotEmpty;
+  bool get isHtml {
+    if (pdfUrl == null || pdfUrl!.trim().isEmpty) return false;
+    final lower = pdfUrl!.trim().toLowerCase();
+    return lower.endsWith('.html') || lower.endsWith('.htm');
+  }
+  bool get isPdf => hasPdf && !isHtml;
 
   String get durationLabel {
     if (durationSeconds <= 0) return '0m';

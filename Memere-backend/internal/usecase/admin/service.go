@@ -33,14 +33,15 @@ func (a Actor) isTeacherOrAdmin() bool {
 
 // Service is the stateless admin usecase orchestrator.
 type Service struct {
-	users    repository.UserRepository
-	courses  repository.CourseRepository
-	payments repository.PaymentRepository
-	enrolls  repository.EnrollmentRepository
-	subs     repository.SubscriptionRepository
-	revenue  repository.RevenueRepository
-	audit    repository.AdminAuditRepository
-	notify   service.Notifier
+	users     repository.UserRepository
+	courses   repository.CourseRepository
+	payments  repository.PaymentRepository
+	enrolls   repository.EnrollmentRepository
+	requests  repository.CourseAccessRequestRepository
+	subs      repository.SubscriptionRepository
+	revenue   repository.RevenueRepository
+	audit     repository.AdminAuditRepository
+	notify    service.Notifier
 	providers service.PaymentProviderRegistry
 }
 
@@ -49,6 +50,7 @@ func NewService(
 	courses repository.CourseRepository,
 	payments repository.PaymentRepository,
 	enrolls repository.EnrollmentRepository,
+	requests repository.CourseAccessRequestRepository,
 	subs repository.SubscriptionRepository,
 	revenue repository.RevenueRepository,
 	audit repository.AdminAuditRepository,
@@ -60,6 +62,7 @@ func NewService(
 		courses:   courses,
 		payments:  payments,
 		enrolls:   enrolls,
+		requests:  requests,
 		subs:      subs,
 		revenue:   revenue,
 		audit:     audit,

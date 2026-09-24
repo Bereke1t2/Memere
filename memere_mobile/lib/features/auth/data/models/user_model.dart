@@ -7,6 +7,7 @@ class UserModel extends UserEntity {
     required super.firstName,
     required super.lastName,
     required super.role,
+    super.approvalStatus,
     super.phone,
     super.avatarUrl,
     super.isEmailVerified,
@@ -22,6 +23,7 @@ class UserModel extends UserEntity {
       firstName: json['first_name'] as String? ?? '',
       lastName: json['last_name'] as String? ?? '',
       role: _parseRole(json['role'] as String? ?? 'student'),
+      approvalStatus: _parseApprovalStatus(json['approval_status'] as String? ?? 'approved'),
       phone: phone is String ? phone : null,
       avatarUrl: avatarUrl is String ? avatarUrl : null,
       isEmailVerified: json['is_email_verified'] as bool? ?? false,
@@ -34,6 +36,7 @@ class UserModel extends UserEntity {
         'first_name': firstName,
         'last_name': lastName,
         'role': role.name,
+        'approval_status': approvalStatus.name,
         'phone': phone,
         'avatar_url': avatarUrl,
         'is_email_verified': isEmailVerified,
@@ -47,6 +50,17 @@ class UserModel extends UserEntity {
         return UserRole.admin;
       default:
         return UserRole.student;
+    }
+  }
+
+  static UserApprovalStatus _parseApprovalStatus(String status) {
+    switch (status) {
+      case 'pending':
+        return UserApprovalStatus.pending;
+      case 'rejected':
+        return UserApprovalStatus.rejected;
+      default:
+        return UserApprovalStatus.approved;
     }
   }
 }

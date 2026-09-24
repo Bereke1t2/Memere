@@ -11,7 +11,6 @@ import {
   Globe,
   Loader2,
   Image as ImageIcon,
-  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -46,6 +45,7 @@ import {
   type CreateCourseInput,
   type Course,
 } from "@/lib/api/schemas";
+import { TeacherThumbnailDialog } from "./teacher-thumbnail-dialog";
 
 interface TeacherCourseActionsProps {
   course: Course;
@@ -58,10 +58,6 @@ export function TeacherCourseActions({ course }: TeacherCourseActionsProps) {
     "edit" | "publish" | "delete" | "thumbnail" | null
   >(null);
   const [busy, setBusy] = useState(false);
-  const [uploadingThumb, setUploadingThumb] = useState(false);
-  const [thumbPreview, setThumbPreview] = useState<string | null>(
-    course.thumbnail_url ?? null
-  );
 
   const existingTags = Array.isArray(course.metadata?.tags)
     ? (course.metadata.tags as string[]).join(", ")
@@ -124,39 +120,6 @@ export function TeacherCourseActions({ course }: TeacherCourseActionsProps) {
     toast.success("Course updated.");
     setDialog(null);
     await invalidate();
-  }
-
-  async function handleThumbnailUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file (PNG, JPG, WebP).");
-      return;
-    }
-    setUploadingThumb(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch(`/api/teacher/courses/${course.id}/thumbnail`, {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message ?? "Thumbnail upload failed.");
-      }
-      const data = await res.json();
-      setThumbPreview(data.thumbnail_url || URL.createObjectURL(file));
-      toast.success("Thumbnail uploaded successfully!");
-      await invalidate();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to upload thumbnail."
-      );
-    } finally {
-      setUploadingThumb(false);
-    }
   }
 
   async function handlePublish() {
@@ -456,56 +419,11 @@ export function TeacherCourseActions({ course }: TeacherCourseActionsProps) {
       </Dialog>
 
       {/* Thumbnail dialog */}
-      <Dialog
+      <TeacherThumbnailDialog
+        course={course}
         open={dialog === "thumbnail"}
         onOpenChange={(v) => !v && setDialog(null)}
-      >
-        <DialogContent className="max-w-md" aria-describedby={undefined}>
-          <DialogHeader>
-            <DialogTitle>Course Thumbnail</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 py-2">
-            {thumbPreview ? (
-              <div className="relative rounded-lg overflow-hidden border aspect-video bg-muted flex items-center justify-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={thumbPreview}
-                  alt="Course thumbnail"
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            ) : (
-              <div className="rounded-lg border-2 border-dashed aspect-video bg-muted/30 flex flex-col items-center justify-center text-muted-foreground gap-2">
-                <ImageIcon className="h-8 w-8 opacity-40" />
-                <p className="text-xs">No thumbnail image uploaded yet.</p>
-              </div>
-            )}
-
-            <label className="cursor-pointer self-center">
-              <span className="inline-flex items-center gap-2 text-sm font-medium px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
-                <Upload className="h-4 w-4" />
-                {uploadingThumb
-                  ? "Uploading…"
-                  : thumbPreview
-                  ? "Upload new image"
-                  : "Upload image"}
-              </span>
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                disabled={uploadingThumb}
-                onChange={handleThumbnailUpload}
-              />
-            </label>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialog(null)}>
-              Done
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      />
 
       {/* Publish confirm */}
       <Dialog

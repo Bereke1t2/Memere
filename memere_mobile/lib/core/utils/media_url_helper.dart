@@ -7,32 +7,38 @@ String fixMediaUrl(String rawUrl) {
   if (trimmed.isEmpty) return trimmed;
   try {
     final apiUri = Uri.parse(Env.baseUrl);
+    final scheme = apiUri.scheme.isNotEmpty ? apiUri.scheme : 'http';
     var host = apiUri.host;
     if (host.isEmpty) {
       host = '10.0.2.2';
     }
 
-    final port = (apiUri.hasPort && apiUri.port != 0) ? apiUri.port : 8080;
+    final portPart = (apiUri.hasPort && apiUri.port != 0)
+        ? ':${apiUri.port}'
+        : (scheme == 'https' ? '' : ':8080');
+    final origin = '$scheme://$host$portPart';
 
     var url = trimmed;
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      if (url.startsWith('/uploads/') || url.startsWith('uploads/') ||
-          url.startsWith('/storage/') || url.startsWith('storage/')) {
+      if (url.startsWith('/uploads/') ||
+          url.startsWith('uploads/') ||
+          url.startsWith('/storage/') ||
+          url.startsWith('storage/')) {
         final cleanPath = url.startsWith('/') ? url : '/$url';
-        url = 'http://$host:$port$cleanPath';
+        url = '$origin$cleanPath';
       } else if (url.startsWith('/')) {
-        url = 'http://$host:$port$url';
+        url = '$origin$url';
       } else {
-        url = 'http://$host:$port/api/v1/$url';
+        url = '$origin/api/v1/$url';
       }
     }
 
     return url
-        .replaceAll('http://localhost:8080', 'http://$host:$port')
-        .replaceAll('http://127.0.0.1:8080', 'http://$host:$port')
-        .replaceAll('http://localhost:9000', 'http://$host:9000')
-        .replaceAll('http://minio:9000', 'http://$host:9000')
-        .replaceAll('http://127.0.0.1:9000', 'http://$host:9000');
+        .replaceAll('http://localhost:8080', origin)
+        .replaceAll('http://127.0.0.1:8080', origin)
+        .replaceAll('http://localhost:9000', origin)
+        .replaceAll('http://minio:9000', origin)
+        .replaceAll('http://127.0.0.1:9000', origin);
   } catch (_) {
     return trimmed;
   }

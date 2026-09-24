@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,13 +6,13 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/auth/account_gate.dart';
+import '../../../../core/network/dio_client.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/memere_mascot.dart';
+import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../../payment/presentation/providers/checkout_flow_provider.dart';
 import '../../../payment/presentation/providers/course_access_provider.dart';
 import '../../../payment/presentation/providers/purchase_history_provider.dart';
-import '../../../payment/presentation/widgets/payment_provider_sheet.dart';
 import '../../domain/entities/course_detail_entity.dart';
 import '../../domain/entities/course_entity.dart';
 import '../../domain/entities/lesson_entity.dart';
@@ -107,12 +106,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen> {
                     child: _DetailTopBar(course: course),
                   ),
 
-                  // 2. Hero Illustration Area (Mascot or Thumbnail)
-                  SliverToBoxAdapter(
-                    child: _HeroIllustrationArea(course: course),
-                  ),
-
-                  // 3. Curved Course Content Sheet
+                  // 2. Curved Course Content Sheet
                   SliverToBoxAdapter(
                     child: _CourseContentSheet(
                       detail: detail,
@@ -222,140 +216,7 @@ class _DetailTopBar extends StatelessWidget {
   }
 }
 
-/// Hero Illustration Area (matching image copy 5.png Screen 3)
-class _HeroIllustrationArea extends StatelessWidget {
-  const _HeroIllustrationArea({required this.course});
 
-  final CourseEntity course;
-
-  @override
-  Widget build(BuildContext context) {
-    final hasImage = course.thumbnailUrl != null &&
-        course.thumbnailUrl!.trim().isNotEmpty &&
-        course.thumbnailUrl!.startsWith('http');
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Center(
-        child: hasImage
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: SizedBox(
-                  height: 180,
-                  width: double.infinity,
-                  child: CachedNetworkImage(
-                    imageUrl: course.thumbnailUrl!,
-                    fit: BoxFit.cover,
-                    placeholder: (_, __) => _MascotHeroCanvas(course: course),
-                    errorWidget: (_, __, ___) =>
-                        _MascotHeroCanvas(course: course),
-                  ),
-                ),
-              )
-            : _MascotHeroCanvas(course: course),
-      ),
-    );
-  }
-}
-
-/// Animated Mascot Hero Canvas with Subject & Grade Pills
-class _MascotHeroCanvas extends StatelessWidget {
-  const _MascotHeroCanvas({required this.course});
-
-  final CourseEntity course;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 180,
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.bgSecondary,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.borderStrong),
-      ),
-      child: Stack(
-        children: [
-          // Background ambient rings
-          Positioned(
-            right: -20,
-            top: -20,
-            child: Container(
-              width: 110,
-              height: 110,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: AppColors.brandEmerald.withAlpha(12),
-              ),
-            ),
-          ),
-
-          // Mascot Character Illustration (standing on card surface)
-          const Center(
-            child: MemereMascot(
-              size: Size(150, 138),
-              showBackdrop: false,
-            ),
-          ),
-
-          // Left Grade & Subject Badges
-          Positioned(
-            left: 0,
-            top: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: AppColors.bgTertiary,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppColors.borderStrong),
-              ),
-              child: Text(
-                'Grade ${course.grade}',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.brandEmerald,
-                ),
-              ),
-            ),
-          ),
-
-          // Right Level / Free Badge
-          Positioned(
-            right: 0,
-            top: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: course.isFree
-                    ? const Color(0x2210B981)
-                    : const Color(0x2238BDF8),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: course.isFree
-                      ? const Color(0x6610B981)
-                      : const Color(0x6638BDF8),
-                ),
-              ),
-              child: Text(
-                course.isFree ? '100% Free' : course.priceLabel,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: course.isFree
-                      ? AppColors.brandEmerald
-                      : const Color(0xFF38BDF8),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 /// Curved Course Content Sheet matching image copy 5.png (Screen 3)
 class _CourseContentSheet extends ConsumerStatefulWidget {
@@ -533,7 +394,7 @@ class _CourseContentSheetState extends ConsumerState<_CourseContentSheet> {
           ),
           const SizedBox(height: 16),
 
-          // Tab Switcher (Lessons / Quizzes / Exams / About)
+          // Tab Switcher (Lessons / Quizzes / Exams)
           Container(
             height: 42,
             padding: const EdgeInsets.all(3),
@@ -558,11 +419,6 @@ class _CourseContentSheetState extends ConsumerState<_CourseContentSheet> {
                   label: 'Exams',
                   selected: widget.selectedTab == 2,
                   onTap: () => widget.onTabChanged(2),
-                ),
-                _TabButton(
-                  label: 'About',
-                  selected: widget.selectedTab == 3,
-                  onTap: () => widget.onTabChanged(3),
                 ),
               ],
             ),
@@ -590,33 +446,11 @@ class _CourseContentSheetState extends ConsumerState<_CourseContentSheet> {
               hasAccess: widget.hasAccess,
               isFree: course.isFree,
             ),
-          ] else if (widget.selectedTab == 2) ...[
+          ] else ...[
             _CourseExamsTab(
               courseId: course.id,
               hasAccess: widget.hasAccess,
               isFree: course.isFree,
-            ),
-          ] else ...[
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.bgSecondary,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.borderStrong),
-              ),
-              child: Text(
-                course.description.isNotEmpty
-                    ? course.description
-                    : (course.shortDescription.isNotEmpty
-                        ? course.shortDescription
-                        : 'Comprehensive lessons and practice materials prepared for national entrance exams.'),
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  color: AppColors.textSecondary,
-                  height: 1.45,
-                ),
-              ),
             ),
           ],
         ],
@@ -1040,6 +874,43 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
                       suffixIcon: Icons.arrow_forward_rounded,
                     );
                   }
+
+                  final auth = ref.watch(authStateProvider).valueOrNull;
+                  final isPendingUser = access.isAccountPending ||
+                      (auth?.user != null && auth!.user!.isPendingApproval);
+
+                  if (isPendingUser) {
+                    return AppButton(
+                      label: 'Account Awaiting Approval',
+                      prefixIcon: Icons.lock_outline_rounded,
+                      variant: AppButtonVariant.secondary,
+                      onPressed: () => _showMessage(
+                        '🔒 Your account is awaiting approval. You can continue using available free courses.',
+                      ),
+                    );
+                  }
+
+                  if (access.isRequestPending) {
+                    return AppButton(
+                      label: 'Access Request Pending',
+                      prefixIcon: Icons.hourglass_top_rounded,
+                      variant: AppButtonVariant.secondary,
+                      onPressed: () => _showMessage(
+                        '⏳ Access request pending. Your request is waiting for approval.',
+                      ),
+                    );
+                  }
+
+                  if (access.isRejected) {
+                    return AppButton(
+                      label: 'Request Access Again',
+                      prefixIcon: Icons.lock_open_rounded,
+                      isLoading: _isRequestingAccess,
+                      onPressed: _isRequestingAccess ? null : _requestAccess,
+                      suffixIcon: Icons.arrow_forward_rounded,
+                    );
+                  }
+
                   final latestPayment =
                       ref.watch(latestCoursePaymentProvider(_courseId));
                   if (latestPayment != null && latestPayment.isPending) {
@@ -1054,10 +925,12 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
                       ),
                     );
                   }
+
                   return AppButton(
-                    label: 'Enroll for ${widget.course.priceLabel}',
-                    isLoading: busy,
-                    onPressed: busy ? null : _startPaid,
+                    label: 'Request Access',
+                    prefixIcon: Icons.lock_outline_rounded,
+                    isLoading: _isRequestingAccess,
+                    onPressed: _isRequestingAccess ? null : _requestAccess,
                     suffixIcon: Icons.arrow_forward_rounded,
                   );
                 },
@@ -1151,50 +1024,42 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
     }
   }
 
-  Future<void> _startPaid() async {
-    if (!await requireAccount(
-      context,
-      ref,
-      title: 'Sign in to purchase',
-      message:
-          'Create a free account or sign in to buy this course. Your purchase '
-          'unlocks it across your devices.',
-    )) {
-      return;
+  bool _isRequestingAccess = false;
+
+  Future<void> _requestAccess() async {
+    final auth = ref.read(authStateProvider).valueOrNull;
+    if (auth?.user == null || !auth!.isAuthenticated) {
+      if (!await requireAccount(
+        context,
+        ref,
+        title: 'Sign in to request access',
+        message: 'Create an account or sign in to request access to this course.',
+      )) {
+        return;
+      }
     }
-    if (!mounted) return;
-    final provider = await PaymentProviderSheet.show(
-      context,
-      amountLabel: widget.course.priceLabel,
-    );
-    if (provider == null || !mounted) return;
 
-    final initiation = await _notifier.startPaidCheckout(provider: provider);
-    if (!mounted) return;
-
-    if (initiation == null) {
-      final state = ref.read(checkoutFlowProvider(_courseId)).valueOrNull;
-      final code = state?.errorCode;
-      if (code == 'COURSE_IS_FREE') {
-        await _startFree();
-        return;
-      }
-      if (code == 'ALREADY_ENROLLED') {
-        ref.invalidate(courseAccessProvider(_courseId));
-        return;
-      }
+    final currentUser = ref.read(authStateProvider).valueOrNull?.user;
+    if (currentUser != null && currentUser.isPendingApproval) {
       _showMessage(
-          state?.error ?? 'Could not start checkout. Please try again.');
+        '🔒 Your account is awaiting approval. You can continue using available free courses.',
+      );
       return;
     }
 
-    context.push(
-      AppRoutes.paymentWebViewPath(
-        paymentId: initiation.paymentId,
-        courseId: _courseId,
-        redirectUrl: initiation.redirectUrl,
-      ),
-    );
+    setState(() => _isRequestingAccess = true);
+    try {
+      final dio = ref.read(dioClientProvider);
+      await dio.post('/courses/$_courseId/request-access');
+      _showMessage('Access requested! Your request is waiting for approval.');
+      ref.invalidate(courseAccessProvider(_courseId));
+    } catch (_) {
+      _showMessage('Failed to request access. Please try again.');
+    } finally {
+      if (mounted) {
+        setState(() => _isRequestingAccess = false);
+      }
+    }
   }
 
   void _showMessage(String message) {

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:go_router/go_router.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -46,12 +48,24 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
   int _totalPages = 1;
   bool _isNightMode = true;
   double _fontSize = 15.0;
-  int _activeTab = 0; // 0: Study Notes, 1: PDF Document
+  int _activeTab = 0; // 0: Study Notes, 1: Document (PDF/HTML)
   bool _isSwipeHorizontal = false;
   bool _noPdfAvailable = false;
+  bool _isFullScreen = false;
 
   PDFViewController? _pdfViewController;
+  WebViewController? _webViewController;
   final List<String> _userNotes = [];
+
+  bool get _isHtmlDocument {
+    final lower = widget.pdfUrl.trim().toLowerCase();
+    if (lower.endsWith('.html') || lower.endsWith('.htm')) return true;
+    if (_localPdfPath != null &&
+        (_localPdfPath!.endsWith('.html') || _localPdfPath!.endsWith('.htm'))) {
+      return true;
+    }
+    return false;
+  }
 
   String get _effectiveContent =>
       SecurePdfStorage.getEffectiveContent(widget.title, widget.content);
@@ -67,7 +81,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
   void initState() {
     super.initState();
 
-    // Default to PDF Document if a specific PDF is attached, otherwise Study Notes
+    // Default to Document if a specific PDF/HTML is attached, otherwise Study Notes
     if (widget.pdfUrl.trim().isNotEmpty &&
         widget.pdfUrl.trim() != 'sample.pdf') {
       _activeTab = 1;
@@ -76,6 +90,139 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
     }
 
     _initializePdf();
+  }
+
+  @override
+  void dispose() {
+    if (_isFullScreen) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+    super.dispose();
+  }
+
+  void _toggleFullScreen() {
+    setState(() {
+      _isFullScreen = !_isFullScreen;
+    });
+    if (_isFullScreen) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    } else {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
+  }
+
+  Future<void> _initWebViewController() async {
+    if (_localPdfPath == null) return;
+    try {
+      final file = File(_localPdfPath!);
+      if (await file.exists()) {
+        final htmlContent = await file.readAsString();
+        final controller = WebViewController()
+          ..setJavaScriptMode(JavaScriptMode.unrestricted)
+          ..setBackgroundColor(
+              _isNightMode ? const Color(0xFF0B0E14) : Colors.white)
+          ..setNavigationDelegate(
+            NavigationDelegate(
+              onPageFinished: (String url) {
+                if (mounted &&
+                    widget.lessonId != null &&
+                    widget.lessonId!.trim().isNotEmpty) {
+                  ref
+                      .read(completedLessonsProvider.notifier)
+                      .markCompleted(widget.lessonId!);
+                }
+              },
+            ),
+          );
+
+        final styledHtml = _wrapHtmlWithTheme(htmlContent);
+        await controller.loadHtmlString(
+          styledHtml,
+          baseUrl: 'file://${file.parent.path}/',
+        );
+        if (mounted) {
+          setState(() {
+            _webViewController = controller;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _pdfRenderError = 'Failed to load HTML document: $e';
+        });
+      }
+    }
+  }
+
+  String _wrapHtmlWithTheme(String rawHtml) {
+    var html = rawHtml;
+    final isDark = _isNightMode;
+    final textColor = isDark ? '#E2E8F0' : '#0F172A';
+    final bgColor = isDark ? '#0B0E14' : '#FFFFFF';
+    const linkColor = '#10B981';
+
+    // Inject mobile viewport meta tag if not present
+    if (!html.toLowerCase().contains('<meta name="viewport"')) {
+      const viewportTag =
+          '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">';
+      if (html.toLowerCase().contains('<head>')) {
+        html = html.replaceFirst(
+            RegExp(r'<head>', caseSensitive: false), '<head>$viewportTag');
+      } else if (html.toLowerCase().contains('<head ')) {
+        html = html.replaceFirst(
+            RegExp(r'(<head[^>]*>)', caseSensitive: false), '\$1$viewportTag');
+      } else {
+        html = '$viewportTag$html';
+      }
+    }
+
+    // Inject responsive typography and theme CSS style tag into <head>
+    final themeStyle = '''
+<style>
+  :root { color-scheme: ${isDark ? 'dark' : 'light'}; }
+  body {
+    background-color: $bgColor !important;
+    color: $textColor !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    padding: 14px;
+    margin: 0;
+    word-break: break-word;
+  }
+  img, video, iframe, table {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  a { color: $linkColor !important; }
+  pre, code {
+    background: ${isDark ? '#1E293B' : '#F1F5F9'} !important;
+    color: ${isDark ? '#38BDF8' : '#0369A1'} !important;
+    border-radius: 6px;
+    padding: 2px 4px;
+    overflow-x: auto;
+  }
+  pre { padding: 12px; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+  }
+  th, td {
+    border: 1px solid ${isDark ? '#334155' : '#E2E8F0'};
+    padding: 8px;
+  }
+</style>
+''';
+
+    if (html.toLowerCase().contains('</head>')) {
+      html = html.replaceFirst(
+          RegExp(r'</head>', caseSensitive: false), '$themeStyle</head>');
+    } else {
+      html = '<head>$themeStyle</head>$html';
+    }
+
+    return html;
   }
 
   Future<void> _initializePdf() async {
@@ -96,6 +243,9 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
             _showPdfCanvas = true;
             _isDownloading = false;
           });
+          if (_isHtmlDocument) {
+            _initWebViewController();
+          }
           return;
         }
       }
@@ -138,6 +288,9 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
         _localPdfPath = pdfFile.path;
         _showPdfCanvas = true;
       });
+      if (_isHtmlDocument) {
+        _initWebViewController();
+      }
     } on PdfNotAvailableException {
       if (!mounted) return;
       setState(() {
@@ -453,6 +606,81 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
     final borderColor =
         _isNightMode ? AppColors.borderStrong : const Color(0xFFE2E8F0);
 
+    if (_isFullScreen) {
+      return Scaffold(
+        backgroundColor: bgColor,
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: _activeTab == 0
+                  ? _buildStudyNotesView(
+                      textColor, mutedColor, borderColor, cardColor)
+                  : (_isDownloading
+                      ? _buildLoadingView(
+                          cardColor, textColor, mutedColor, borderColor)
+                      : (_showPdfCanvas && _localPdfPath != null
+                          ? (_isHtmlDocument
+                              ? _buildHtmlCanvasView(cardColor, textColor,
+                                  mutedColor, borderColor)
+                              : _buildPdfCanvasView(cardColor, textColor,
+                                  mutedColor, borderColor))
+                          : _buildErrorOrEmptyView(
+                              cardColor, textColor, mutedColor, borderColor))),
+            ),
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 12,
+              right: 16,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: _toggleFullScreen,
+                  borderRadius: BorderRadius.circular(24),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withAlpha(210),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: AppColors.brandEmerald,
+                        width: 1.2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(120),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.fullscreen_exit_rounded,
+                          color: Colors.white,
+                          size: 18,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          'Exit Fullscreen',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: bgColor,
       floatingActionButton: FloatingActionButton(
@@ -470,7 +698,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
             // 1. Premium Obsidian Header
             _buildObsidianHeader(cardColor, textColor, mutedColor, borderColor),
 
-            // 2. Mode Switcher Bar ([ Study Notes ] [ PDF Document ])
+            // 2. Mode Switcher Bar ([ Study Notes ] [ HTML / PDF Document ])
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
               child: Container(
@@ -495,8 +723,10 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
                     const SizedBox(width: 4),
                     Expanded(
                       child: _ReaderTabItem(
-                        label: 'PDF Document',
-                        icon: Icons.picture_as_pdf_outlined,
+                        label: _isHtmlDocument ? 'HTML Document' : 'PDF Document',
+                        icon: _isHtmlDocument
+                            ? Icons.html_rounded
+                            : Icons.picture_as_pdf_outlined,
                         isSelected: _activeTab == 1,
                         isNightMode: _isNightMode,
                         onTap: () {
@@ -634,8 +864,11 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
                       ? _buildLoadingView(
                           cardColor, textColor, mutedColor, borderColor)
                       : (_showPdfCanvas && _localPdfPath != null
-                          ? _buildPdfCanvasView(
-                              cardColor, textColor, mutedColor, borderColor)
+                          ? (_isHtmlDocument
+                              ? _buildHtmlCanvasView(cardColor, textColor,
+                                  mutedColor, borderColor)
+                              : _buildPdfCanvasView(cardColor, textColor,
+                                  mutedColor, borderColor))
                           : _buildErrorOrEmptyView(
                               cardColor, textColor, mutedColor, borderColor))),
             ),
@@ -769,6 +1002,17 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
               },
             ),
 
+          // Fullscreen Toggle Button
+          IconButton(
+            icon: const Icon(
+              Icons.fullscreen_rounded,
+              size: 22,
+            ),
+            color: textColor,
+            tooltip: 'Full Screen View',
+            onPressed: _toggleFullScreen,
+          ),
+
           // Night / Light Mode Toggle
           IconButton(
             icon: Icon(
@@ -777,7 +1021,12 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
               size: 19,
             ),
             tooltip: _isNightMode ? 'Light Mode' : 'Dark Mode',
-            onPressed: () => setState(() => _isNightMode = !_isNightMode),
+            onPressed: () {
+              setState(() => _isNightMode = !_isNightMode);
+              if (_isHtmlDocument && _webViewController != null) {
+                _initWebViewController();
+              }
+            },
           ),
 
           // Options Menu (Reload / Clear Cache)
@@ -1637,6 +1886,68 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Interactive Fullscreen-capable HTML Document Canvas
+  Widget _buildHtmlCanvasView(
+    Color cardColor,
+    Color textColor,
+    Color mutedColor,
+    Color borderColor,
+  ) {
+    if (_webViewController == null) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppColors.brandEmerald),
+      );
+    }
+    return Column(
+      children: [
+        Expanded(
+          child: WebViewWidget(controller: _webViewController!),
+        ),
+        if (!_isFullScreen)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: cardColor,
+              border: Border(top: BorderSide(color: borderColor)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.html_rounded,
+                      size: 18,
+                      color: AppColors.brandEmerald,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Interactive HTML Notes',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
+                    ),
+                  ],
+                ),
+                TextButton.icon(
+                  onPressed: _toggleFullScreen,
+                  icon: const Icon(Icons.fullscreen_rounded, size: 18),
+                  label: const Text('Full Screen'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.brandEmerald,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 

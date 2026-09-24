@@ -1,5 +1,4 @@
 import { notFound, redirect } from "next/navigation";
-import Image from "next/image";
 import { requireStaff } from "@/lib/auth/session";
 import {
   getCourse,
@@ -13,6 +12,7 @@ import { SectionsList } from "@/components/courses/sections-list";
 import { QuizzesPanel } from "@/components/courses/quizzes-panel";
 import { ExamsPanel } from "@/components/courses/exams-panel";
 import { TeacherCourseActions } from "@/components/courses/teacher-course-actions";
+import { CourseThumbnailCover } from "@/components/courses/course-thumbnail-cover";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -66,16 +66,7 @@ export default async function MyCourseDetailPage({
             </div>
           )}
           <div className="flex gap-4 items-start flex-1 min-w-0">
-            {course.thumbnail_url ? (
-              <div className="relative h-20 w-32 shrink-0 rounded-lg overflow-hidden border bg-muted">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={course.thumbnail_url}
-                  alt={course.title}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-            ) : null}
+            <CourseThumbnailCover course={course} canEdit={isOwner} />
             <div className="flex flex-col gap-1 min-w-0">
               <h1 className="text-2xl font-semibold tracking-tight">{course.title}</h1>
               {course.short_description && (

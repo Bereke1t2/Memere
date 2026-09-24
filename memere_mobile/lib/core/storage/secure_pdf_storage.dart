@@ -29,14 +29,22 @@ class PdfDownloadException implements Exception {
 /// Downloads, validates, and stores PDF files in app-private sandbox storage
 /// (`/data/user/0/.../app_flutter/pdfs/`), preventing raw files from being shared outside Memere.
 class SecurePdfStorage {
+  /// Checks if a given URL or filename is HTML format
+  static bool isHtmlUrl(String url) {
+    final lower = url.trim().toLowerCase();
+    return lower.endsWith('.html') || lower.endsWith('.htm');
+  }
+
   /// Generates a safe, unique filename key based on the pdfUrl or lesson title
   static String getFileKey(String url, {String? title}) {
     final cleanUrl = url.trim();
+    final isHtml = isHtmlUrl(cleanUrl);
+    final prefix = isHtml ? 'doc_html_v2_' : 'pdf_v2_';
     if (cleanUrl.isNotEmpty && cleanUrl != 'sample.pdf') {
-      return 'pdf_v2_${cleanUrl.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
+      return '$prefix${cleanUrl.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
     }
     final cleanTitle = (title ?? 'lesson').trim();
-    return 'pdf_v2_note_${cleanTitle.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
+    return '${prefix}note_${cleanTitle.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}';
   }
 
   /// Gets local File reference for a given fileKey
@@ -46,16 +54,21 @@ class SecurePdfStorage {
     if (!await pdfDir.exists()) {
       await pdfDir.create(recursive: true);
     }
-    return File('${pdfDir.path}/$fileKey.pdf');
+    final ext = (fileKey.startsWith('doc_html_v2_') ||
+            fileKey.endsWith('.html') ||
+            fileKey.endsWith('.htm'))
+        ? '.html'
+        : '.pdf';
+    return File('${pdfDir.path}/$fileKey$ext');
   }
 
-  /// Checks if a valid PDF file exists in app local private storage, validating PDF header
+  /// Checks if a valid PDF or HTML file exists in app local private storage
   static Future<bool> isDownloaded(String fileKey) async {
     try {
       final file = await getPdfFile(fileKey);
       if (!await file.exists()) return false;
       final length = await file.length();
-      if (length < 200) {
+      if (length < 20) {
         await file.delete();
         return false;
       }
@@ -64,7 +77,8 @@ class SecurePdfStorage {
       final headerBytes = await handle.read(1024);
       await handle.close();
 
-      final isValid = _isValidPdfBytes(Uint8List.fromList(headerBytes));
+      final uBytes = Uint8List.fromList(headerBytes);
+      final isValid = _isValidPdfBytes(uBytes) || _isValidHtmlBytes(uBytes);
       if (!isValid) {
         await file.delete();
         return false;
@@ -377,19 +391,19 @@ class SecurePdfStorage {
       if (response != null &&
           response.statusCode == 200 &&
           response.data != null &&
-          response.data!.length > 100) {
+          response.data!.length > 20) {
         final bytes = Uint8List.fromList(response.data!);
-        if (_isValidPdfBytes(bytes)) {
+        if (_isValidPdfBytes(bytes) || _isValidHtmlBytes(bytes)) {
           await file.writeAsBytes(bytes, flush: true);
           if (onProgress != null) onProgress(1.0);
           return file;
         }
-        // 200 but not a PDF -> most likely a note_url (HTML/markdown). Show notes.
-        throw PdfNotAvailableException('The attached file is not a valid PDF.');
+        // 200 but not a PDF or HTML document -> most likely plain text or markdown
+        throw PdfNotAvailableException('The attached file is not a valid PDF or HTML document.');
       }
 
       throw PdfDownloadException(
-        'Could not download the PDF (status ${response?.statusCode ?? 'unknown'}).',
+        'Could not download the document (status ${response?.statusCode ?? 'unknown'}).',
       );
     } on PdfNotAvailableException {
       rethrow;
@@ -398,7 +412,7 @@ class SecurePdfStorage {
     } on DioException catch (e) {
       throw PdfDownloadException(_friendlyDioError(e));
     } catch (_) {
-      throw PdfDownloadException('Unexpected error while opening the PDF. Please retry.');
+      throw PdfDownloadException('Unexpected error while opening the document. Please retry.');
     }
   }
 
@@ -413,11 +427,11 @@ class SecurePdfStorage {
         if (code == 401 || code == 403) {
           return 'Your session may have expired. Please sign in again and retry.';
         }
-        return 'The server could not provide the PDF (status $code).';
+        return 'The server could not provide the document (status $code).';
       case DioExceptionType.connectionError:
         return 'No internet connection. Please retry when you are back online.';
       default:
-        return 'Could not download the PDF. Please retry.';
+        return 'Could not download the document. Please retry.';
     }
   }
 
@@ -435,5 +449,26 @@ class SecurePdfStorage {
       }
     }
     return false;
+  }
+
+  /// Scans bytes to check for HTML markup or tags
+  static bool _isValidHtmlBytes(Uint8List bytes) {
+    if (bytes.length < 5) return false;
+    try {
+      final sample = String.fromCharCodes(bytes.take(1024)).toLowerCase();
+      return sample.contains('<!doctype html') ||
+          sample.contains('<html') ||
+          sample.contains('<head') ||
+          sample.contains('<body') ||
+          sample.contains('<div') ||
+          sample.contains('<p') ||
+          sample.contains('<script') ||
+          sample.contains('<style') ||
+          sample.contains('<h1') ||
+          sample.contains('<h2') ||
+          sample.contains('<h3');
+    } catch (_) {
+      return false;
+    }
   }
 }

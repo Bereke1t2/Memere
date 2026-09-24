@@ -341,6 +341,34 @@ func (fakeEnrollRepo) GetActiveForStudent(context.Context, uuid.UUID, uuid.UUID)
 func (fakeEnrollRepo) ListByStudent(context.Context, uuid.UUID, int) ([]*entity.Enrollment, error) {
 	return nil, nil
 }
+func (fakeEnrollRepo) ListAllByStudent(context.Context, uuid.UUID) ([]*entity.Enrollment, error) {
+	return nil, nil
+}
+func (fakeEnrollRepo) Delete(context.Context, uuid.UUID, uuid.UUID) error {
+	return nil
+}
+
+// ---- fake request repo ------------------------------------------------------
+
+type fakeRequestRepo struct{}
+
+func (fakeRequestRepo) Create(context.Context, *entity.CourseAccessRequest) error { return nil }
+func (fakeRequestRepo) GetByID(context.Context, uuid.UUID) (*entity.CourseAccessRequest, error) {
+	return nil, apperror.NotFound("not found", nil)
+}
+func (fakeRequestRepo) GetByStudentAndCourse(context.Context, uuid.UUID, uuid.UUID) (*entity.CourseAccessRequest, error) {
+	return nil, apperror.NotFound("not found", nil)
+}
+func (fakeRequestRepo) Update(context.Context, *entity.CourseAccessRequest) error { return nil }
+func (fakeRequestRepo) ListByTeacher(context.Context, uuid.UUID, *string, *pagination.Cursor, int) ([]*entity.CourseAccessRequest, *pagination.Cursor, error) {
+	return nil, nil, nil
+}
+func (fakeRequestRepo) ListAll(context.Context, *string, *pagination.Cursor, int) ([]*entity.CourseAccessRequest, *pagination.Cursor, error) {
+	return nil, nil, nil
+}
+func (fakeRequestRepo) ListByStudent(context.Context, uuid.UUID) ([]*entity.CourseAccessRequest, error) {
+	return nil, nil
+}
 
 // ---- fake notifier ----------------------------------------------------------
 
@@ -371,11 +399,12 @@ var _ repository.AdminAuditRepository = (*fakeAuditRepo)(nil)
 var _ repository.RevenueRepository = fakeRevenueRepo{}
 var _ repository.SubscriptionRepository = fakeSubRepo{}
 var _ repository.EnrollmentRepository = fakeEnrollRepo{}
+var _ repository.CourseAccessRequestRepository = fakeRequestRepo{}
 var _ service.Notifier = (*fakeNotifier)(nil)
 
 // ---- helpers ----------------------------------------------------------------
 
 // newSvc builds a Service wired to all fakes.
 func newSvc(users *fakeUserRepo, courses *fakeCourseRepo, payments *fakePaymentRepo, audit *fakeAuditRepo, notify *fakeNotifier) *Service {
-	return NewService(users, courses, payments, fakeEnrollRepo{}, fakeSubRepo{}, fakeRevenueRepo{}, audit, notify, nil)
+	return NewService(users, courses, payments, fakeEnrollRepo{}, fakeRequestRepo{}, fakeSubRepo{}, fakeRevenueRepo{}, audit, notify, nil)
 }

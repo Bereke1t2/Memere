@@ -145,3 +145,105 @@ func (h *Hooks) LessonPublished(ctx context.Context, lessonID, courseID uuid.UUI
 		Channels: []service.Channel{service.ChannelPush, service.ChannelInApp},
 	})
 }
+
+// AccountApproved notifies a student that their account has been approved.
+func (h *Hooks) AccountApproved(ctx context.Context, userID uuid.UUID) {
+	_ = h.n.Notify(ctx, service.NotifyEvent{
+		UserID: userID.String(),
+		Type:   "account_approved",
+		Title:  "Account Approved",
+		Body:   "Your account has been approved. You can now explore courses and request access.",
+		Channels: []service.Channel{
+			service.ChannelPush,
+			service.ChannelInApp,
+			service.ChannelEmail,
+		},
+	})
+}
+
+// AccountRejected notifies a user that their registration was rejected.
+func (h *Hooks) AccountRejected(ctx context.Context, userID uuid.UUID, reason string) {
+	body := "Your account application was reviewed and not approved."
+	if reason != "" {
+		body = "Your account application was rejected: " + reason
+	}
+	_ = h.n.Notify(ctx, service.NotifyEvent{
+		UserID: userID.String(),
+		Type:   "account_rejected",
+		Title:  "Account Update",
+		Body:   body,
+		Channels: []service.Channel{
+			service.ChannelInApp,
+			service.ChannelEmail,
+		},
+	})
+}
+
+// CourseAccessRequested notifies a teacher that a student applied for their course.
+func (h *Hooks) CourseAccessRequested(ctx context.Context, teacherID uuid.UUID, studentName, courseTitle string, requestID uuid.UUID) {
+	_ = h.n.Notify(ctx, service.NotifyEvent{
+		UserID: teacherID.String(),
+		Type:   "course_access_requested",
+		Title:  "New Course Access Request",
+		Body:   studentName + " requested access to " + courseTitle,
+		Data: map[string]string{
+			"request_id": requestID.String(),
+		},
+		Channels: []service.Channel{
+			service.ChannelPush,
+			service.ChannelInApp,
+		},
+	})
+}
+
+// CourseAccessApproved notifies a student that their course access request was approved.
+func (h *Hooks) CourseAccessApproved(ctx context.Context, studentID uuid.UUID, courseTitle string, courseID uuid.UUID) {
+	_ = h.n.Notify(ctx, service.NotifyEvent{
+		UserID: studentID.String(),
+		Type:   "course_access_approved",
+		Title:  "Course Access Approved",
+		Body:   "Your access request for " + courseTitle + " has been approved!",
+		Data: map[string]string{
+			"course_id": courseID.String(),
+		},
+		Channels: []service.Channel{
+			service.ChannelPush,
+			service.ChannelInApp,
+			service.ChannelEmail,
+		},
+	})
+}
+
+// CourseAccessRejected notifies a student that their request was rejected.
+func (h *Hooks) CourseAccessRejected(ctx context.Context, studentID uuid.UUID, courseTitle, reason string) {
+	body := "Your request for access to " + courseTitle + " was not approved."
+	if reason != "" {
+		body = "Your request for " + courseTitle + " was rejected: " + reason
+	}
+	_ = h.n.Notify(ctx, service.NotifyEvent{
+		UserID: studentID.String(),
+		Type:   "course_access_rejected",
+		Title:  "Course Request Update",
+		Body:   body,
+		Channels: []service.Channel{
+			service.ChannelInApp,
+			service.ChannelEmail,
+		},
+	})
+}
+
+// CourseAccessGranted notifies a student that an admin granted them course access.
+func (h *Hooks) CourseAccessGranted(ctx context.Context, studentID uuid.UUID, courseTitles string) {
+	_ = h.n.Notify(ctx, service.NotifyEvent{
+		UserID: studentID.String(),
+		Type:   "course_access_granted",
+		Title:  "Course Access Granted",
+		Body:   "You have been granted access to: " + courseTitles,
+		Channels: []service.Channel{
+			service.ChannelPush,
+			service.ChannelInApp,
+			service.ChannelEmail,
+		},
+	})
+}
+

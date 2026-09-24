@@ -149,6 +149,26 @@ func (f *fakeEnrollRepo) ListByStudent(_ context.Context, s uuid.UUID, limit int
 	return nil, nil
 }
 
+func (f *fakeEnrollRepo) ListAllByStudent(_ context.Context, s uuid.UUID) ([]*entity.Enrollment, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []*entity.Enrollment
+	for _, e := range f.active {
+		if e.StudentID == s {
+			cp := *e
+			out = append(out, &cp)
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeEnrollRepo) Delete(_ context.Context, s, c uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.active, [2]uuid.UUID{s, c})
+	return nil
+}
+
 // ---- fake coupon repo --------------------------------------------------------
 
 type fakeCouponRepo struct {

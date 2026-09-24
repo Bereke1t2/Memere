@@ -65,7 +65,7 @@ function UploadSuccessDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   fileName: string;
-  fileType: "Video" | "PDF Document";
+  fileType: string;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -348,22 +348,29 @@ function PdfUploader({ lesson, pdfUrl }: { lesson: Lesson; pdfUrl?: string | nul
   const [indeterminate, setIndeterminate] = useState(false);
   const [statusText, setStatusText] = useState("Preparing upload…");
   const [fileName, setFileName] = useState("");
-  const [currentPdf, setCurrentPdf] = useState<string | null>(pdfUrl ?? null);
+  const [currentDoc, setCurrentDoc] = useState<string | null>(pdfUrl ?? null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const router = useRouter();
 
-  async function handlePdfUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleDocUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== "application/pdf" && !file.name.endsWith(".pdf")) {
-      toast.error("Please upload a valid PDF file.");
+
+    const lowerName = file.name.toLowerCase();
+    const isPdf = file.type === "application/pdf" || lowerName.endsWith(".pdf");
+    const isHtml = file.type === "text/html" || lowerName.endsWith(".html") || lowerName.endsWith(".htm");
+
+    if (!isPdf && !isHtml) {
+      toast.error("Please upload a valid PDF (.pdf) or HTML (.html) file.");
       return;
     }
+
+    const docTypeLabel = isHtml ? "HTML Document" : "PDF Document";
     setFileName(file.name);
     setUploading(true);
     setProgress(5);
     setIndeterminate(false);
-    setStatusText("Uploading PDF document…");
+    setStatusText(`Uploading ${docTypeLabel}…`);
 
     try {
       const bodyData = new FormData();
@@ -390,30 +397,34 @@ function PdfUploader({ lesson, pdfUrl }: { lesson: Lesson; pdfUrl?: string | nul
           }
           reject(new Error(msg));
         };
-        xhr.onerror = () => reject(new Error("Network error while uploading the PDF."));
+        xhr.onerror = () => reject(new Error("Network error while uploading the document."));
         xhr.open("POST", `/api/teacher/lessons/${lesson.id}/pdf`);
         xhr.send(bodyData);
       });
 
       setProgress(100);
       setStatusText("Complete!");
-      setCurrentPdf(file.name);
+      setCurrentDoc(file.name);
       setUploading(false);
       setShowSuccessDialog(true);
-      toast.success(`PDF "${file.name}" uploaded.`);
+      toast.success(`${docTypeLabel} "${file.name}" uploaded.`);
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "PDF upload failed.");
+      toast.error(err instanceof Error ? err.message : "Document upload failed.");
       setUploading(false);
     }
   }
+
+  const isCurrentHtml = currentDoc ? (currentDoc.toLowerCase().endsWith(".html") || currentDoc.toLowerCase().endsWith(".htm")) : false;
+  const currentDocLabel = isCurrentHtml ? "HTML" : "PDF";
+  const fileTypeLabel = fileName.toLowerCase().endsWith(".html") || fileName.toLowerCase().endsWith(".htm") ? "HTML Document" : "PDF Document";
 
   return (
     <div className="flex items-center gap-2">
       <UploadProgressModal
         open={uploading}
         fileName={fileName}
-        fileType="PDF Document"
+        fileType={fileTypeLabel}
         progress={progress}
         statusText={statusText}
         indeterminate={indeterminate}
@@ -422,23 +433,43 @@ function PdfUploader({ lesson, pdfUrl }: { lesson: Lesson; pdfUrl?: string | nul
         open={showSuccessDialog}
         onOpenChange={setShowSuccessDialog}
         fileName={fileName}
-        fileType="PDF Document"
+        fileType={fileTypeLabel}
       />
 
-      {currentPdf && (
+      {currentDoc && (
         <span
-          className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 font-medium mr-1 max-w-[120px] truncate"
-          title={currentPdf}
+          className={`inline-flex items-center gap-1 text-xs font-medium mr-1 max-w-[140px] truncate ${
+            isCurrentHtml
+              ? "text-emerald-600 dark:text-emerald-400"
+              : "text-blue-600 dark:text-blue-400"
+          }`}
+          title={currentDoc}
         >
-          <File className="h-3 w-3 shrink-0" /> {currentPdf.split("/").pop() || currentPdf}
+          <File className="h-3 w-3 shrink-0" />
+          <span className="font-semibold text-[10px] px-1 py-0.5 rounded border uppercase tracking-wider">
+            {currentDocLabel}
+          </span>{" "}
+          {currentDoc.split("/").pop() || currentDoc}
         </span>
       )}
       <label className="cursor-pointer">
         <span className="inline-flex items-center gap-1 text-xs h-7 px-2 rounded-md border hover:bg-muted transition-colors cursor-pointer">
           <Upload className="h-3 w-3" />
-          {uploading ? <Loader2 className="h-3 w-3 animate-spin" /> : currentPdf ? "Replace PDF" : "Upload PDF"}
+          {uploading ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : currentDoc ? (
+            `Replace ${currentDocLabel}`
+          ) : (
+            "Upload Note (PDF / HTML)"
+          )}
         </span>
-        <input type="file" accept=".pdf,application/pdf" className="hidden" disabled={uploading} onChange={handlePdfUpload} />
+        <input
+          type="file"
+          accept=".pdf,.html,.htm,application/pdf,text/html"
+          className="hidden"
+          disabled={uploading}
+          onChange={handleDocUpload}
+        />
       </label>
     </div>
   );

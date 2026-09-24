@@ -296,6 +296,32 @@ func (f *fakeEnrollRepo) ListByStudent(_ context.Context, studentID uuid.UUID, l
 	return out, nil
 }
 
+func (f *fakeEnrollRepo) ListAllByStudent(_ context.Context, studentID uuid.UUID) ([]*entity.Enrollment, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []*entity.Enrollment
+	for _, e := range f.enrollments {
+		if e.StudentID == studentID {
+			cp := *e
+			out = append(out, &cp)
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeEnrollRepo) Delete(_ context.Context, studentID, courseID uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var next []*entity.Enrollment
+	for _, e := range f.enrollments {
+		if !(e.StudentID == studentID && e.CourseID == courseID) {
+			next = append(next, e)
+		}
+	}
+	f.enrollments = next
+	return nil
+}
+
 // ---- fake course access gate ------------------------------------------------
 
 type fakeAccess struct{ err error }

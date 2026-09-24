@@ -223,6 +223,9 @@ class _LessonTileState extends State<LessonTile> {
     if (lesson.hasQuiz || lesson.type == LessonType.quiz) {
       return Icons.quiz_outlined;
     }
+    if (lesson.isHtml) {
+      return Icons.html_rounded;
+    }
     if (lesson.hasPdf) {
       return Icons.picture_as_pdf_rounded;
     }
@@ -285,6 +288,8 @@ class _LessonTileState extends State<LessonTile> {
   }
 
   String _buildSubtitleText(LessonEntity lesson) {
+    if (lesson.isHtml && lesson.hasContent) return '${lesson.durationLabel} • Notes & HTML';
+    if (lesson.isHtml) return '${lesson.durationLabel} • HTML Document';
     if (lesson.hasPdf && lesson.hasContent) return '${lesson.durationLabel} • Notes & PDF';
     if (lesson.hasPdf) return '${lesson.durationLabel} • PDF Document';
     if (lesson.hasContent || lesson.type == LessonType.note) return '${lesson.durationLabel} • Study Notes';

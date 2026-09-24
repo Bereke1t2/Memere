@@ -2,6 +2,7 @@ import { apiFetch } from "./server";
 import {
   AuthResponseSchema,
   UserSchema,
+  UserDetailResponseSchema,
   OverviewSchema,
   EngagementStatsSchema,
   RevenueBreakdownResponseSchema,
@@ -28,6 +29,9 @@ import {
   VideoStatusSchema,
   EarningsSchema,
   CourseSalesSchema,
+  UserCourseAccessListResponseSchema,
+  CourseAccessRequestSchema,
+  CourseAccessRequestListResponseSchema,
   type AuthResponse,
   type User,
   type Overview,
@@ -57,6 +61,10 @@ import {
   type VideoStatus,
   type Earnings,
   type CourseSales,
+  type UserCourseAccessItem,
+  type UserCourseAccessListResponse,
+  type CourseAccessRequest,
+  type CourseAccessRequestListResponse,
 } from "./schemas";
 
 // ---- Auth ----------------------------------------------------------------------
@@ -128,11 +136,13 @@ export async function listUsers(params: {
   limit?: number;
   after?: string;
   role?: string;
+  approval_status?: string;
 }): Promise<PaginatedUsers> {
   const qs = new URLSearchParams();
   if (params.limit) qs.set("limit", String(params.limit));
   if (params.after) qs.set("after", params.after);
   if (params.role) qs.set("role", params.role);
+  if (params.approval_status) qs.set("approval_status", params.approval_status);
   const data = await apiFetch(`/admin/users?${qs}`, {
     schema: PaginatedUsersSchema,
   });
@@ -142,6 +152,47 @@ export async function listUsers(params: {
 export async function getUser(id: string): Promise<User> {
   const data = await apiFetch(`/admin/users/${id}`, { schema: UserSchema });
   return data!;
+}
+
+export async function approveUser(id: string): Promise<void> {
+  await apiFetch(`/admin/users/${id}/approve`, {
+    method: "POST",
+  });
+}
+
+export async function rejectUser(id: string, reason?: string): Promise<void> {
+  await apiFetch(`/admin/users/${id}/reject`, {
+    method: "POST",
+    body: { reason },
+  });
+}
+
+export async function getUserCourseAccess(id: string): Promise<UserCourseAccessListResponse> {
+  const data = await apiFetch(`/admin/users/${id}/courses`, {
+    schema: UserCourseAccessListResponseSchema,
+  });
+  return data!;
+}
+
+export async function grantCourseAccess(id: string, courseIds: string[]): Promise<void> {
+  await apiFetch(`/admin/users/${id}/grant-access`, {
+    method: "POST",
+    body: { course_ids: courseIds },
+  });
+}
+
+export async function grantAllCoursesAccess(id: string): Promise<void> {
+  await apiFetch(`/admin/users/${id}/grant-access`, {
+    method: "POST",
+    body: { grant_all: true },
+  });
+}
+
+export async function revokeCourseAccess(id: string, courseId: string): Promise<void> {
+  await apiFetch(`/admin/users/${id}/revoke-access`, {
+    method: "POST",
+    body: { course_id: courseId },
+  });
 }
 
 export async function suspendUser(id: string, reason: string): Promise<void> {
@@ -450,3 +501,64 @@ export async function confirmVideoUpload(videoId: string): Promise<void> {
 export async function retryTranscode(videoId: string): Promise<void> {
   await apiFetch(`/videos/${videoId}/retry`, { method: "POST" });
 }
+
+// ---- Course Access Requests (Admin & Teacher) -------------------------------
+
+export async function listAdminCourseRequests(params?: {
+  status?: string;
+  page?: number;
+  limit?: number;
+}): Promise<CourseAccessRequestListResponse> {
+  const qs = new URLSearchParams();
+  if (params?.status) qs.set("status", params.status);
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.limit) qs.set("limit", String(params.limit));
+  const data = await apiFetch(`/admin/course-requests?${qs}`, {
+    schema: CourseAccessRequestListResponseSchema,
+  });
+  return data!;
+}
+
+export async function approveAdminCourseRequest(requestId: string): Promise<void> {
+  await apiFetch(`/admin/course-requests/${requestId}/approve`, {
+    method: "POST",
+  });
+}
+
+export async function rejectAdminCourseRequest(requestId: string, reason?: string): Promise<void> {
+  await apiFetch(`/admin/course-requests/${requestId}/reject`, {
+    method: "POST",
+    body: { reason },
+  });
+}
+
+export async function listTeacherCourseRequests(params?: {
+  course_id?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}): Promise<CourseAccessRequestListResponse> {
+  const qs = new URLSearchParams();
+  if (params?.course_id) qs.set("course_id", params.course_id);
+  if (params?.status) qs.set("status", params.status);
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.limit) qs.set("limit", String(params.limit));
+  const data = await apiFetch(`/teacher/course-requests?${qs}`, {
+    schema: CourseAccessRequestListResponseSchema,
+  });
+  return data!;
+}
+
+export async function approveTeacherCourseRequest(requestId: string): Promise<void> {
+  await apiFetch(`/teacher/course-requests/${requestId}/approve`, {
+    method: "POST",
+  });
+}
+
+export async function rejectTeacherCourseRequest(requestId: string, reason?: string): Promise<void> {
+  await apiFetch(`/teacher/course-requests/${requestId}/reject`, {
+    method: "POST",
+    body: { reason },
+  });
+}
+

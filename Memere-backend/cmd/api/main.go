@@ -45,6 +45,7 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/certificate"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/coupon"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/course"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/courseaccess"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/enrollment"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/exam"
 	notificationuc "github.com/Bereke1t2/Memere/memere-backend/internal/usecase/notification"
@@ -264,6 +265,7 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	examAttemptRepo := postgres.NewExamAttemptRepo(pool)
 	videoRepo := postgres.NewVideoRepo(pool)
 	enrollmentRepo := postgres.NewEnrollmentRepo(pool)
+	courseAccessRepo := postgres.NewCourseAccessRequestRepo(pool)
 	subscriptionRepo := postgres.NewSubscriptionRepo(pool)
 	paymentRepo := postgres.NewPaymentRepo(pool)
 	couponRepo := postgres.NewCouponRepo(pool)
@@ -473,7 +475,8 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	progressSvc := progress.NewService(progressRepo, courseRepo, enrollmentRepo, accessSvc, lessonRepo, hooks,
 		progress.Config{StreakTZ: "Africa/Addis_Ababa"}, nil)
 	notifSvc := notificationuc.NewService(notifRepo, deviceRepo, prefRepo)
-	adminSvc := admin.NewService(userRepo, courseRepo, paymentRepo, enrollmentRepo, subscriptionRepo,
+	courseAccessSvc := courseaccess.NewService(courseAccessRepo, enrollmentRepo, courseRepo, userRepo, hooks, nil)
+	adminSvc := admin.NewService(userRepo, courseRepo, paymentRepo, enrollmentRepo, courseAccessRepo, subscriptionRepo,
 		revenueRepo, auditRepo, notifDispatcher, registry)
 	pdfRenderer := pdf.NewFPDFRenderer()
 	certSvc := certificate.NewService(certRepo, progressRepo, courseRepo, userRepo, store, signer,
@@ -516,7 +519,8 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 		Progress:      delivery_http.NewProgressHandler(progressSvc),
 		Notifications: delivery_http.NewNotificationHandler(notifSvc),
 		Certificates:  delivery_http.NewCertificateHandler(certSvc),
-		Admin:         delivery_http.NewAdminHandler(adminSvc),
+		Admin:         delivery_http.NewAdminHandler(adminSvc, courseAccessSvc),
+		CourseAccess:  delivery_http.NewCourseAccessHandler(courseAccessSvc),
 
 		Media:       mediaHandler,
 		GoogleOAuth: googleOAuthHandler,

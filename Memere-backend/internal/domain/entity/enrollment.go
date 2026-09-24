@@ -15,12 +15,13 @@ const (
 	SourceSubscription EnrollmentSource = "subscription"
 	SourceFree         EnrollmentSource = "free"
 	SourceCoupon       EnrollmentSource = "coupon"
+	SourceAdminGrant   EnrollmentSource = "admin_grant"
 )
 
 // Valid reports whether s is a known enrollment source.
 func (s EnrollmentSource) Valid() bool {
 	switch s {
-	case SourcePurchase, SourceSubscription, SourceFree, SourceCoupon:
+	case SourcePurchase, SourceSubscription, SourceFree, SourceCoupon, SourceAdminGrant:
 		return true
 	}
 	return false

@@ -69,10 +69,8 @@ func NewService(
 	return &Service{enroll: enroll, subs: subs, course: course, clock: clock}
 }
 
-// DisableEnrollmentCheck temporarily disables enrollment enforcement so all
-// students can access courses, lessons, quizzes, and exams without enrolling.
-// Set back to false to re-enable enrollment checks in the future.
-var DisableEnrollmentCheck = true
+// DisableEnrollmentCheck enables/disables temporary access bypass.
+var DisableEnrollmentCheck = false
 
 // CanAccessCourse is THE access function. It resolves the course server-side
 // (never trusting a client-supplied flag) and applies the precedence policy.

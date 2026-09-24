@@ -10,23 +10,26 @@ import {
   TrendingUp,
   Megaphone,
   DollarSign,
+  KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const ADMIN_NAV = [
-  { href: "/",              label: "Dashboard",     icon: LayoutDashboard },
-  { href: "/users",         label: "Users",         icon: Users },
-  { href: "/courses",       label: "Courses",       icon: BookOpen },
-  { href: "/payments",      label: "Payments",      icon: CreditCard },
-  { href: "/revenue",       label: "Revenue",       icon: TrendingUp },
-  { href: "/announcements", label: "Announcements", icon: Megaphone },
+  { href: "/",                label: "Dashboard",       icon: LayoutDashboard },
+  { href: "/users",           label: "Users",           icon: Users },
+  { href: "/courses",         label: "Courses",         icon: BookOpen },
+  { href: "/course-requests", label: "Course Requests", icon: KeyRound },
+  { href: "/payments",        label: "Payments",        icon: CreditCard },
+  { href: "/revenue",         label: "Revenue",         icon: TrendingUp },
+  { href: "/announcements",   label: "Announcements",   icon: Megaphone },
 ];
 
 const TEACHER_NAV = [
-  { href: "/",            label: "Dashboard",  icon: LayoutDashboard },
-  { href: "/my-courses",  label: "My Courses", icon: BookOpen },
-  { href: "/earnings",    label: "Earnings",   icon: DollarSign },
+  { href: "/",                label: "Dashboard",       icon: LayoutDashboard },
+  { href: "/my-courses",      label: "My Courses",      icon: BookOpen },
+  { href: "/course-requests", label: "Course Requests", icon: KeyRound },
+  { href: "/earnings",        label: "Earnings",        icon: DollarSign },
 ];
 
 interface SidebarNavProps {
