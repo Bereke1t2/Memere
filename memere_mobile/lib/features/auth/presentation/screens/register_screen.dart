@@ -125,7 +125,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         ),
                         const SizedBox(height: AppSizes.xs),
                         Text(
-                          'Memere',
+                          'Mirkuz',
                           style: AppTextStyles.titleLarge.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -180,7 +180,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         const SizedBox(height: AppSizes.md),
                         AppTextField(
                           controller: _emailCtrl,
-                          hintText: 'student@memere.edu.et',
+                          hintText: 'student@mirkuz.edu.et',
                           labelText: 'Email Address',
                           prefixIcon: Icons.email_outlined,
                           keyboardType: TextInputType.emailAddress,

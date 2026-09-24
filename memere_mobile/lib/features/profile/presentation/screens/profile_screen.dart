@@ -311,7 +311,7 @@ class ProfileScreen extends ConsumerWidget {
                       child: Column(
                         children: [
                           Text(
-                            'Memere • Interactive Course Learning Platform',
+                            'Mirkuz • Interactive Course Learning Platform',
                             style: TextStyle(
                               fontSize: 11.5,
                               fontWeight: FontWeight.w600,

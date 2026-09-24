@@ -294,7 +294,7 @@ class _MyLearningHeader extends ConsumerWidget {
                     ),
                     SizedBox(width: 8),
                     Text(
-                      'Memere Learning Hub',
+                      'Mirkuz Learning Hub',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,

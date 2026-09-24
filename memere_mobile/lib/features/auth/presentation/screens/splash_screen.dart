@@ -74,7 +74,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                     const SizedBox(height: AppSizes.lg),
 
                     // App Title & Tagline
-                    const Text('Memere', style: AppTextStyles.displayMedium),
+                    const Text('Mirkuz', style: AppTextStyles.displayMedium),
                     const SizedBox(height: AppSizes.xs),
                     Text(
                       'Interactive Course Learning Platform',

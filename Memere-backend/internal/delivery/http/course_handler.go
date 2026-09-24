@@ -611,7 +611,7 @@ func (h *CourseHandler) UploadCourseThumbnail(c *gin.Context) {
 	// Authorize + persist the URL FIRST: UpdateCourse asserts owner/admin, so the
 	// object write below only happens for a course the caller may edit (prevents
 	// overwriting another teacher's thumbnail object at the shared key).
-	thumbURL := strings.TrimRight(h.publicURL, "/") + "/api/v1/courses/" + id.String() + "/thumbnail"
+	thumbURL := fmt.Sprintf("%s/api/v1/courses/%s/thumbnail?v=%d", strings.TrimRight(h.publicURL, "/"), id.String(), time.Now().Unix())
 	updated, err := h.svc.UpdateCourse(c.Request.Context(), actor(c), id, course.UpdateCourseInput{ThumbnailURL: &thumbURL})
 	if err != nil {
 		respondError(c, err)
@@ -658,7 +658,7 @@ func (h *CourseHandler) ServeCourseThumbnail(c *gin.Context) {
 		respondError(c, apperror.Internal(err))
 		return
 	}
-	c.Header("Cache-Control", "public, max-age=86400")
+	c.Header("Cache-Control", "public, max-age=3600, must-revalidate")
 	c.Data(http.StatusOK, http.DetectContentType(data), data)
 }
 

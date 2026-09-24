@@ -6,6 +6,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../core/utils/media_url_helper.dart';
 import '../../domain/entities/course_entity.dart';
 
 String courseHeroTag(String courseId) => 'course-thumbnail-$courseId';
@@ -154,9 +155,11 @@ class _CourseRowCardState extends State<CourseRowCard> {
   @override
   Widget build(BuildContext context) {
     final course = widget.course;
-    final hasThumbnail = course.thumbnailUrl != null &&
-        course.thumbnailUrl!.trim().isNotEmpty &&
-        course.thumbnailUrl!.startsWith('http');
+    final rawThumbnail = course.thumbnailUrl;
+    final cleanThumbnail = (rawThumbnail != null && rawThumbnail.trim().isNotEmpty)
+        ? fixMediaUrl(rawThumbnail)
+        : null;
+    final hasThumbnail = cleanThumbnail != null && cleanThumbnail.startsWith('http');
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
@@ -188,7 +191,7 @@ class _CourseRowCardState extends State<CourseRowCard> {
                         fit: StackFit.expand,
                         children: [
                           CachedNetworkImage(
-                            imageUrl: course.thumbnailUrl!,
+                            imageUrl: cleanThumbnail,
                             fit: BoxFit.cover,
                             placeholder: (_, __) => _SubjectFallbackBanner(course: course),
                             errorWidget: (_, __, ___) => _SubjectFallbackBanner(course: course),

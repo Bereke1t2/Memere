@@ -115,7 +115,7 @@ class CourseDetailHeader extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          'Memere Senior Educator',
+                          'Mirkuz Senior Educator',
                           style: AppTextStyles.labelMedium.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppColors.textPrimary,

@@ -119,7 +119,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                         const SizedBox(height: AppSizes.sm),
                         Text(
-                          'Memere',
+                          'Mirkuz',
                           style: AppTextStyles.displayMedium.copyWith(
                             fontWeight: FontWeight.bold,
                             letterSpacing: -0.5,
@@ -156,7 +156,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       children: [
                         AppTextField(
                           controller: _emailCtrl,
-                          hintText: 'student@memere.edu.et',
+                          hintText: 'student@mirkuz.edu.et',
                           labelText: 'Email Address',
                           prefixIcon: Icons.email_outlined,
                           keyboardType: TextInputType.emailAddress,

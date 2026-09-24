@@ -250,7 +250,7 @@ class _CatalogHeader extends ConsumerWidget {
                     ),
                     SizedBox(width: 8),
                     Text(
-                      'Memere Exam Hub',
+                      'Mirkuz Exam Hub',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,

@@ -366,9 +366,9 @@ class _HomeTopBar extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Memere Brand Name
+          // Mirkuz Brand Name
           const Text(
-            'Memere',
+            'Mirkuz',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w900,

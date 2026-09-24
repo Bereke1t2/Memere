@@ -115,6 +115,7 @@ export function TeacherThumbnailDialog({
       toast.success("Course thumbnail updated successfully!");
       await queryClient.invalidateQueries({ queryKey: ["teacher-courses"] });
       await queryClient.invalidateQueries({ queryKey: ["courses"] });
+      await queryClient.invalidateQueries({ queryKey: ["course", course.id] });
       router.refresh();
       handleOpenChange(false);
     } catch (err) {

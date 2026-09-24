@@ -42,7 +42,7 @@ void main() async {
 
   runApp(
     const ProviderScope(
-      child: MemereApp(),
+      child: MirkuzApp(),
     ),
   );
 }

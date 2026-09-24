@@ -390,7 +390,7 @@ class _SavedHeader extends ConsumerWidget {
                     ),
                     SizedBox(width: 8),
                     Text(
-                      'Memere Saved Hub',
+                      'Mirkuz Saved Hub',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,

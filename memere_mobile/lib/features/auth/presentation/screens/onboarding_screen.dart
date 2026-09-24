@@ -24,7 +24,7 @@ class _OnboardingPage {
 
 final _pages = [
   const _OnboardingPage(
-    title: 'Meet Memere',
+    title: 'Meet Mirkuz',
     body:
         'Selam. Learn with interactive AI-guided courses and comprehensive study tools.',
   ),
@@ -100,7 +100,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     ),
                     const SizedBox(width: AppSizes.sm),
                     Text(
-                      'Memere',
+                      'Mirkuz',
                       style: AppTextStyles.titleLarge.copyWith(
                         color: AppColors.textPrimary,
                       ),

@@ -7,14 +7,14 @@ import 'core/offline/sync_service.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 
-class MemereApp extends ConsumerStatefulWidget {
-  const MemereApp({super.key});
+class MirkuzApp extends ConsumerStatefulWidget {
+  const MirkuzApp({super.key});
 
   @override
-  ConsumerState<MemereApp> createState() => _MemereAppState();
+  ConsumerState<MirkuzApp> createState() => _MirkuzAppState();
 }
 
-class _MemereAppState extends ConsumerState<MemereApp>
+class _MirkuzAppState extends ConsumerState<MirkuzApp>
     with WidgetsBindingObserver {
   @override
   void initState() {
@@ -54,7 +54,7 @@ class _MemereAppState extends ConsumerState<MemereApp>
     });
 
     return MaterialApp.router(
-      title: 'Memere',
+      title: 'Mirkuz',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark(),
       darkTheme: AppTheme.dark(),
