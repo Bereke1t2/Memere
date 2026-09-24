@@ -6,19 +6,19 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
-import '../../../courses/presentation/providers/completed_lessons_provider.dart';
 import '../../../payment/presentation/providers/purchase_history_provider.dart';
 import '../../../progress/presentation/providers/progress_providers.dart';
 
 /// Refined Profile Screen for Memere adapted directly from the reference UI design.
 ///
 /// Design Highlights:
-/// - Top patterned header banner with settings icon
-/// - Prominent hero avatar bridging header and profile content
+/// - Top patterned header banner with settings icon & approval status indicator
+/// - Prominent hero avatar with verified / waitlist badge
 /// - User handle & metadata row ("@username • Joined August 2024")
-/// - 3-Column Stat Strip (Courses, Total Points, Avg Score)
+/// - Distinct Account Status Pill (Approved Student vs Waitlist / Pending Review)
+/// - Informative Waitlist Notice Card when awaiting approval
+/// - 3-Column Stat Strip (Courses, Total Points, Avg Score) for approved students
 /// - Primary Action Button ("Edit Profile" / "Share Profile") + Square Share Button
-/// - "Weekly progress" card with 7-day comparative sparkline graph (This Week vs Last Week)
 /// - Clean dark obsidian settings navigation groups
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -30,23 +30,19 @@ class ProfileScreen extends ConsumerWidget {
       return const _GuestProfileView();
     }
     final user = authValue?.user;
+    final isApproved = user?.isApproved ?? false;
+    final isPending = user?.isPendingApproval ?? false;
+
     final fullName = [
       user?.firstName.trim() ?? '',
       user?.lastName.trim() ?? '',
     ].where((part) => part.isNotEmpty).join(' ');
 
-    final enrollmentsAsync = ref.watch(enrollmentListProvider);
-    final enrolledCount = enrollmentsAsync.valueOrNull?.length ?? 0;
+    final enrollmentsAsync = isApproved ? ref.watch(enrollmentListProvider) : null;
+    final enrolledCount = enrollmentsAsync?.valueOrNull?.length ?? 0;
 
-    final purchasesAsync = ref.watch(paymentHistoryProvider);
-    final purchasesCount = purchasesAsync.valueOrNull?.length ?? 0;
-
-    final pointsAsync = ref.watch(studentPointsProvider);
-    final points = pointsAsync.valueOrNull;
-
-    final completedLessons =
-        ref.watch(completedLessonsProvider).valueOrNull ?? const {};
-    final completedCount = completedLessons.length;
+    final pointsAsync = isApproved ? ref.watch(studentPointsProvider) : null;
+    final points = pointsAsync?.valueOrNull;
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -57,10 +53,10 @@ class ProfileScreen extends ConsumerWidget {
           backgroundColor: AppColors.bgSecondary,
           onRefresh: () async {
             ref.invalidate(authStateProvider);
-            ref.invalidate(enrollmentListProvider);
-            ref.invalidate(paymentHistoryProvider);
-            ref.invalidate(studentPointsProvider);
-            ref.invalidate(completedLessonsProvider);
+            if (isApproved) {
+              ref.invalidate(enrollmentListProvider);
+              ref.invalidate(studentPointsProvider);
+            }
           },
           child: ListView(
             padding: EdgeInsets.zero,
@@ -68,6 +64,8 @@ class ProfileScreen extends ConsumerWidget {
               // 1. Top Header Banner with Settings Icon & Hero Avatar
               _ProfileHeaderBanner(
                 initials: _initials(user?.firstName, user?.lastName),
+                isApproved: isApproved,
+                isPending: isPending,
                 onSettingsPressed: () => _showSettingsSheet(context, ref),
               ),
 
@@ -81,15 +79,22 @@ class ProfileScreen extends ConsumerWidget {
                     const SizedBox(height: 42),
 
                     // User Name & Handle / Joined Info
-                    Text(
-                      fullName.isEmpty ? 'Active Student' : fullName,
-                      style: const TextStyle(
-                        fontFamily: 'Sora',
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                        letterSpacing: -0.4,
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            fullName.isEmpty ? 'Active Student' : fullName,
+                            style: const TextStyle(
+                              fontFamily: 'Sora',
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                              letterSpacing: -0.4,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 3),
                     Row(
@@ -120,90 +125,120 @@ class ProfileScreen extends ConsumerWidget {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 10),
+
+                    // Account Status Pill (Approved Student vs Waitlist / Pending Review)
+                    if (isPending)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0x24F59E0B),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color(0x5DF59E0B),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.hourglass_top_rounded,
+                                size: 13.5, color: Color(0xFFF59E0B)),
+                            SizedBox(width: 5),
+                            Text(
+                              'Waitlist • Pending Approval',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFF59E0B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else if (isApproved)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0x1E10B981),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: const Color(0x4D10B981),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.verified_rounded,
+                                size: 14, color: AppColors.brandEmerald),
+                            SizedBox(width: 5),
+                            Text(
+                              'Approved Student',
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.brandEmerald,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     const SizedBox(height: 16),
 
-                    // 3. Horizontal Metric Stat Row (Courses, Points, Avg Score)
-                    _SocialStatsRow(
-                      enrolledCount: enrolledCount,
-                      totalPoints: (points?.totalPoints ?? 0).toInt(),
-                      avgScore: points?.avgPercentage ?? 0,
-                      onTapCourses: () => context.go(AppRoutes.learn),
-                      onTapPoints: () => context.go(AppRoutes.mockExams),
-                    ),
-                    const SizedBox(height: 14),
+                    // 3. Waitlist Announcement Banner (Shown only when pending approval)
+                    if (isPending) ...[
+                      const _WaitlistNoticeCard(),
+                      const SizedBox(height: 20),
+                    ],
 
-                    // 4. Primary Action Bar (Share Profile + Square Share Icon)
-                    _ProfileActionsBar(
-                      onShare: () => _shareProfile(context, user?.email),
-                      onEdit: () => _showEditPrompt(context),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // 5. "Weekly progress" Card Section (Matching reference UI sparkline chart)
-                    const Text(
-                      'Weekly progress',
-                      style: TextStyle(
-                        fontFamily: 'Sora',
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textPrimary,
-                        letterSpacing: -0.3,
+                    // 4. Horizontal Metric Stat Row (Courses, Points, Avg Score) - Visible only for approved students
+                    if (isApproved) ...[
+                      _SocialStatsRow(
+                        enrolledCount: enrolledCount,
+                        totalPoints: (points?.totalPoints ?? 0).toInt(),
+                        avgScore: points?.avgPercentage ?? 0,
+                        onTapCourses: () => context.go(AppRoutes.learn),
+                        onTapPoints: () => context.go(AppRoutes.mockExams),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    _WeeklyProgressCard(completedCount: completedCount),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 14),
 
-                    // 6. Academic & Learning Group
+                      // Primary Action Bar (Share Profile + Square Share Icon)
+                      _ProfileActionsBar(
+                        onShare: () => _shareProfile(context, user?.email),
+                        onEdit: () => _showEditPrompt(context),
+                      ),
+                      const SizedBox(height: 24),
+                    ],
+
+                    // 5. Academic & Learning Group
                     const _SectionHeader(title: 'Academic & Learning'),
                     const SizedBox(height: 6),
                     _SettingsGroup(
                       items: [
                         _SettingsItemData(
                           icon: Icons.menu_book_outlined,
-                          title: 'My Enrolled Courses',
-                          subtitle: enrolledCount == 0
-                              ? 'Explore curriculum courses'
-                              : '$enrolledCount active courses in progress',
-                          onTap: () => context.go(AppRoutes.learn),
+                          title: isApproved ? 'My Enrolled Courses' : 'Browse Courses',
+                          subtitle: isApproved
+                              ? (enrolledCount == 0
+                                  ? 'Explore curriculum courses'
+                                  : '$enrolledCount active courses in progress')
+                              : 'Explore free introductory curriculum courses',
+                          onTap: () => context.go(isApproved ? AppRoutes.learn : AppRoutes.home),
                         ),
-                        _SettingsItemData(
-                          icon: Icons.assignment_outlined,
-                          title: 'Mock Exams & Results',
-                          subtitle:
-                              'Interactive mock exams and score analytics',
-                          onTap: () => context.go(AppRoutes.mockExams),
-                        ),
+                        if (isApproved)
+                          _SettingsItemData(
+                            icon: Icons.assignment_outlined,
+                            title: 'Mock Exams & Results',
+                            subtitle:
+                                'Interactive mock exams and score analytics',
+                            onTap: () => context.go(AppRoutes.mockExams),
+                          ),
                         _SettingsItemData(
                           icon: Icons.bookmark_outline_rounded,
                           title: 'Saved Notes & Library',
                           subtitle: 'Offline study guides and saved materials',
                           onTap: () => context.go(AppRoutes.saved),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // 7. Membership & Purchases Group
-                    const _SectionHeader(title: 'Membership & Billing'),
-                    const SizedBox(height: 6),
-                    _SettingsGroup(
-                      items: [
-                        _SettingsItemData(
-                          icon: Icons.workspace_premium_outlined,
-                          title: 'All-Access Plans',
-                          subtitle:
-                              'Unlock unlimited mock exams & full solutions',
-                          onTap: () =>
-                              context.push(AppRoutes.subscriptionPlans),
-                        ),
-                        _SettingsItemData(
-                          icon: Icons.receipt_outlined,
-                          title: 'Purchase History',
-                          subtitle: purchasesCount == 0
-                              ? 'View transaction history and invoices'
-                              : '$purchasesCount recorded transactions',
-                          onTap: () => context.push(AppRoutes.purchaseHistory),
                         ),
                       ],
                     ),
@@ -504,19 +539,29 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
-/// Top Header Banner matching the reference UI (pattern background + avatar bridge + settings gear icon)
+/// Top Header Banner matching the reference UI (pattern background + avatar bridge + settings gear icon + verification/waitlist status)
 class _ProfileHeaderBanner extends StatelessWidget {
   const _ProfileHeaderBanner({
     required this.initials,
+    required this.isApproved,
+    required this.isPending,
     required this.onSettingsPressed,
   });
 
   final String initials;
+  final bool isApproved;
+  final bool isPending;
   final VoidCallback onSettingsPressed;
 
   @override
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.paddingOf(context).top;
+    final Color avatarBorderColor = isPending
+        ? const Color(0xFFF59E0B)
+        : (isApproved ? AppColors.brandEmerald : AppColors.borderStrong);
+    final Color avatarTextColor = isPending
+        ? const Color(0xFFF59E0B)
+        : (isApproved ? AppColors.brandEmerald : AppColors.textPrimary);
 
     return Stack(
       clipBehavior: Clip.none,
@@ -589,7 +634,7 @@ class _ProfileHeaderBanner extends StatelessWidget {
                   color: const Color(0xFF141926),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: AppColors.brandEmerald,
+                    color: avatarBorderColor,
                     width: 3,
                   ),
                   boxShadow: [
@@ -602,37 +647,60 @@ class _ProfileHeaderBanner extends StatelessWidget {
                 ),
                 child: Text(
                   initials,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Sora',
                     fontSize: 24,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.brandEmerald,
+                    color: avatarTextColor,
                     letterSpacing: -0.5,
                   ),
                 ),
               ),
-              // Verification Checkmark Badge
-              Positioned(
-                bottom: 2,
-                right: 2,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF141926),
-                    shape: BoxShape.circle,
-                    border: Border.all(
+              // Status Badge (Emerald checkmark for approved, Amber hourglass for waitlist)
+              if (isApproved)
+                Positioned(
+                  bottom: 2,
+                  right: 2,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
                       color: const Color(0xFF141926),
-                      width: 2,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFF141926),
+                        width: 2,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.check_circle_rounded,
+                      size: 16,
+                      color: AppColors.brandEmerald,
                     ),
                   ),
-                  child: const Icon(
-                    Icons.check_circle_rounded,
-                    size: 16,
-                    color: AppColors.brandEmerald,
+                )
+              else if (isPending)
+                Positioned(
+                  bottom: 2,
+                  right: 2,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF141926),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFF59E0B),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.hourglass_top_rounded,
+                      size: 12,
+                      color: Color(0xFFF59E0B),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
@@ -641,7 +709,69 @@ class _ProfileHeaderBanner extends StatelessWidget {
   }
 }
 
-/// 3-Column Metric Stat Row matching reference design ("Courses", "Following/Points", "Followers/Avg")
+/// Prominent Waitlist Announcement Notice Card
+class _WaitlistNoticeCard extends StatelessWidget {
+  const _WaitlistNoticeCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF161D26),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFFF59E0B).withAlpha(90),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: const Color(0x28F59E0B),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.hourglass_empty_rounded,
+                  size: 18,
+                  color: Color(0xFFF59E0B),
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text(
+                  'Account In Waitlist Queue',
+                  style: TextStyle(
+                    fontFamily: 'Sora',
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFFF59E0B),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'Your account registration is awaiting administrator review. You can explore curriculum courses and free introductory lessons in the meantime. Once your account is approved, you will be able to request access to premium courses and take mock exams.',
+            style: TextStyle(
+              fontSize: 12.5,
+              height: 1.5,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 3-Column Metric Stat Row matching reference design ("Courses", "Points", "Avg Score")
 class _SocialStatsRow extends StatelessWidget {
   const _SocialStatsRow({
     required this.enrolledCount,
@@ -775,7 +905,7 @@ class _SocialStatsRow extends StatelessWidget {
   }
 }
 
-/// Primary Actions Bar ("+ ADD FRIENDS" / "EDIT PROFILE" + Square Share button)
+/// Primary Actions Bar ("SHARE PROFILE" + Square Share button)
 class _ProfileActionsBar extends StatelessWidget {
   const _ProfileActionsBar({
     required this.onShare,
@@ -789,7 +919,7 @@ class _ProfileActionsBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        // Primary Action Button ("+ EDIT PROFILE" / "SHARE PROFILE")
+        // Primary Action Button ("SHARE PROFILE")
         Expanded(
           child: SizedBox(
             height: 44,
@@ -849,220 +979,6 @@ class _ProfileActionsBar extends StatelessWidget {
       ],
     );
   }
-}
-
-/// "Weekly progress" Card matching the reference UI Comparative Sparkline Graph
-class _WeeklyProgressCard extends StatelessWidget {
-  const _WeeklyProgressCard({required this.completedCount});
-
-  final int completedCount;
-
-  @override
-  Widget build(BuildContext context) {
-    // 7-day sparkline points (Mon - Sun)
-    final thisWeekData = [4.0, 3.0, 10.0, 4.0, 7.0, 9.0, 3.0];
-    final lastWeekData = [32.0, 8.0, 7.0, 3.0, 5.0, 4.0, 10.0];
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.bgSecondary,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderStrong),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Legend Row: "● This week  36 lessons" & "● Last week  74 lessons"
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 7,
-                    height: 7,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(0xFF38BDF8),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'This week',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                '${completedCount > 0 ? completedCount : 36} lessons',
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF38BDF8),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  SizedBox(
-                    width: 7,
-                    height: 7,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0xFF64748B),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    'Last week',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                '74 lessons',
-                style: TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textMuted,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Custom 7-day sparkline chart graph
-          SizedBox(
-            height: 90,
-            width: double.infinity,
-            child: CustomPaint(
-              painter: _WeeklyProgressPainter(
-                thisWeekData: thisWeekData,
-                lastWeekData: lastWeekData,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // X-Axis Day Labels (M, T, W, T, F, S, S)
-          const Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('F', style: TextStyle(fontSize: 10.5, color: AppColors.textMuted)),
-              Text('S', style: TextStyle(fontSize: 10.5, color: AppColors.textMuted)),
-              Text('S', style: TextStyle(fontSize: 10.5, color: AppColors.textMuted)),
-              Text('M', style: TextStyle(fontSize: 10.5, color: AppColors.textMuted)),
-              Text('T', style: TextStyle(fontSize: 10.5, color: AppColors.textMuted)),
-              Text('W', style: TextStyle(fontSize: 10.5, color: AppColors.textMuted)),
-              Text('T', style: TextStyle(fontSize: 10.5, color: AppColors.textMuted)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Custom Painter for 7-day Weekly Progress Line Chart
-class _WeeklyProgressPainter extends CustomPainter {
-  _WeeklyProgressPainter({
-    required this.thisWeekData,
-    required this.lastWeekData,
-  });
-
-  final List<double> thisWeekData;
-  final List<double> lastWeekData;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final gridPaint = Paint()
-      ..color = AppColors.border.withAlpha(80)
-      ..strokeWidth = 1;
-
-    // Draw horizontal grid lines
-    const lineCount = 3;
-    for (int i = 0; i <= lineCount; i++) {
-      final y = size.height * (i / lineCount);
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-    }
-
-    final double stepX = size.width / (thisWeekData.length - 1);
-
-    // 1. Draw Last Week Line (Muted Grey)
-    final lastWeekPaint = Paint()
-      ..color = const Color(0xFF475569)
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-
-    final lastWeekPath = Path();
-    for (int i = 0; i < lastWeekData.length; i++) {
-      final x = i * stepX;
-      final y = size.height * (1.0 - (lastWeekData[i] / 40.0).clamp(0.08, 0.92));
-      if (i == 0) {
-        lastWeekPath.moveTo(x, y);
-      } else {
-        lastWeekPath.lineTo(x, y);
-      }
-    }
-    canvas.drawPath(lastWeekPath, lastWeekPaint);
-
-    // 2. Draw This Week Line (Vibrant Cyan Blue)
-    final thisWeekPaint = Paint()
-      ..color = const Color(0xFF38BDF8)
-      ..strokeWidth = 2.5
-      ..style = PaintingStyle.stroke;
-
-    final dotPaint = Paint()
-      ..color = const Color(0xFF38BDF8)
-      ..style = PaintingStyle.fill;
-
-    final dotOutlinePaint = Paint()
-      ..color = AppColors.bgSecondary
-      ..style = PaintingStyle.fill;
-
-    final thisWeekPath = Path();
-    final points = <Offset>[];
-
-    for (int i = 0; i < thisWeekData.length; i++) {
-      final x = i * stepX;
-      final y = size.height * (1.0 - (thisWeekData[i] / 40.0).clamp(0.08, 0.92));
-      final pt = Offset(x, y);
-      points.add(pt);
-
-      if (i == 0) {
-        thisWeekPath.moveTo(x, y);
-      } else {
-        thisWeekPath.lineTo(x, y);
-      }
-    }
-    canvas.drawPath(thisWeekPath, thisWeekPaint);
-
-    // Draw dots on This Week line
-    for (final pt in points) {
-      canvas.drawCircle(pt, 5, dotOutlinePaint);
-      canvas.drawCircle(pt, 3.5, dotPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _WeeklyProgressPainter oldDelegate) => true;
 }
 
 class _SectionHeader extends StatelessWidget {
