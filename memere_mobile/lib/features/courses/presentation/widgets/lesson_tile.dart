@@ -217,20 +217,16 @@ class _LessonTileState extends State<LessonTile> {
   }
 
   IconData _actionIcon(LessonEntity lesson) {
-    if (lesson.hasVideo || lesson.type == LessonType.video) {
+    if (lesson.type == LessonType.note || lesson.hasPdf || lesson.isHtml || (lesson.hasContent && !lesson.hasVideo)) {
+      if (lesson.isHtml) return Icons.html_rounded;
+      if (lesson.hasPdf) return Icons.picture_as_pdf_rounded;
+      return Icons.article_rounded;
+    }
+    if (lesson.type == LessonType.video || lesson.hasVideo) {
       return Icons.play_arrow_rounded;
     }
-    if (lesson.hasQuiz || lesson.type == LessonType.quiz) {
+    if (lesson.type == LessonType.quiz || lesson.hasQuiz) {
       return Icons.quiz_outlined;
-    }
-    if (lesson.isHtml) {
-      return Icons.html_rounded;
-    }
-    if (lesson.hasPdf) {
-      return Icons.picture_as_pdf_rounded;
-    }
-    if (lesson.hasContent || lesson.type == LessonType.note) {
-      return Icons.article_rounded;
     }
     return Icons.description_rounded;
   }
@@ -243,8 +239,28 @@ class _LessonTileState extends State<LessonTile> {
       return;
     }
 
-    // 1. Playable Video content
-    if (lesson.hasVideo || lesson.type == LessonType.video || (lesson.videoId != null && lesson.videoId!.isNotEmpty)) {
+    // 1. Note / Study Document / PDF / HTML content
+    if (lesson.type == LessonType.note || lesson.hasPdf || lesson.isHtml) {
+      final pdfName = lesson.pdfUrl ?? '';
+      context.push(
+        AppRoutes.pdfReaderPath(
+          title: lesson.title,
+          pdfUrl: pdfName,
+          lessonId: lesson.id,
+          content: lesson.content,
+        ),
+        extra: <String, dynamic>{
+          'title': lesson.title,
+          'pdfUrl': pdfName,
+          'lessonId': lesson.id,
+          'content': lesson.content,
+        },
+      );
+      return;
+    }
+
+    // 2. Playable Video content
+    if (lesson.type == LessonType.video || lesson.hasVideo || (lesson.videoId != null && lesson.videoId!.isNotEmpty)) {
       final effectiveVideoId = (lesson.videoId != null && lesson.videoId!.isNotEmpty)
           ? lesson.videoId!
           : lesson.id;
@@ -259,8 +275,8 @@ class _LessonTileState extends State<LessonTile> {
       return;
     }
 
-    // 2. Quiz content
-    if (lesson.hasQuiz || lesson.type == LessonType.quiz) {
+    // 3. Quiz content
+    if (lesson.type == LessonType.quiz || lesson.hasQuiz) {
       if (lesson.quizId != null && lesson.quizId!.isNotEmpty) {
         context.push(AppRoutes.quizDetailPath(lesson.quizId!));
         return;
@@ -269,7 +285,7 @@ class _LessonTileState extends State<LessonTile> {
       return;
     }
 
-    // 3. Open Study Document / Notes Reader for all lessons
+    // Fallback: Open Study Document / Notes Reader for all lessons
     final pdfName = lesson.pdfUrl ?? '';
     context.push(
       AppRoutes.pdfReaderPath(
@@ -292,9 +308,10 @@ class _LessonTileState extends State<LessonTile> {
     if (lesson.isHtml) return '${lesson.durationLabel} • HTML Document';
     if (lesson.hasPdf && lesson.hasContent) return '${lesson.durationLabel} • Notes & PDF';
     if (lesson.hasPdf) return '${lesson.durationLabel} • PDF Document';
-    if (lesson.hasContent || lesson.type == LessonType.note) return '${lesson.durationLabel} • Study Notes';
-    if (lesson.hasQuiz || lesson.type == LessonType.quiz) return 'Practice Quiz';
-    return '${lesson.durationLabel} • Video Lesson';
+    if (lesson.type == LessonType.note || lesson.hasContent) return '${lesson.durationLabel} • Study Notes';
+    if (lesson.type == LessonType.video || lesson.hasVideo) return '${lesson.durationLabel} • Video Lesson';
+    if (lesson.type == LessonType.quiz || lesson.hasQuiz) return 'Practice Quiz';
+    return '${lesson.durationLabel} • Study Material';
   }
 
   void _showMessage(BuildContext context, String message) {

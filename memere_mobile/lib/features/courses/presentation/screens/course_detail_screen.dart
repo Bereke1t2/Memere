@@ -949,7 +949,29 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
       _showMessage('Lessons will appear here when this course is ready.');
       return;
     }
-    if (lesson.hasVideo || lesson.type == LessonType.video || (lesson.videoId != null && lesson.videoId!.isNotEmpty)) {
+
+    // 1. Note / Study Document / PDF / HTML content
+    if (lesson.type == LessonType.note || lesson.hasPdf || lesson.isHtml) {
+      final pdfName = lesson.pdfUrl ?? '';
+      context.push(
+        AppRoutes.pdfReaderPath(
+          title: lesson.title,
+          pdfUrl: pdfName,
+          lessonId: lesson.id,
+          content: lesson.content,
+        ),
+        extra: <String, dynamic>{
+          'title': lesson.title,
+          'pdfUrl': pdfName,
+          'lessonId': lesson.id,
+          'content': lesson.content,
+        },
+      );
+      return;
+    }
+
+    // 2. Playable Video content
+    if (lesson.type == LessonType.video || lesson.hasVideo || (lesson.videoId != null && lesson.videoId!.isNotEmpty)) {
       final effectiveVideoId = (lesson.videoId != null && lesson.videoId!.isNotEmpty)
           ? lesson.videoId!
           : lesson.id;
@@ -963,10 +985,14 @@ class _CheckoutCtaBarState extends ConsumerState<_CheckoutCtaBar> {
       );
       return;
     }
-    if (lesson.hasQuiz && lesson.quizId != null && lesson.quizId!.isNotEmpty) {
+
+    // 3. Quiz content
+    if (lesson.type == LessonType.quiz || (lesson.hasQuiz && lesson.quizId != null && lesson.quizId!.isNotEmpty)) {
       context.push(AppRoutes.quizDetailPath(lesson.quizId!));
       return;
     }
+
+    // Fallback: Open Study Document / Notes Reader
     final pdfName = lesson.pdfUrl ?? '';
     context.push(
       AppRoutes.pdfReaderPath(
