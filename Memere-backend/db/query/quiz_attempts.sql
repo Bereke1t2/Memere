@@ -3,7 +3,7 @@ INSERT INTO courses.quiz_attempts (
     quiz_id, student_id, attempt_number, expires_at, question_order,
     answers_snapshot, status
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
+    $1, $2, $3, $4, $5::jsonb, $6::jsonb, $7
 )
 RETURNING *;
 
@@ -45,7 +45,7 @@ LIMIT $2;
 -- the latest answers snapshot and status without touching the immutable timer
 -- columns (started_at/expires_at).
 UPDATE courses.quiz_attempts
-SET answers_snapshot = $2,
+SET answers_snapshot = $2::jsonb,
     status = $3,
     submitted_at = $4
 WHERE id = $1
@@ -58,7 +58,7 @@ RETURNING *;
 -- no-ops. $2 is the target status ('submitted' or 'expired').
 UPDATE courses.quiz_attempts
 SET status = $2,
-    answers_snapshot = $3,
+    answers_snapshot = $3::jsonb,
     submitted_at = $4
 WHERE id = $1 AND status = 'in_progress'
 RETURNING *;
