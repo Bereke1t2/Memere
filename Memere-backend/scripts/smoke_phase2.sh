@@ -67,7 +67,7 @@ STUDENT_B="$(register_login student studentb)"
 pass "teacher + 2 students provisioned"
 
 echo "[2] teacher creates + publishes a course"
-req POST /courses "$(jq -nc '{title:"Phase2 Smoke", description:"d", subject:"Math", grade:12, price:0, level:"beginner"}')" "$TEACHER"
+req POST /courses "$(jq -nc '{title:"Phase2 Smoke", description:"d", subject:"Math", grade:12, price:0, is_free:true, level:"beginner"}')" "$TEACHER"
 [[ "$HTTP_CODE" == "201" ]] || fail "create course expected 201, got $HTTP_CODE ($BODY)"
 COURSE_ID="$(jq -r '.id' <<<"$BODY")"
 req POST "/courses/${COURSE_ID}/publish" "" "$TEACHER"
