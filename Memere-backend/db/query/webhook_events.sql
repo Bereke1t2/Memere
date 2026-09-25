@@ -4,7 +4,7 @@
 -- the first delivery and the caller should fulfill it.
 -- name: InsertWebhookIfNew :one
 INSERT INTO payments.webhook_events (id, provider, provider_event_id, event_type, payload)
-VALUES (gen_random_uuid(), $1, $2, $3, $4)
+VALUES (gen_random_uuid(), $1, $2, $3, $4::jsonb)
 ON CONFLICT (provider, provider_event_id) DO NOTHING
 RETURNING id;
 
