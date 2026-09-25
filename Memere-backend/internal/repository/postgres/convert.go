@@ -192,22 +192,22 @@ func derefString(s *string) string {
 	return *s
 }
 
-// toJSONB marshals a metadata map to the []byte sqlc expects for a JSONB column.
-// A nil map maps to SQL NULL (nil []byte).
+// toJSONB marshals a metadata map to a JSON byte slice for a JSONB column.
+// A nil map maps to []byte("{}") so PostgreSQL JSONB casting never receives empty bytes.
 func toJSONB(m map[string]any) []byte {
 	if m == nil {
-		return nil
+		return []byte("{}")
 	}
 	b, err := json.Marshal(m)
 	if err != nil {
-		return nil
+		return []byte("{}")
 	}
 	return b
 }
 
 // fromJSONB unmarshals a JSONB column into a metadata map. NULL/empty yields nil.
 func fromJSONB(b []byte) map[string]any {
-	if len(b) == 0 {
+	if len(b) == 0 || string(b) == "null" || string(b) == "{}" {
 		return nil
 	}
 	var m map[string]any
@@ -216,3 +216,4 @@ func fromJSONB(b []byte) map[string]any {
 	}
 	return m
 }
+
