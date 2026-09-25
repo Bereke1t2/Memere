@@ -129,16 +129,16 @@ void main() {
           ),
         );
 
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
 
-        // Scroll all the way to the bottom of the Home screen
+        // Scroll progressively to ensure all lazy sliver items are built and bottom reached
         final scrollable = find.byType(Scrollable).first;
-        await tester.scrollUntilVisible(
-          find.text('Grade 12 Physics Course #5'),
-          500,
-          scrollable: scrollable,
-        );
-        await tester.pumpAndSettle();
+        for (int i = 0; i < 8; i++) {
+          await tester.drag(scrollable, const Offset(0, -500));
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        await tester.pump(const Duration(milliseconds: 300));
 
         // Find the last course card
         final lastCardFinder = find.byType(CourseRowCard).last;
