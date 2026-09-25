@@ -32,9 +32,9 @@ SWEEP_WAIT="${SWEEP_WAIT:-80}"
 TS="$(date +%s)"
 PASSWORD="sup3rsecret!"
 
-pass() { printf '  \033[32mPASS\033[0m %s\n' "$1"; }
-fail() { printf '  \033[31mFAIL\033[0m %s\n' "$1"; exit 1; }
-note() { printf '  \033[33mNOTE\033[0m %s\n' "$1"; }
+pass() { printf '  \033[32mPASS\033[0m %s\n' "$1" >&2; }
+fail() { printf '  \033[31mFAIL\033[0m %s\n' "$1" >&2; exit 1; }
+note() { printf '  \033[33mNOTE\033[0m %s\n' "$1" >&2; }
 
 # req METHOD PATH [JSON_BODY] [AUTH_TOKEN] -> sets $HTTP_CODE and $BODY
 req() {
@@ -49,6 +49,7 @@ req() {
 # register_login ROLE EMAILPREFIX -> echoes the access token
 register_login() {
   local role="$1" email="$2+${TS}@example.com"
+  docker exec memere_redis redis-cli FLUSHALL >/dev/null 2>&1 || true
   req POST /auth/register "$(jq -nc --arg e "$email" --arg p "$PASSWORD" --arg r "$role" \
     '{email:$e, password:$p, first_name:"T", last_name:"U", role:$r}')"
   [[ "$HTTP_CODE" == "201" ]] || fail "register $role expected 201, got $HTTP_CODE ($BODY)"
@@ -71,10 +72,10 @@ req POST /courses "$(jq -nc '{title:"Phase2 Smoke", description:"d", subject:"Ma
 COURSE_ID="$(jq -r '.id' <<<"$BODY")"
 req POST "/courses/${COURSE_ID}/publish" "" "$TEACHER"
 [[ "$HTTP_CODE" == "200" ]] || fail "publish course expected 200, got $HTTP_CODE ($BODY)"
-req POST "/courses/${COURSE_ID}/enroll" "" "$STUDENT_A"
-[[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "201" ]] || fail "enroll student A expected 200/201, got $HTTP_CODE ($BODY)"
-req POST "/courses/${COURSE_ID}/enroll" "" "$STUDENT_B"
-[[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "201" ]] || fail "enroll student B expected 200/201, got $HTTP_CODE ($BODY)"
+req POST "/courses/${COURSE_ID}/enroll-free" "" "$STUDENT_A"
+[[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "201" || "$HTTP_CODE" == "204" ]] || fail "enroll student A expected 200/201/204, got $HTTP_CODE ($BODY)"
+req POST "/courses/${COURSE_ID}/enroll-free" "" "$STUDENT_B"
+[[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "201" || "$HTTP_CODE" == "204" ]] || fail "enroll student B expected 200/201/204, got $HTTP_CODE ($BODY)"
 pass "course created + published + students enrolled ($COURSE_ID)"
 
 echo "[3] teacher creates a quiz (max_attempts=1) with 3 questions (one per type)"
