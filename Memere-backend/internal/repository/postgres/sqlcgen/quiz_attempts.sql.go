@@ -35,7 +35,7 @@ func (q *Queries) ClaimQuizAttemptForGrading(ctx context.Context, arg ClaimQuizA
 	row := q.db.QueryRow(ctx, claimQuizAttemptForGrading,
 		arg.ID,
 		arg.Status,
-		arg.AnswersSnapshot,
+		toJSONString(arg.AnswersSnapshot),
 		arg.SubmittedAt,
 	)
 	var i CoursesQuizAttempt
@@ -102,8 +102,8 @@ func (q *Queries) CreateQuizAttempt(ctx context.Context, arg CreateQuizAttemptPa
 		arg.StudentID,
 		arg.AttemptNumber,
 		arg.ExpiresAt,
-		arg.QuestionOrder,
-		arg.AnswersSnapshot,
+		toJSONString(arg.QuestionOrder),
+		toJSONString(arg.AnswersSnapshot),
 		arg.Status,
 	)
 	var i CoursesQuizAttempt
@@ -366,7 +366,7 @@ type UpdateQuizAttemptParams struct {
 func (q *Queries) UpdateQuizAttempt(ctx context.Context, arg UpdateQuizAttemptParams) (CoursesQuizAttempt, error) {
 	row := q.db.QueryRow(ctx, updateQuizAttempt,
 		arg.ID,
-		arg.AnswersSnapshot,
+		toJSONString(arg.AnswersSnapshot),
 		arg.Status,
 		arg.SubmittedAt,
 	)
