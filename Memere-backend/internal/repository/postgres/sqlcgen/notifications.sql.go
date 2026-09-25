@@ -31,7 +31,7 @@ func (q *Queries) CreateNotification(ctx context.Context, arg CreateNotification
 		arg.Type,
 		arg.Title,
 		arg.Body,
-		arg.Data,
+		toJSONString(arg.Data),
 	)
 	var i NotificationsNotification
 	err := row.Scan(
