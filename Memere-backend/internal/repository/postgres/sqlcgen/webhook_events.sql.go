@@ -34,7 +34,7 @@ func (q *Queries) InsertWebhookIfNew(ctx context.Context, arg InsertWebhookIfNew
 		arg.Provider,
 		arg.ProviderEventID,
 		arg.EventType,
-		arg.Payload,
+		toJSONString(arg.Payload),
 	)
 	var id pgtype.UUID
 	err := row.Scan(&id)
