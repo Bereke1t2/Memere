@@ -61,5 +61,12 @@ class QuestionFeedbackModel extends QuestionFeedbackEntity {
         'selected_answers': selectedAnswers,
         'correct_answer_ids': correctAnswerIds,
         'explanation': explanation,
+        'answers': answers
+            .map((a) => {
+                  'id': a.id,
+                  'text': a.text,
+                  'is_correct': a.isCorrect,
+                })
+            .toList(),
       };
 }
