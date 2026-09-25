@@ -211,17 +211,21 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*AuthTokens, *entit
 	}
 
 	// Check for active session on another device (Single-Device Policy).
-	activeSession, err := s.sessions.GetSession(ctx, u.ID)
-	if err != nil {
-		return nil, nil, err
-	}
-	if activeSession != "" {
-		return nil, nil, apperror.New(
-			http.StatusConflict,
-			"ACTIVE_SESSION_EXISTS",
-			"This account is currently active on another device. Please log out from that device first before logging in here.",
-			nil,
-		)
+	// Only students are restricted to a single device session. Admin and teacher
+	// accounts can log in concurrently from multiple/different devices.
+	if u.Role == entity.RoleStudent {
+		activeSession, err := s.sessions.GetSession(ctx, u.ID)
+		if err != nil {
+			return nil, nil, err
+		}
+		if activeSession != "" {
+			return nil, nil, apperror.New(
+				http.StatusConflict,
+				"ACTIVE_SESSION_EXISTS",
+				"This account is currently active on another device. Please log out from that device first before logging in here.",
+				nil,
+			)
+		}
 	}
 
 	tokens, err := s.issueTokens(ctx, u, in.DeviceInfo)
@@ -333,8 +337,10 @@ func (s *Service) issueTokens(ctx context.Context, u *entity.User, deviceInfo *s
 	if err := s.tokens.Create(ctx, rt); err != nil {
 		return nil, err
 	}
-	if err := s.sessions.SetSession(ctx, u.ID, refreshHash, refreshTTL); err != nil {
-		return nil, err
+	if u.Role == entity.RoleStudent {
+		if err := s.sessions.SetSession(ctx, u.ID, refreshHash, refreshTTL); err != nil {
+			return nil, err
+		}
 	}
 
 	return &AuthTokens{
