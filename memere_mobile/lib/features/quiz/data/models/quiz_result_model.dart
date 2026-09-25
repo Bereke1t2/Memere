@@ -23,8 +23,10 @@ class QuizResultModel extends QuizResultEntity {
     final feedbackJson = json['feedback'];
     final feedback = feedbackJson is List
         ? feedbackJson
-            .whereType<Map<String, dynamic>>()
-            .map(QuestionFeedbackModel.fromJson)
+            .where((item) => item is Map)
+            .map((item) => QuestionFeedbackModel.fromJson(
+                  Map<String, dynamic>.from(item as Map),
+                ))
             .toList()
         : <QuestionFeedbackModel>[];
 
