@@ -14,7 +14,7 @@ import (
 const claimQuizAttemptForGrading = `-- name: ClaimQuizAttemptForGrading :one
 UPDATE courses.quiz_attempts
 SET status = $2,
-    answers_snapshot = $3,
+    answers_snapshot = $3::jsonb,
     submitted_at = $4
 WHERE id = $1 AND status = 'in_progress'
 RETURNING id, quiz_id, student_id, attempt_number, started_at, submitted_at, score, percentage, answers_snapshot, status, created_at, updated_at, question_order, expires_at, passed
@@ -81,7 +81,7 @@ INSERT INTO courses.quiz_attempts (
     quiz_id, student_id, attempt_number, expires_at, question_order,
     answers_snapshot, status
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
+    $1, $2, $3, $4, $5::jsonb, $6::jsonb, $7
 )
 RETURNING id, quiz_id, student_id, attempt_number, started_at, submitted_at, score, percentage, answers_snapshot, status, created_at, updated_at, question_order, expires_at, passed
 `
@@ -346,7 +346,7 @@ func (q *Queries) ListQuizAttemptsByStudentAndQuiz(ctx context.Context, arg List
 
 const updateQuizAttempt = `-- name: UpdateQuizAttempt :one
 UPDATE courses.quiz_attempts
-SET answers_snapshot = $2,
+SET answers_snapshot = $2::jsonb,
     status = $3,
     submitted_at = $4
 WHERE id = $1
