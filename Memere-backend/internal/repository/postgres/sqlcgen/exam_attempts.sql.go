@@ -14,7 +14,7 @@ import (
 const claimExamAttemptForGrading = `-- name: ClaimExamAttemptForGrading :one
 UPDATE courses.exam_attempts
 SET status = $2,
-    answers_snapshot = $3,
+    answers_snapshot = $3::jsonb,
     submitted_at = $4
 WHERE id = $1 AND status = 'in_progress'
 RETURNING id, exam_id, student_id, started_at, submitted_at, score, percentage, answers_snapshot, status, created_at, updated_at
@@ -58,7 +58,7 @@ const createExamAttempt = `-- name: CreateExamAttempt :one
 INSERT INTO courses.exam_attempts (
     exam_id, student_id, answers_snapshot, status
 ) VALUES (
-    $1, $2, $3, $4
+    $1, $2, $3::jsonb, $4
 )
 RETURNING id, exam_id, student_id, started_at, submitted_at, score, percentage, answers_snapshot, status, created_at, updated_at
 `
@@ -353,7 +353,7 @@ func (q *Queries) ListGradedExamAttemptsBySubject(ctx context.Context, arg ListG
 
 const updateExamAttempt = `-- name: UpdateExamAttempt :one
 UPDATE courses.exam_attempts
-SET answers_snapshot = $2,
+SET answers_snapshot = $2::jsonb,
     status = $3,
     submitted_at = $4
 WHERE id = $1
