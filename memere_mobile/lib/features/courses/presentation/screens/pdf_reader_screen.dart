@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/storage/secure_pdf_storage.dart';
 import '../../../../shared/widgets/ai_robot_mascot.dart';
+import '../helpers/html_presentation_transformer.dart';
 import '../providers/completed_lessons_provider.dart';
 
 /// In-App PDF & Study Notes Reader for Mirkuz.
@@ -119,6 +120,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
         final htmlContent = await file.readAsString();
         final controller = WebViewController()
           ..setJavaScriptMode(JavaScriptMode.unrestricted)
+          ..enableZoom(true)
           ..setBackgroundColor(
               _isNightMode ? const Color(0xFF0B0E14) : Colors.white)
           ..setNavigationDelegate(
@@ -156,73 +158,11 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
   }
 
   String _wrapHtmlWithTheme(String rawHtml) {
-    var html = rawHtml;
-    final isDark = _isNightMode;
-    final textColor = isDark ? '#E2E8F0' : '#0F172A';
-    final bgColor = isDark ? '#0B0E14' : '#FFFFFF';
-    const linkColor = '#10B981';
-
-    // Inject mobile viewport meta tag if not present
-    if (!html.toLowerCase().contains('<meta name="viewport"')) {
-      const viewportTag =
-          '<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">';
-      if (html.toLowerCase().contains('<head>')) {
-        html = html.replaceFirst(
-            RegExp(r'<head>', caseSensitive: false), '<head>$viewportTag');
-      } else if (html.toLowerCase().contains('<head ')) {
-        html = html.replaceFirst(
-            RegExp(r'(<head[^>]*>)', caseSensitive: false), '\$1$viewportTag');
-      } else {
-        html = '$viewportTag$html';
-      }
-    }
-
-    // Inject responsive typography and theme CSS style tag into <head>
-    final themeStyle = '''
-<style>
-  :root { color-scheme: ${isDark ? 'dark' : 'light'}; }
-  body {
-    background-color: $bgColor !important;
-    color: $textColor !important;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    line-height: 1.6;
-    padding: 14px;
-    margin: 0;
-    word-break: break-word;
-  }
-  img, video, iframe, table {
-    max-width: 100% !important;
-    height: auto !important;
-  }
-  a { color: $linkColor !important; }
-  pre, code {
-    background: ${isDark ? '#1E293B' : '#F1F5F9'} !important;
-    color: ${isDark ? '#38BDF8' : '#0369A1'} !important;
-    border-radius: 6px;
-    padding: 2px 4px;
-    overflow-x: auto;
-  }
-  pre { padding: 12px; }
-  table {
-    border-collapse: collapse;
-    width: 100%;
-    margin: 12px 0;
-  }
-  th, td {
-    border: 1px solid ${isDark ? '#334155' : '#E2E8F0'};
-    padding: 8px;
-  }
-</style>
-''';
-
-    if (html.toLowerCase().contains('</head>')) {
-      html = html.replaceFirst(
-          RegExp(r'</head>', caseSensitive: false), '$themeStyle</head>');
-    } else {
-      html = '<head>$themeStyle</head>$html';
-    }
-
-    return html;
+    return HtmlPresentationTransformer.wrapHtml(
+      rawHtml: rawHtml,
+      isDark: _isNightMode,
+      linkColor: AppColors.brandEmerald,
+    );
   }
 
   Future<void> _initializePdf() async {
@@ -756,101 +696,105 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: borderColor),
                   ),
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Font Size',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textMuted,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      InkWell(
-                        onTap: _fontSize > 12.0
-                            ? () => setState(() => _fontSize -= 1.5)
-                            : null,
-                        borderRadius: BorderRadius.circular(6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: _isNightMode
-                                ? const Color(0xFF181820)
-                                : const Color(0xFFE2E8F0),
-                            borderRadius: BorderRadius.circular(6),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: Row(
+                      children: [
+                        const Text(
+                          'Font Size',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textMuted,
                           ),
-                          child: Text(
-                            'A-',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: _fontSize > 12.0 ? textColor : mutedColor,
+                        ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: _fontSize > 12.0
+                              ? () => setState(() => _fontSize -= 1.5)
+                              : null,
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: _isNightMode
+                                  ? const Color(0xFF181820)
+                                  : const Color(0xFFE2E8F0),
+                              borderRadius: BorderRadius.circular(6),
                             ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '${_fontSize.toInt()}pt',
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600,
-                          color: textColor,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      InkWell(
-                        onTap: _fontSize < 22.0
-                            ? () => setState(() => _fontSize += 1.5)
-                            : null,
-                        borderRadius: BorderRadius.circular(6),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: _isNightMode
-                                ? const Color(0xFF181820)
-                                : const Color(0xFFE2E8F0),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            'A+',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: _fontSize < 22.0 ? textColor : mutedColor,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const Spacer(),
-                      InkWell(
-                        onTap: _copyNotesToClipboard,
-                        borderRadius: BorderRadius.circular(6),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 4),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.copy_rounded,
-                                  size: 14, color: mutedColor),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Copy Notes',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: textColor,
-                                ),
+                            child: Text(
+                              'A-',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: _fontSize > 12.0 ? textColor : mutedColor,
                               ),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: 6),
+                        Text(
+                          '${_fontSize.toInt()}pt',
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: textColor,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        InkWell(
+                          onTap: _fontSize < 22.0
+                              ? () => setState(() => _fontSize += 1.5)
+                              : null,
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: _isNightMode
+                                  ? const Color(0xFF181820)
+                                  : const Color(0xFFE2E8F0),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              'A+',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: _fontSize < 22.0 ? textColor : mutedColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        InkWell(
+                          onTap: _copyNotesToClipboard,
+                          borderRadius: BorderRadius.circular(6),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 4),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.copy_rounded,
+                                    size: 14, color: mutedColor),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Copy Notes',
+                                  style: TextStyle(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: textColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -1904,7 +1848,17 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
     return Column(
       children: [
         Expanded(
-          child: WebViewWidget(controller: _webViewController!),
+          child: WebViewWidget(
+            controller: _webViewController!,
+            gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+              Factory<VerticalDragGestureRecognizer>(
+                  () => VerticalDragGestureRecognizer()),
+              Factory<HorizontalDragGestureRecognizer>(
+                  () => HorizontalDragGestureRecognizer()),
+              Factory<ScaleGestureRecognizer>(() => ScaleGestureRecognizer()),
+              Factory<TapGestureRecognizer>(() => TapGestureRecognizer()),
+            },
+          ),
         ),
         if (!_isFullScreen)
           Container(
@@ -1925,7 +1879,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'Interactive HTML Notes',
+                      'Interactive HTML Presentation',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -2270,6 +2224,7 @@ class _ReaderTabItem extends StatelessWidget {
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
@@ -2280,17 +2235,21 @@ class _ReaderTabItem extends StatelessWidget {
                       ? AppColors.textMuted
                       : const Color(0xFF64748B)),
             ),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
-                color: isSelected
-                    ? Colors.white
-                    : (isNightMode
-                        ? AppColors.textSecondary
-                        : const Color(0xFF334155)),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                  color: isSelected
+                      ? Colors.white
+                      : (isNightMode
+                          ? AppColors.textSecondary
+                          : const Color(0xFF334155)),
+                ),
               ),
             ),
           ],
