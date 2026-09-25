@@ -22,8 +22,10 @@ class ExamQuestionFeedbackModel extends ExamQuestionFeedbackEntity {
     final answersJson = json['answers'];
     final answers = answersJson is List
         ? answersJson
-            .whereType<Map<String, dynamic>>()
-            .map(ExamFeedbackAnswerModel.fromJson)
+            .where((item) => item is Map)
+            .map((item) => ExamFeedbackAnswerModel.fromJson(
+                  Map<String, dynamic>.from(item as Map),
+                ))
             .toList()
         : <ExamFeedbackAnswerModel>[];
 
