@@ -1,3 +1,5 @@
+import 'package:flutter/widgets.dart';
+
 /// Spacing, border radius, icon sizes, elevation constants
 abstract class AppSizes {
   // ── Spacing (8px grid) ───────────────────────────────────────────────────
@@ -45,4 +47,10 @@ abstract class AppSizes {
   // ── Screen Padding ───────────────────────────────────────────────────────
   static const double screenPaddingH = 16.0; // horizontal screen edge padding
   static const double screenPaddingV = 16.0; // vertical screen edge padding
+
+  /// Total bottom clearance needed for scrollable views rendered inside AppShell
+  /// so their last element is completely visible above the floating bottom navigation bar.
+  static double bottomNavClearance(BuildContext context) {
+    return bottomNavHeight + md + MediaQuery.paddingOf(context).bottom + lg;
+  }
 }

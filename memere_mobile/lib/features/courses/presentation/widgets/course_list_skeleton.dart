@@ -11,7 +11,12 @@ class CourseListSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(AppSizes.screenPaddingH),
+      padding: EdgeInsets.fromLTRB(
+        AppSizes.screenPaddingH,
+        AppSizes.screenPaddingH,
+        AppSizes.screenPaddingH,
+        AppSizes.bottomNavClearance(context),
+      ),
       itemCount: 5,
       separatorBuilder: (_, __) => const SizedBox(height: AppSizes.md),
       itemBuilder: (_, __) => const _SkeletonCard(),

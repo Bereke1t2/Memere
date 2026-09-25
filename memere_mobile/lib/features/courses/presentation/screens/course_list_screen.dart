@@ -293,34 +293,41 @@ class _CourseListContent extends ConsumerWidget {
           if (selectedGrade == _kFreshmanGrade)
             SliverFillRemaining(
               hasScrollBody: false,
-              child: CourseEmptyState(
-                icon: Icons.auto_awesome_rounded,
-                title: 'Freshman courses are coming soon',
-                body:
-                    'We’re preparing freshman-year lessons and practice. For '
-                    'now, explore our Grade 9–12 courses.',
-                buttonLabel: 'Browse Grade 12',
-                onPressed: () => onSelectGrade(12),
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: AppSizes.bottomNavClearance(context),
+                ),
+                child: CourseEmptyState(
+                  icon: Icons.auto_awesome_rounded,
+                  title: 'Freshman courses are coming soon',
+                  body:
+                      'We’re preparing freshman-year lessons and practice. For '
+                      'now, explore our Grade 9–12 courses.',
+                  buttonLabel: 'Browse Grade 12',
+                  onPressed: () => onSelectGrade(12),
+                ),
               ),
             )
           else if (state.filteredCourses.isEmpty)
             SliverFillRemaining(
               hasScrollBody: false,
-              child: CourseEmptyState(
-                icon: Icons.search_off_rounded,
-                title: 'No courses found',
-                body: 'Try another grade or subject.',
-                buttonLabel: state.hasActiveFilters ? 'Clear filters' : null,
-                onPressed: state.hasActiveFilters ? onResetFilters : null,
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: AppSizes.bottomNavClearance(context),
+                ),
+                child: CourseEmptyState(
+                  icon: Icons.search_off_rounded,
+                  title: 'No courses found',
+                  body: 'Try another grade or subject.',
+                  buttonLabel: state.hasActiveFilters ? 'Clear filters' : null,
+                  onPressed: state.hasActiveFilters ? onResetFilters : null,
+                ),
               ),
             )
           else
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSizes.screenPaddingH,
-                0,
-                AppSizes.screenPaddingH,
-                AppSizes.lg,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSizes.screenPaddingH,
               ),
               sliver: SliverList.separated(
                 itemCount: state.filteredCourses.length,
@@ -992,10 +999,12 @@ class _LoadMoreFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = AppSizes.bottomNavClearance(context);
+
     if (state.isLoadingMore) {
-      return const Padding(
-        padding: EdgeInsets.only(bottom: AppSizes.xl),
-        child: Center(
+      return Padding(
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: const Center(
           child: CircularProgressIndicator(
             strokeWidth: 2,
             color: AppColors.brandEmerald,
@@ -1006,11 +1015,11 @@ class _LoadMoreFooter extends StatelessWidget {
 
     if (state.loadMoreError != null) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           AppSizes.screenPaddingH,
           0,
           AppSizes.screenPaddingH,
-          AppSizes.xl,
+          bottomInset,
         ),
         child: Text(
           state.loadMoreError!.message,
@@ -1020,6 +1029,6 @@ class _LoadMoreFooter extends StatelessWidget {
       );
     }
 
-    return const SizedBox(height: AppSizes.xl);
+    return SizedBox(height: bottomInset);
   }
 }
