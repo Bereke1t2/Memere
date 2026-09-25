@@ -49,7 +49,7 @@ func (q *Queries) CreatePayment(ctx context.Context, arg CreatePaymentParams) (P
 		arg.Status,
 		arg.CouponID,
 		arg.IdempotencyKey,
-		arg.Metadata,
+		toJSONString(arg.Metadata),
 	)
 	var i PaymentsPayment
 	err := row.Scan(
