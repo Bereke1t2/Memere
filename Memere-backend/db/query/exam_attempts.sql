@@ -2,7 +2,7 @@
 INSERT INTO courses.exam_attempts (
     exam_id, student_id, answers_snapshot, status
 ) VALUES (
-    $1, $2, $3, $4
+    $1, $2, $3::jsonb, $4
 )
 RETURNING *;
 
@@ -38,7 +38,7 @@ LIMIT $2;
 -- Auto-save and status transitions; the immutable started_at timer column is
 -- never touched here.
 UPDATE courses.exam_attempts
-SET answers_snapshot = $2,
+SET answers_snapshot = $2::jsonb,
     status = $3,
     submitted_at = $4
 WHERE id = $1
@@ -50,7 +50,7 @@ RETURNING *;
 -- the loser matches no row and no-ops. $2 is 'submitted' or 'expired'.
 UPDATE courses.exam_attempts
 SET status = $2,
-    answers_snapshot = $3,
+    answers_snapshot = $3::jsonb,
     submitted_at = $4
 WHERE id = $1 AND status = 'in_progress'
 RETURNING *;
