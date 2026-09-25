@@ -56,7 +56,7 @@ func (q *Queries) CreateCourse(ctx context.Context, arg CreateCourseParams) (Cou
 		arg.IsPublished,
 		arg.Language,
 		arg.Level,
-		arg.Metadata,
+		toJSONString(arg.Metadata),
 	)
 	var i CoursesCourse
 	err := row.Scan(
@@ -321,7 +321,7 @@ func (q *Queries) UpdateCourse(ctx context.Context, arg UpdateCourseParams) (Cou
 		arg.IsPublished,
 		arg.Language,
 		arg.Level,
-		arg.Metadata,
+		toJSONString(arg.Metadata),
 	)
 	var i CoursesCourse
 	err := row.Scan(
