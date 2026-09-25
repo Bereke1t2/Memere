@@ -20,10 +20,18 @@ class ServerFailure extends Failure {
       case DioExceptionType.badResponse:
         final statusCode = e.response?.statusCode;
         final data = e.response?.data;
-        final message = (data is Map && data['message'] != null)
-            ? data['message'] as String
-            : 'Server error occurred';
-        final code = (data is Map && data['code'] != null) ? data['code'] as String : null;
+        String message = 'Server error occurred';
+        String? code;
+        if (data is Map) {
+          if (data['message'] != null && data['message'].toString().trim().isNotEmpty) {
+            message = data['message'].toString();
+          } else if (data['error'] != null && data['error'].toString().trim().isNotEmpty) {
+            message = data['error'].toString();
+          }
+          if (data['code'] != null) {
+            code = data['code'].toString();
+          }
+        }
         return ServerFailure(message, code: code, statusCode: statusCode);
       case DioExceptionType.connectionError:
         return const ServerFailure('No internet connection.', code: 'NO_INTERNET');
