@@ -183,9 +183,7 @@ class QuestionFeedbackTile extends StatelessWidget {
               );
             }),
           ] else ...[
-            _IdLine(label: 'Your Answer', values: feedback.selectedAnswers),
-            const SizedBox(height: 4),
-            _IdLine(label: 'Correct Answer', values: feedback.correctAnswerIds),
+            _HumanReadableAnswerFallback(feedback: feedback),
           ],
           if (feedback.explanation != null &&
               feedback.explanation!.isNotEmpty) ...[
@@ -240,22 +238,63 @@ class QuestionFeedbackTile extends StatelessWidget {
   }
 }
 
-class _IdLine extends StatelessWidget {
-  const _IdLine({
-    required this.label,
-    required this.values,
+class _HumanReadableAnswerFallback extends StatelessWidget {
+  const _HumanReadableAnswerFallback({
+    required this.feedback,
   });
 
-  final String label;
-  final List<String> values;
+  final QuestionFeedbackEntity feedback;
+
+  static bool _isUuid(String s) => RegExp(
+        r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+      ).hasMatch(s.trim());
+
+  String _resolveValues(List<String> values) {
+    if (values.isEmpty) return 'None';
+    final idMap = {for (final a in feedback.answers) a.id: a.text};
+    final resolved = values.map((v) {
+      if (idMap.containsKey(v)) return idMap[v]!;
+      if (_isUuid(v)) return 'Selected Answer';
+      return v;
+    }).toList();
+    return resolved.join(', ');
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      '$label: ${values.isEmpty ? 'None' : values.join(', ')}',
-      maxLines: 2,
-      overflow: TextOverflow.ellipsis,
-      style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+    final userAns = _resolveValues(feedback.selectedAnswers);
+    final correctAnswers = feedback.answers.where((a) => a.isCorrect).toList();
+    final correctAns = correctAnswers.isNotEmpty
+        ? correctAnswers.map((a) => a.text).join(', ')
+        : _resolveValues(feedback.correctAnswerIds);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (feedback.selectedAnswers.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Text(
+              'Your Answer: $userAns',
+              style: TextStyle(
+                color: feedback.correct
+                    ? const Color(0xFF10B981)
+                    : const Color(0xFFEF4444),
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        if (correctAns.isNotEmpty && correctAns != 'None' && !feedback.correct)
+          Text(
+            'Correct Answer: $correctAns',
+            style: const TextStyle(
+              color: Color(0xFF10B981),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+      ],
     );
   }
 }
