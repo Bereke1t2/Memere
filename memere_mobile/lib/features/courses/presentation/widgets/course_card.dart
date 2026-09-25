@@ -227,16 +227,20 @@ class _CourseRowCardState extends State<CourseRowCard> {
                     // Subject Track & Grade
                     Row(
                       children: [
-                        Text(
-                          'GRADE ${course.grade} • ${_streamLabel(course.subject).toUpperCase()}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            color: Color(0xFF38BDF8),
-                            letterSpacing: 0.5,
+                        Expanded(
+                          child: Text(
+                            'GRADE ${course.grade} • ${_streamLabel(course.subject).toUpperCase()}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF38BDF8),
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 8),
                         _CourseLevelBadge(levelLabel: course.levelLabel),
                       ],
                     ),
@@ -276,39 +280,50 @@ class _CourseRowCardState extends State<CourseRowCard> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.menu_book_outlined,
-                              size: 13,
-                              color: AppColors.textMuted,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${course.totalLessons} lessons',
-                              style: const TextStyle(
-                                fontSize: 12,
+                        Expanded(
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.menu_book_outlined,
+                                size: 13,
                                 color: AppColors.textMuted,
-                                fontWeight: FontWeight.w500,
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            const Icon(
-                              Icons.schedule_rounded,
-                              size: 13,
-                              color: AppColors.textMuted,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              course.durationLabel,
-                              style: const TextStyle(
-                                fontSize: 12,
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  '${course.totalLessons} lessons',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textMuted,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(
+                                Icons.schedule_rounded,
+                                size: 13,
                                 color: AppColors.textMuted,
-                                fontWeight: FontWeight.w500,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  course.durationLabel,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textMuted,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
