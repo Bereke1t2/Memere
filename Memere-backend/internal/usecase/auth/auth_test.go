@@ -10,6 +10,7 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/jwt"
+	"github.com/Bereke1t2/Memere/memere-backend/pkg/password"
 )
 
 func newTestService() (*Service, *fakeUserRepo, *fakeTokenRepo, *fakeSessionRepo) {
@@ -414,3 +415,73 @@ func TestLogin_RejectWhenActiveSessionExists(t *testing.T) {
 		t.Fatal("second device login should return access token")
 	}
 }
+
+func TestLogin_MultipleDevicesAllowedForTeacherAndAdmin(t *testing.T) {
+	svc, users, _, _ := newTestService()
+	ctx := context.Background()
+
+	// 1. Teacher can log in concurrently from multiple devices
+	tIn := validRegisterInput()
+	tIn.Email = "teacher@example.com"
+	tIn.Role = entity.RoleTeacher
+	if _, err := svc.Register(ctx, tIn); err != nil {
+		t.Fatalf("register teacher: %v", err)
+	}
+
+	dev1 := "device-phone-1"
+	dev2 := "device-tablet-2"
+
+	tok1, _, err := svc.Login(ctx, LoginInput{Email: "teacher@example.com", Password: "correct horse battery", DeviceInfo: &dev1})
+	if err != nil {
+		t.Fatalf("teacher device 1 login failed: %v", err)
+	}
+
+	tok2, _, err := svc.Login(ctx, LoginInput{Email: "teacher@example.com", Password: "correct horse battery", DeviceInfo: &dev2})
+	if err != nil {
+		t.Fatalf("teacher device 2 login failed (should be allowed): %v", err)
+	}
+
+	if tok1.AccessToken == "" || tok2.AccessToken == "" {
+		t.Fatal("both devices should receive tokens")
+	}
+
+	// Both devices can independently refresh tokens
+	refreshed1, err := svc.Refresh(ctx, tok1.RefreshToken)
+	if err != nil {
+		t.Fatalf("teacher device 1 refresh failed: %v", err)
+	}
+	refreshed2, err := svc.Refresh(ctx, tok2.RefreshToken)
+	if err != nil {
+		t.Fatalf("teacher device 2 refresh failed: %v", err)
+	}
+	if refreshed1.AccessToken == "" || refreshed2.AccessToken == "" {
+		t.Fatal("both devices should receive refreshed tokens")
+	}
+
+	// 2. Admin can also log in concurrently from multiple devices
+	adminHash, _ := password.Hash("admin-secret-password")
+	adminUser := &entity.User{
+		Email:           "admin@example.com",
+		PasswordHash:    adminHash,
+		Role:            entity.RoleAdmin,
+		ApprovalStatus:  entity.ApprovalStatusApproved,
+		IsActive:        true,
+		IsEmailVerified: true,
+	}
+	if err := users.Create(ctx, adminUser); err != nil {
+		t.Fatalf("create admin user: %v", err)
+	}
+
+	adminTok1, _, err := svc.Login(ctx, LoginInput{Email: "admin@example.com", Password: "admin-secret-password", DeviceInfo: &dev1})
+	if err != nil {
+		t.Fatalf("admin device 1 login failed: %v", err)
+	}
+	adminTok2, _, err := svc.Login(ctx, LoginInput{Email: "admin@example.com", Password: "admin-secret-password", DeviceInfo: &dev2})
+	if err != nil {
+		t.Fatalf("admin device 2 login failed (should be allowed): %v", err)
+	}
+	if adminTok1.AccessToken == "" || adminTok2.AccessToken == "" {
+		t.Fatal("both admin devices should receive tokens")
+	}
+}
+
