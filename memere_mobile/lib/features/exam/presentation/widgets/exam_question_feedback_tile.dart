@@ -330,7 +330,28 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
     );
   }
 
+  static bool _isUuid(String s) => RegExp(
+        r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+      ).hasMatch(s.trim());
+
+  String _resolveValues(List<String> values) {
+    if (values.isEmpty) return 'None';
+    final idMap = {for (final a in feedback.answers) a.id: a.text};
+    final resolved = values.map((v) {
+      if (idMap.containsKey(v)) return idMap[v]!;
+      if (_isUuid(v)) return 'Selected Option';
+      return v;
+    }).toList();
+    return resolved.join(', ');
+  }
+
   Widget _buildFallbackSelectionDisplay() {
+    final userAns = _resolveValues(feedback.selectedAnswers);
+    final correctAnswers = feedback.answers.where((a) => a.isCorrect).toList();
+    final correctAns = correctAnswers.isNotEmpty
+        ? correctAnswers.map((a) => a.text).join(', ')
+        : _resolveValues(feedback.correctAnswerIds);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -338,7 +359,7 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
             child: Text(
-              'Your Answer: ${feedback.selectedAnswers.join(", ")}',
+              'Your Answer: $userAns',
               style: TextStyle(
                 color: feedback.correct ? const Color(0xFF10B981) : const Color(0xFFEF4444),
                 fontSize: 13,
@@ -346,9 +367,9 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
               ),
             ),
           ),
-        if (!feedback.correct && feedback.correctAnswerIds.isNotEmpty)
+        if (!feedback.correct && correctAns.isNotEmpty && correctAns != 'None')
           Text(
-            'Correct: ${feedback.correctAnswerIds.join(", ")}',
+            'Correct: $correctAns',
             style: const TextStyle(
               color: Color(0xFF10B981),
               fontSize: 13,
