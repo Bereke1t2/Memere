@@ -13,7 +13,7 @@ import (
 
 const createNotification = `-- name: CreateNotification :one
 INSERT INTO notifications.notifications (user_id, type, title, body, data)
-VALUES ($1, $2, $3, $4, $5)
+VALUES ($1, $2, $3, $4, $5::jsonb)
 RETURNING id, user_id, type, title, body, data, read_at, created_at
 `
 
