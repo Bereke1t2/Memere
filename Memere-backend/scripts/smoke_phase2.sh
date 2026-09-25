@@ -71,7 +71,11 @@ req POST /courses "$(jq -nc '{title:"Phase2 Smoke", description:"d", subject:"Ma
 COURSE_ID="$(jq -r '.id' <<<"$BODY")"
 req POST "/courses/${COURSE_ID}/publish" "" "$TEACHER"
 [[ "$HTTP_CODE" == "200" ]] || fail "publish course expected 200, got $HTTP_CODE ($BODY)"
-pass "course created + published ($COURSE_ID)"
+req POST "/courses/${COURSE_ID}/enroll" "" "$STUDENT_A"
+[[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "201" ]] || fail "enroll student A expected 200/201, got $HTTP_CODE ($BODY)"
+req POST "/courses/${COURSE_ID}/enroll" "" "$STUDENT_B"
+[[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "201" ]] || fail "enroll student B expected 200/201, got $HTTP_CODE ($BODY)"
+pass "course created + published + students enrolled ($COURSE_ID)"
 
 echo "[3] teacher creates a quiz (max_attempts=1) with 3 questions (one per type)"
 req POST "/courses/${COURSE_ID}/quizzes" "$(jq -nc '{title:"Q1", pass_percentage:50, time_limit_seconds:1800, max_attempts:1}')" "$TEACHER"
