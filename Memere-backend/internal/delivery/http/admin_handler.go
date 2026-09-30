@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -440,6 +441,46 @@ func (h *AdminHandler) Broadcast(c *gin.Context) {
 		Segment: adminuc.BroadcastSegment(req.Segment),
 		Data:    req.Data,
 	}); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// ListAnnouncements handles GET /admin/announcements → 200 with list of announcements
+func (h *AdminHandler) ListAnnouncements(c *gin.Context) {
+	limit := 50
+	if l := c.Query("limit"); l != "" {
+		if val, err := strconv.Atoi(l); err == nil && val > 0 && val <= 100 {
+			limit = val
+		}
+	}
+	items, err := h.svc.ListAnnouncements(c.Request.Context(), adminActor(c), limit)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	resp := make([]dto.AnnouncementResponse, 0, len(items))
+	for _, item := range items {
+		resp = append(resp, dto.AnnouncementResponse{
+			ID:             item.ID.String(),
+			Title:          item.Title,
+			Body:           item.Body,
+			RecipientCount: item.RecipientCount,
+			CreatedAt:      item.CreatedAt,
+		})
+	}
+	respondJSON(c, http.StatusOK, dto.AnnouncementListResponse{Announcements: resp})
+}
+
+// DeleteAnnouncement handles DELETE /admin/announcements/:id → 204
+func (h *AdminHandler) DeleteAnnouncement(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		respondError(c, apperror.BadRequest("invalid announcement id", err))
+		return
+	}
+	if err := h.svc.DeleteAnnouncement(c.Request.Context(), adminActor(c), id); err != nil {
 		respondError(c, err)
 		return
 	}

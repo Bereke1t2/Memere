@@ -33,6 +33,20 @@ type BroadcastRequest struct {
 	Data    map[string]string `json:"data,omitempty"`
 }
 
+// AnnouncementResponse represents one broadcast announcement item.
+type AnnouncementResponse struct {
+	ID             string    `json:"id"`
+	Title          string    `json:"title"`
+	Body           string    `json:"body"`
+	RecipientCount int       `json:"recipient_count"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
+// AnnouncementListResponse is returned by GET /admin/announcements.
+type AnnouncementListResponse struct {
+	Announcements []AnnouncementResponse `json:"announcements"`
+}
+
 // ReconcileResponse is the response for POST /admin/payments/reconcile.
 type ReconcileResponse struct {
 	Reconciled int `json:"reconciled"`

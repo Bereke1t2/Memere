@@ -135,6 +135,8 @@ func NewRouter(deps Deps) *gin.Engine {
 	authGroup := v1.Group("/auth")
 	{
 		authGroup.POST("/register", deps.Auth.Register)
+		authGroup.POST("/verify-email", deps.Auth.VerifyEmail)
+		authGroup.POST("/resend-verification", deps.Auth.ResendVerification)
 		authGroup.POST("/login", loginLimit, deps.Auth.Login)
 		authGroup.POST("/refresh", deps.Auth.Refresh)
 		authGroup.POST("/logout", requireAuth, deps.Auth.Logout)
@@ -370,7 +372,9 @@ func NewRouter(deps Deps) *gin.Engine {
 			adminGroup.GET("/payments/:id", deps.Admin.GetPaymentDetail)
 			adminGroup.POST("/payments/reconcile", deps.Admin.ReconcilePending)
 
+			adminGroup.GET("/announcements", deps.Admin.ListAnnouncements)
 			adminGroup.POST("/announcements", deps.Admin.Broadcast)
+			adminGroup.DELETE("/announcements/:id", deps.Admin.DeleteAnnouncement)
 
 			adminGroup.GET("/analytics/overview", deps.Admin.Overview)
 			adminGroup.GET("/analytics/revenue", deps.Admin.RevenueBreakdown)

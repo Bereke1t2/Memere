@@ -372,13 +372,23 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	// Phase 5 — notification senders (real if keys present, LogSender in dev).
 	// Created before usecases so hooks can be passed to all services from the start.
 	pushSender := notification.NewFCMSender(cfg.FCM.ServerKey)
-	emailSender := notification.NewSendGridSender(cfg.SendGrid.APIKey, cfg.SendGrid.FromEmail)
+	var emailSender service.EmailSender
+	if cfg.Resend.APIKey != "" {
+		emailSender = notification.NewResendSender(cfg.Resend.APIKey, cfg.Resend.FromEmail, cfg.Resend.FromName)
+	} else if cfg.Brevo.APIKey != "" {
+		emailSender = notification.NewBrevoSender(cfg.Brevo.APIKey, cfg.Brevo.FromEmail, cfg.Brevo.FromName)
+	} else if cfg.SendGrid.APIKey != "" {
+		emailSender = notification.NewSendGridSender(cfg.SendGrid.APIKey, cfg.SendGrid.FromEmail)
+	} else {
+		emailSender = notification.NewResendSender("", cfg.Resend.FromEmail, cfg.Resend.FromName)
+	}
 	notifDispatcher := notificationuc.NewDispatcher(notifRepo, queue)
 	hooks := notificationuc.NewHooks(notifDispatcher)
 	notifWorker := worker.NewNotificationWorker(queue, pushSender, emailSender, deviceRepo, prefRepo)
 
 	// Usecases.
-	authSvc := auth.NewService(userRepo, tokenRepo, sessionRepo, jwtManager).
+	authSvc := auth.NewService(userRepo, tokenRepo, sessionRepo, jwtManager, emailSender).
+		WithPublicURL(cfg.App.PublicURL).
 		WithLockout(auth.LockoutConfig{
 			MaxFailures: cfg.Security.LoginMaxFailures,
 			LockoutTTL:  cfg.Security.LoginLockoutTTL,
@@ -477,7 +487,7 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	notifSvc := notificationuc.NewService(notifRepo, deviceRepo, prefRepo)
 	courseAccessSvc := courseaccess.NewService(courseAccessRepo, enrollmentRepo, courseRepo, userRepo, hooks, nil)
 	adminSvc := admin.NewService(userRepo, courseRepo, paymentRepo, enrollmentRepo, courseAccessRepo, subscriptionRepo,
-		revenueRepo, auditRepo, notifDispatcher, registry)
+		revenueRepo, auditRepo, notifDispatcher, registry).WithNotificationRepo(notifRepo)
 	pdfRenderer := pdf.NewFPDFRenderer()
 	certSvc := certificate.NewService(certRepo, progressRepo, courseRepo, userRepo, store, signer,
 		pdfRenderer, hooks, certificate.Config{})
