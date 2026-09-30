@@ -457,3 +457,20 @@ export const CourseAccessRequestListResponseSchema = z.object({
 });
 export type CourseAccessRequestListResponse = z.infer<typeof CourseAccessRequestListResponseSchema>;
 
+// ---- Announcements -----------------------------------------------------------
+
+export const AnnouncementSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  body: z.string(),
+  recipient_count: z.number().optional().default(1),
+  created_at: z.string(),
+});
+export type Announcement = z.infer<typeof AnnouncementSchema>;
+
+export const AnnouncementListResponseSchema = z.object({
+  announcements: z.array(AnnouncementSchema),
+});
+export type AnnouncementListResponse = z.infer<typeof AnnouncementListResponseSchema>;
+
+

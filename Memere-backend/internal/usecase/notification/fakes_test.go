@@ -103,6 +103,57 @@ func (f *fakeNotificationRepo) UnreadCount(_ context.Context, userID uuid.UUID) 
 	return count, nil
 }
 
+func (f *fakeNotificationRepo) ListAnnouncements(_ context.Context, limit int) ([]*entity.AnnouncementSummary, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	groups := make(map[string]*entity.AnnouncementSummary)
+	for _, n := range f.rows {
+		if n.Type != "announcement" {
+			continue
+		}
+		key := n.Title + "|||" + n.Body
+		if existing, ok := groups[key]; ok {
+			existing.RecipientCount++
+		} else {
+			groups[key] = &entity.AnnouncementSummary{
+				ID:             n.ID,
+				Title:          n.Title,
+				Body:           n.Body,
+				RecipientCount: 1,
+				CreatedAt:      n.CreatedAt,
+			}
+		}
+	}
+	var out []*entity.AnnouncementSummary
+	for _, item := range groups {
+		out = append(out, item)
+		if limit > 0 && len(out) >= limit {
+			break
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeNotificationRepo) DeleteAnnouncementGroup(_ context.Context, id uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	target, ok := f.byID[id]
+	if !ok {
+		return apperror.NotFound("announcement not found", nil)
+	}
+	title, body := target.Title, target.Body
+	var remaining []*entity.Notification
+	for _, n := range f.rows {
+		if n.Type == "announcement" && n.Title == title && n.Body == body {
+			delete(f.byID, n.ID)
+		} else {
+			remaining = append(remaining, n)
+		}
+	}
+	f.rows = remaining
+	return nil
+}
+
 // ---- fake device token repo -------------------------------------------------
 
 type fakeDeviceTokenRepo struct {

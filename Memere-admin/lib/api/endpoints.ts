@@ -32,6 +32,8 @@ import {
   UserCourseAccessListResponseSchema,
   CourseAccessRequestSchema,
   CourseAccessRequestListResponseSchema,
+  AnnouncementListResponseSchema,
+  AnnouncementSchema,
   type AuthResponse,
   type User,
   type Overview,
@@ -65,6 +67,8 @@ import {
   type UserCourseAccessListResponse,
   type CourseAccessRequest,
   type CourseAccessRequestListResponse,
+  type Announcement,
+  type AnnouncementListResponse,
 } from "./schemas";
 
 // ---- Auth ----------------------------------------------------------------------
@@ -294,6 +298,19 @@ export async function broadcast(input: {
   await apiFetch("/admin/announcements", {
     method: "POST",
     body: input,
+  });
+}
+
+export async function listAnnouncements(limit = 50): Promise<AnnouncementListResponse> {
+  const data = await apiFetch(`/admin/announcements?limit=${limit}`, {
+    schema: AnnouncementListResponseSchema,
+  });
+  return data ?? { announcements: [] };
+}
+
+export async function deleteAnnouncement(id: string): Promise<void> {
+  await apiFetch(`/admin/announcements/${id}`, {
+    method: "DELETE",
   });
 }
 
