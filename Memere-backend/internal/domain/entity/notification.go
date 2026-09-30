@@ -38,6 +38,18 @@ type NotificationPreference struct {
 	UpdatedAt    time.Time
 }
 
+// Announcement is a broadcast announcement record.
+type Announcement struct {
+	ID             uuid.UUID
+	SenderID       uuid.UUID
+	Title          string
+	Body           string
+	Segment        string
+	Data           map[string]string
+	RecipientCount int
+	CreatedAt      time.Time
+}
+
 // AnnouncementSummary is an aggregated summary of a broadcast announcement.
 type AnnouncementSummary struct {
 	ID             uuid.UUID

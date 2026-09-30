@@ -125,18 +125,30 @@ export function AnnouncementsClient({ initialData = [] }: AnnouncementsClientPro
     ? data.announcements
     : [];
 
-  // Delete mutation
+  // Delete mutation with optimistic removal
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       await clientAction(`/api/admin/announcements/${id}`, undefined, "DELETE");
+    },
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ["admin-announcements"] });
+      const previous = queryClient.getQueryData<AnnouncementListResponse>(["admin-announcements"]);
+      queryClient.setQueryData<AnnouncementListResponse>(["admin-announcements"], (old) => {
+        const prev = old?.announcements ?? [];
+        return { announcements: prev.filter((a) => a.id !== id) };
+      });
+      return { previous };
+    },
+    onError: (err: Error, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["admin-announcements"], context.previous);
+      }
+      toast.error(err.message || "Failed to delete announcement.");
     },
     onSuccess: () => {
       toast.success("Announcement deleted from all user notification feeds.");
       setDeleteItem(null);
       queryClient.invalidateQueries({ queryKey: ["admin-announcements"] });
-    },
-    onError: (err: Error) => {
-      toast.error(err.message || "Failed to delete announcement.");
     },
   });
 
@@ -156,6 +168,19 @@ export function AnnouncementsClient({ initialData = [] }: AnnouncementsClientPro
     }
 
     try {
+      // Optimistically add to list
+      const optimisticItem: Announcement = {
+        id: "ann-" + Date.now(),
+        title: pending.title,
+        body: pending.body,
+        recipient_count: 0,
+        created_at: new Date().toISOString(),
+      };
+      queryClient.setQueryData<AnnouncementListResponse>(["admin-announcements"], (old) => {
+        const prev = old?.announcements ?? [];
+        return { announcements: [optimisticItem, ...prev] };
+      });
+
       await clientAction("/api/admin/announcements", {
         title: pending.title,
         body: pending.body,
@@ -172,6 +197,7 @@ export function AnnouncementsClient({ initialData = [] }: AnnouncementsClientPro
       queryClient.invalidateQueries({ queryKey: ["admin-announcements"] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to send.");
+      queryClient.invalidateQueries({ queryKey: ["admin-announcements"] });
     } finally {
       setSending(false);
     }
@@ -322,9 +348,19 @@ export function AnnouncementsClient({ initialData = [] }: AnnouncementsClientPro
               <Skeleton className="h-20 w-full rounded-md" />
             </div>
           ) : isError ? (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span>Failed to load announcements: {(error as Error).message}</span>
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span className="truncate">Failed to load announcements: {(error as Error).message}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs shrink-0 border-destructive/40 hover:bg-destructive/20"
+                onClick={() => refetch()}
+              >
+                Retry
+              </Button>
             </div>
           ) : announcements.length === 0 ? (
             <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">

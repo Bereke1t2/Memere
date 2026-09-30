@@ -534,6 +534,28 @@ func (f *fakeNotificationRepo) DeleteAnnouncementGroup(_ context.Context, id uui
 	return nil
 }
 
+func (f *fakeNotificationRepo) SaveAnnouncement(_ context.Context, a *entity.Announcement) (*entity.Announcement, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if a.ID == uuid.Nil {
+		a.ID = uuid.New()
+	}
+	if a.CreatedAt.IsZero() {
+		a.CreatedAt = time.Now()
+	}
+	cp := *a
+	// Also ensure an in-memory notification row exists so ListAnnouncements returns it
+	f.notifications[a.ID] = &entity.Notification{
+		ID:        a.ID,
+		UserID:    a.SenderID,
+		Type:      "announcement",
+		Title:     a.Title,
+		Body:      a.Body,
+		CreatedAt: a.CreatedAt,
+	}
+	return &cp, nil
+}
+
 // ---- compile-time checks ----------------------------------------------------
 
 var _ repository.UserRepository = (*fakeUserRepo)(nil)

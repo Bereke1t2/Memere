@@ -28,6 +28,8 @@ type NotificationRepository interface {
 	ListAnnouncements(ctx context.Context, limit int) ([]*entity.AnnouncementSummary, error)
 	// DeleteAnnouncementGroup deletes all announcement notifications matching the given ID or grouping.
 	DeleteAnnouncementGroup(ctx context.Context, id uuid.UUID) error
+	// SaveAnnouncement stores a permanent broadcast announcement record.
+	SaveAnnouncement(ctx context.Context, a *entity.Announcement) (*entity.Announcement, error)
 }
 
 // DeviceTokenRepository persists FCM device tokens (spec §11.1 push channel).

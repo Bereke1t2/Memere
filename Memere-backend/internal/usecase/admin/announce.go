@@ -54,6 +54,17 @@ func (s *Service) Broadcast(ctx context.Context, actor Actor, input BroadcastInp
 		total += s.broadcastToSubscribers(ctx, input)
 	}
 
+	if s.notifications != nil {
+		_, _ = s.notifications.SaveAnnouncement(ctx, &entity.Announcement{
+			SenderID:       actor.UserID,
+			Title:          input.Title,
+			Body:           input.Body,
+			Segment:        string(input.Segment),
+			Data:           input.Data,
+			RecipientCount: total,
+		})
+	}
+
 	if s.notify != nil {
 		_ = s.notify.Notify(ctx, service.NotifyEvent{
 			UserID:   actor.UserID.String(),

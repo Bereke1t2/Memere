@@ -154,6 +154,29 @@ func (f *fakeNotificationRepo) DeleteAnnouncementGroup(_ context.Context, id uui
 	return nil
 }
 
+func (f *fakeNotificationRepo) SaveAnnouncement(_ context.Context, a *entity.Announcement) (*entity.Announcement, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if a.ID == uuid.Nil {
+		a.ID = uuid.New()
+	}
+	if a.CreatedAt.IsZero() {
+		a.CreatedAt = time.Now()
+	}
+	cp := *a
+	n := &entity.Notification{
+		ID:        a.ID,
+		UserID:    a.SenderID,
+		Type:      "announcement",
+		Title:     a.Title,
+		Body:      a.Body,
+		CreatedAt: a.CreatedAt,
+	}
+	f.rows = append(f.rows, n)
+	f.byID[a.ID] = n
+	return &cp, nil
+}
+
 // ---- fake device token repo -------------------------------------------------
 
 type fakeDeviceTokenRepo struct {

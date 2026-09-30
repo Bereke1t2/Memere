@@ -91,9 +91,93 @@ func (r *NotificationRepo) UnreadCount(ctx context.Context, userID uuid.UUID) (i
 	return int(n), nil
 }
 
-func (r *NotificationRepo) ListAnnouncements(ctx context.Context, limit int) ([]*entity.AnnouncementSummary, error) {
+func (r *NotificationRepo) SaveAnnouncement(ctx context.Context, a *entity.Announcement) (*entity.Announcement, error) {
+	if a.ID == uuid.Nil {
+		a.ID = uuid.New()
+	}
+	if a.CreatedAt.IsZero() {
+		a.CreatedAt = time.Now()
+	}
+	var dataBytes []byte
+	if len(a.Data) > 0 {
+		dataBytes, _ = json.Marshal(a.Data)
+	}
+
+	const qCreate = `CREATE TABLE IF NOT EXISTS notifications.announcements (
+		id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		sender_id       UUID NOT NULL REFERENCES auth.users(id),
+		title           TEXT NOT NULL,
+		body            TEXT NOT NULL,
+		segment         TEXT NOT NULL,
+		data            JSONB,
+		recipient_count INT NOT NULL DEFAULT 0,
+		created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+	);`
+	_, _ = r.pool.Exec(ctx, qCreate)
+
 	const q = `
-	WITH notifs AS (
+	INSERT INTO notifications.announcements (id, sender_id, title, body, segment, data, recipient_count, created_at)
+	VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	ON CONFLICT (id) DO UPDATE SET
+		recipient_count = EXCLUDED.recipient_count,
+		data = EXCLUDED.data
+	RETURNING id::text, sender_id::text, title, body, segment, data, recipient_count, created_at`
+
+	row := r.pool.QueryRow(ctx, q,
+		toPgUUID(a.ID),
+		toPgUUID(a.SenderID),
+		a.Title,
+		a.Body,
+		a.Segment,
+		dataBytes,
+		a.RecipientCount,
+		a.CreatedAt,
+	)
+
+	var retID, retSenderID string
+	var retTitle, retBody, retSegment string
+	var retData []byte
+	var retCount int
+	var retCreatedAt time.Time
+
+	if err := row.Scan(&retID, &retSenderID, &retTitle, &retBody, &retSegment, &retData, &retCount, &retCreatedAt); err != nil {
+		return nil, apperror.Internal(err)
+	}
+
+	res := &entity.Announcement{
+		ID:             uuid.MustParse(retID),
+		SenderID:       uuid.MustParse(retSenderID),
+		Title:          retTitle,
+		Body:           retBody,
+		Segment:        retSegment,
+		RecipientCount: retCount,
+		CreatedAt:      retCreatedAt,
+	}
+	if len(retData) > 0 {
+		_ = json.Unmarshal(retData, &res.Data)
+	}
+	return res, nil
+}
+
+func (r *NotificationRepo) ListAnnouncements(ctx context.Context, limit int) ([]*entity.AnnouncementSummary, error) {
+	const qCreate = `CREATE TABLE IF NOT EXISTS notifications.announcements (
+		id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		sender_id       UUID NOT NULL REFERENCES auth.users(id),
+		title           TEXT NOT NULL,
+		body            TEXT NOT NULL,
+		segment         TEXT NOT NULL,
+		data            JSONB,
+		recipient_count INT NOT NULL DEFAULT 0,
+		created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+	);`
+	_, _ = r.pool.Exec(ctx, qCreate)
+
+	const q = `
+	WITH tbl_announcements AS (
+		SELECT id::text AS id, title, body, recipient_count, created_at
+		FROM notifications.announcements
+	),
+	notifs AS (
 		SELECT MIN(id)::text AS id, title, body, COUNT(*)::int AS recipient_count, MAX(created_at) AS created_at
 		FROM notifications.notifications
 		WHERE type = 'announcement'
@@ -108,13 +192,19 @@ func (r *NotificationRepo) ListAnnouncements(ctx context.Context, limit int) ([]
 			created_at
 		FROM auth.admin_audit_log
 		WHERE action = 'broadcast.send'
-		  AND NOT EXISTS (
-			SELECT 1 FROM notifs n WHERE n.title = (details->>'title')
-		  )
+	),
+	combined AS (
+		SELECT id, title, body, recipient_count, created_at FROM tbl_announcements
+		UNION ALL
+		SELECT n.id, n.title, n.body, n.recipient_count, n.created_at FROM notifs n
+		WHERE NOT EXISTS (SELECT 1 FROM tbl_announcements a WHERE a.title = n.title)
+		UNION ALL
+		SELECT au.id, au.title, au.body, au.recipient_count, au.created_at FROM audits au
+		WHERE NOT EXISTS (SELECT 1 FROM tbl_announcements a WHERE a.title = au.title)
+		  AND NOT EXISTS (SELECT 1 FROM notifs n WHERE n.title = au.title)
 	)
-	SELECT id, title, body, recipient_count, created_at FROM notifs
-	UNION ALL
-	SELECT id, title, body, recipient_count, created_at FROM audits
+	SELECT id, title, body, recipient_count, created_at
+	FROM combined
 	ORDER BY created_at DESC
 	LIMIT $1`
 
@@ -148,13 +238,32 @@ func (r *NotificationRepo) ListAnnouncements(ctx context.Context, limit int) ([]
 }
 
 func (r *NotificationRepo) DeleteAnnouncementGroup(ctx context.Context, id uuid.UUID) error {
+	const qCreate = `CREATE TABLE IF NOT EXISTS notifications.announcements (
+		id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+		sender_id       UUID NOT NULL REFERENCES auth.users(id),
+		title           TEXT NOT NULL,
+		body            TEXT NOT NULL,
+		segment         TEXT NOT NULL,
+		data            JSONB,
+		recipient_count INT NOT NULL DEFAULT 0,
+		created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+	);`
+	_, _ = r.pool.Exec(ctx, qCreate)
+
 	const q = `
 	WITH target AS (
+		SELECT title, body FROM notifications.announcements WHERE id = $1 LIMIT 1
+		UNION ALL
 		SELECT title, body FROM notifications.notifications WHERE id = $1 LIMIT 1
 		UNION ALL
 		SELECT details->>'title' AS title, COALESCE(details->>'body', '') AS body FROM auth.admin_audit_log WHERE id = $1 LIMIT 1
 	),
-	deleted_notifs AS (
+	del_ann AS (
+		DELETE FROM notifications.announcements
+		WHERE id = $1 OR title IN (SELECT title FROM target WHERE title IS NOT NULL AND title != '')
+		RETURNING id
+	),
+	del_notifs AS (
 		DELETE FROM notifications.notifications
 		WHERE type = 'announcement'
 		  AND (
