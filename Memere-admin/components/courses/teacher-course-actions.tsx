@@ -45,6 +45,7 @@ import {
   type CreateCourseInput,
   type Course,
 } from "@/lib/api/schemas";
+import { GRADE_OPTIONS } from "@/lib/format";
 import { TeacherThumbnailDialog } from "./teacher-thumbnail-dialog";
 
 interface TeacherCourseActionsProps {
@@ -283,9 +284,9 @@ export function TeacherCourseActions({ course }: TeacherCourseActionsProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
-                      <SelectItem key={g} value={String(g)}>
-                        Grade {g}
+                    {GRADE_OPTIONS.map((g) => (
+                      <SelectItem key={g.value} value={String(g.value)}>
+                        {g.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
