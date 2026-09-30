@@ -36,6 +36,7 @@ import {
   type Exam,
   type ExamStats,
 } from "@/lib/api/schemas";
+import { GRADE_OPTIONS, formatGrade } from "@/lib/format";
 
 interface ExamsPanelProps {
   courseId: string;
@@ -335,8 +336,8 @@ function EditExamDialog({
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
-                      <SelectItem key={g} value={String(g)}>Grade {g}</SelectItem>
+                    {GRADE_OPTIONS.map((g) => (
+                      <SelectItem key={g.value} value={String(g.value)}>{g.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -590,7 +591,7 @@ export function ExamsPanel({ courseId, exams, canEdit = true }: ExamsPanelProps)
                   </div>
                   <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
                     {exam.subject && <span>{exam.subject}</span>}
-                    {exam.grade && <span>Grade {exam.grade}</span>}
+                    {exam.grade && <span>{formatGrade(exam.grade)}</span>}
                     {exam.duration_minutes && <span>{exam.duration_minutes}min</span>}
                     {exam.pass_marks != null && <span>Pass: {exam.pass_marks} marks</span>}
                     {exam.total_marks != null && <span>Total: {exam.total_marks} marks</span>}
@@ -663,8 +664,8 @@ export function ExamsPanel({ courseId, exams, canEdit = true }: ExamsPanelProps)
                 <Select defaultValue="12" onValueChange={(v) => setValue("grade", Number(v))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
-                      <SelectItem key={g} value={String(g)}>Grade {g}</SelectItem>
+                    {GRADE_OPTIONS.map((g) => (
+                      <SelectItem key={g.value} value={String(g.value)}>{g.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
