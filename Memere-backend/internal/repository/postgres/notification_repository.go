@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -17,13 +18,14 @@ import (
 
 // NotificationRepo implements repository.NotificationRepository.
 type NotificationRepo struct {
-	q *sqlcgen.Queries
+	pool *pgxpool.Pool
+	q    *sqlcgen.Queries
 }
 
 var _ repository.NotificationRepository = (*NotificationRepo)(nil)
 
 func NewNotificationRepo(pool *pgxpool.Pool) *NotificationRepo {
-	return &NotificationRepo{q: sqlcgen.New(pool)}
+	return &NotificationRepo{pool: pool, q: sqlcgen.New(pool)}
 }
 
 func (r *NotificationRepo) Create(ctx context.Context, n *entity.Notification) (*entity.Notification, error) {
@@ -87,6 +89,65 @@ func (r *NotificationRepo) UnreadCount(ctx context.Context, userID uuid.UUID) (i
 		return 0, apperror.Internal(err)
 	}
 	return int(n), nil
+}
+
+func (r *NotificationRepo) ListAnnouncements(ctx context.Context, limit int) ([]*entity.AnnouncementSummary, error) {
+	const q = `SELECT MIN(id)::text AS id, title, body, COUNT(*)::int AS recipient_count, MAX(created_at) AS created_at
+		FROM notifications.notifications
+		WHERE type = 'announcement'
+		GROUP BY title, body
+		ORDER BY MAX(created_at) DESC
+		LIMIT $1`
+
+	rows, err := r.pool.Query(ctx, q, limit)
+	if err != nil {
+		return nil, apperror.Internal(err)
+	}
+	defer rows.Close()
+
+	var out []*entity.AnnouncementSummary
+	for rows.Next() {
+		var idStr, title, body string
+		var count int
+		var createdAt time.Time
+		if err := rows.Scan(&idStr, &title, &body, &count, &createdAt); err != nil {
+			return nil, apperror.Internal(err)
+		}
+		id, _ := uuid.Parse(idStr)
+		out = append(out, &entity.AnnouncementSummary{
+			ID:             id,
+			Title:          title,
+			Body:           body,
+			RecipientCount: count,
+			CreatedAt:      createdAt,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, apperror.Internal(err)
+	}
+	return out, nil
+}
+
+func (r *NotificationRepo) DeleteAnnouncementGroup(ctx context.Context, id uuid.UUID) error {
+	const q = `WITH target AS (
+		SELECT title, body FROM notifications.notifications WHERE id = $1 LIMIT 1
+	)
+	DELETE FROM notifications.notifications
+	WHERE type = 'announcement'
+	  AND title = (SELECT title FROM target)
+	  AND body = (SELECT body FROM target)`
+
+	tag, err := r.pool.Exec(ctx, q, toPgUUID(id))
+	if err != nil {
+		return apperror.Internal(err)
+	}
+	if tag.RowsAffected() == 0 {
+		const qDirect = `DELETE FROM notifications.notifications WHERE id = $1`
+		if _, err := r.pool.Exec(ctx, qDirect, toPgUUID(id)); err != nil {
+			return apperror.Internal(err)
+		}
+	}
+	return nil
 }
 
 // --- DeviceTokenRepo ---------------------------------------------------------

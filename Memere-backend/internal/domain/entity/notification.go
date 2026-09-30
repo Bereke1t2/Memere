@@ -37,3 +37,13 @@ type NotificationPreference struct {
 	EmailEnabled bool
 	UpdatedAt    time.Time
 }
+
+// AnnouncementSummary is an aggregated summary of a broadcast announcement.
+type AnnouncementSummary struct {
+	ID             uuid.UUID
+	Title          string
+	Body           string
+	RecipientCount int
+	CreatedAt      time.Time
+}
+

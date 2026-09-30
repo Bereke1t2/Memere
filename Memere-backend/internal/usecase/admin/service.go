@@ -33,16 +33,17 @@ func (a Actor) isTeacherOrAdmin() bool {
 
 // Service is the stateless admin usecase orchestrator.
 type Service struct {
-	users     repository.UserRepository
-	courses   repository.CourseRepository
-	payments  repository.PaymentRepository
-	enrolls   repository.EnrollmentRepository
-	requests  repository.CourseAccessRequestRepository
-	subs      repository.SubscriptionRepository
-	revenue   repository.RevenueRepository
-	audit     repository.AdminAuditRepository
-	notify    service.Notifier
-	providers service.PaymentProviderRegistry
+	users         repository.UserRepository
+	courses       repository.CourseRepository
+	payments      repository.PaymentRepository
+	enrolls       repository.EnrollmentRepository
+	requests      repository.CourseAccessRequestRepository
+	subs          repository.SubscriptionRepository
+	revenue       repository.RevenueRepository
+	audit         repository.AdminAuditRepository
+	notify        service.Notifier
+	notifications repository.NotificationRepository
+	providers     service.PaymentProviderRegistry
 }
 
 func NewService(
@@ -69,6 +70,12 @@ func NewService(
 		notify:    notify,
 		providers: providers,
 	}
+}
+
+// WithNotificationRepo attaches the notification repository for listing/deleting broadcast announcements.
+func (s *Service) WithNotificationRepo(notifs repository.NotificationRepository) *Service {
+	s.notifications = notifs
+	return s
 }
 
 // writeAudit records an audit entry best-effort: errors are logged but never

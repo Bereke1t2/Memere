@@ -24,6 +24,10 @@ type NotificationRepository interface {
 	MarkAllRead(ctx context.Context, userID uuid.UUID) error
 	// UnreadCount returns the count of unread notifications for a user.
 	UnreadCount(ctx context.Context, userID uuid.UUID) (int, error)
+	// ListAnnouncements returns broadcast announcements aggregated by title and body.
+	ListAnnouncements(ctx context.Context, limit int) ([]*entity.AnnouncementSummary, error)
+	// DeleteAnnouncementGroup deletes all announcement notifications matching the given ID or grouping.
+	DeleteAnnouncementGroup(ctx context.Context, id uuid.UUID) error
 }
 
 // DeviceTokenRepository persists FCM device tokens (spec §11.1 push channel).

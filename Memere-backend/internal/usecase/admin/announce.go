@@ -4,9 +4,12 @@ import (
 	"context"
 	"log"
 
+	"github.com/google/uuid"
+
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/service"
+	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 )
 
 // BroadcastSegment identifies which users receive an announcement.
@@ -59,6 +62,41 @@ func (s *Service) Broadcast(ctx context.Context, actor Actor, input BroadcastInp
 	return nil
 }
 
+// ListAnnouncements lists broadcast announcements with aggregated recipient counts. Admin only.
+func (s *Service) ListAnnouncements(ctx context.Context, actor Actor, limit int) ([]*entity.AnnouncementSummary, error) {
+	if err := requireAdmin(actor); err != nil {
+		return nil, err
+	}
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	if s.notifications == nil {
+		return []*entity.AnnouncementSummary{}, nil
+	}
+	return s.notifications.ListAnnouncements(ctx, limit)
+}
+
+// DeleteAnnouncement deletes all notification rows corresponding to the given announcement. Admin only.
+// Audited.
+func (s *Service) DeleteAnnouncement(ctx context.Context, actor Actor, id uuid.UUID) error {
+	if err := requireAdmin(actor); err != nil {
+		return err
+	}
+	if s.notifications == nil {
+		return apperror.NotFound("notification repository unavailable", nil)
+	}
+
+	if err := s.notifications.DeleteAnnouncementGroup(ctx, id); err != nil {
+		return err
+	}
+
+	log.Printf("admin.DeleteAnnouncement: removed announcement id=%s", id)
+	s.writeAudit(ctx, actor, "announcement.delete", "announcement", &id, map[string]any{
+		"announcement_id": id.String(),
+	})
+	return nil
+}
+
 // broadcastToRole pages through users with the given role and notifies each.
 func (s *Service) broadcastToRole(ctx context.Context, input BroadcastInput, role entity.Role) int {
 	if s.notify == nil {
@@ -89,3 +127,4 @@ func (s *Service) broadcastToSubscribers(_ context.Context, input BroadcastInput
 	log.Printf("admin.Broadcast: subscriber segment not yet implemented (title=%q)", input.Title)
 	return 0
 }
+

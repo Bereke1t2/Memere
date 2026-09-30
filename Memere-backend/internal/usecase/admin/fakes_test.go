@@ -63,6 +63,18 @@ func (f *fakeUserRepo) FindByEmail(_ context.Context, email string) (*entity.Use
 	return nil, apperror.NotFound("user not found", nil)
 }
 
+func (f *fakeUserRepo) FindByEmailVerificationToken(_ context.Context, token string) (*entity.User, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, u := range f.byID {
+		if u.EmailVerificationToken != nil && *u.EmailVerificationToken == token {
+			cp := *u
+			return &cp, nil
+		}
+	}
+	return nil, apperror.NotFound("user not found", nil)
+}
+
 func (f *fakeUserRepo) Update(_ context.Context, u *entity.User) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -390,12 +402,145 @@ func (n *fakeNotifier) count() int {
 	return len(n.calls)
 }
 
+// ---- fake notification repo --------------------------------------------------
+
+type fakeNotificationRepo struct {
+	mu            sync.Mutex
+	notifications map[uuid.UUID]*entity.Notification
+}
+
+func newFakeNotificationRepo() *fakeNotificationRepo {
+	return &fakeNotificationRepo{
+		notifications: make(map[uuid.UUID]*entity.Notification),
+	}
+}
+
+func (f *fakeNotificationRepo) Create(_ context.Context, n *entity.Notification) (*entity.Notification, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if n.ID == uuid.Nil {
+		n.ID = uuid.New()
+	}
+	if n.CreatedAt.IsZero() {
+		n.CreatedAt = time.Now()
+	}
+	cp := *n
+	f.notifications[n.ID] = &cp
+	return &cp, nil
+}
+
+func (f *fakeNotificationRepo) ListByUser(_ context.Context, userID uuid.UUID, limit int) ([]*entity.Notification, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []*entity.Notification
+	for _, n := range f.notifications {
+		if n.UserID == userID {
+			cp := *n
+			out = append(out, &cp)
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeNotificationRepo) GetByID(_ context.Context, id uuid.UUID) (*entity.Notification, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if n, ok := f.notifications[id]; ok {
+		cp := *n
+		return &cp, nil
+	}
+	return nil, apperror.NotFound("notification not found", nil)
+}
+
+func (f *fakeNotificationRepo) MarkRead(_ context.Context, id, userID uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if n, ok := f.notifications[id]; ok && n.UserID == userID {
+		now := time.Now()
+		n.ReadAt = &now
+	}
+	return nil
+}
+
+func (f *fakeNotificationRepo) MarkAllRead(_ context.Context, userID uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	now := time.Now()
+	for _, n := range f.notifications {
+		if n.UserID == userID && n.ReadAt == nil {
+			n.ReadAt = &now
+		}
+	}
+	return nil
+}
+
+func (f *fakeNotificationRepo) UnreadCount(_ context.Context, userID uuid.UUID) (int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	count := 0
+	for _, n := range f.notifications {
+		if n.UserID == userID && n.ReadAt == nil {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (f *fakeNotificationRepo) ListAnnouncements(_ context.Context, limit int) ([]*entity.AnnouncementSummary, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	groups := make(map[string]*entity.AnnouncementSummary)
+	for _, n := range f.notifications {
+		if n.Type == "announcement" {
+			key := n.Title + "::" + n.Body
+			if existing, ok := groups[key]; ok {
+				existing.RecipientCount++
+				if n.CreatedAt.After(existing.CreatedAt) {
+					existing.CreatedAt = n.CreatedAt
+				}
+			} else {
+				groups[key] = &entity.AnnouncementSummary{
+					ID:             n.ID,
+					Title:          n.Title,
+					Body:           n.Body,
+					RecipientCount: 1,
+					CreatedAt:      n.CreatedAt,
+				}
+			}
+		}
+	}
+	var out []*entity.AnnouncementSummary
+	for _, g := range groups {
+		out = append(out, g)
+	}
+	return out, nil
+}
+
+func (f *fakeNotificationRepo) DeleteAnnouncementGroup(_ context.Context, id uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	target, ok := f.notifications[id]
+	if !ok {
+		// Try deleting matching ID anyway
+		delete(f.notifications, id)
+		return nil
+	}
+	title, body := target.Title, target.Body
+	for k, n := range f.notifications {
+		if n.Type == "announcement" && n.Title == title && n.Body == body {
+			delete(f.notifications, k)
+		}
+	}
+	return nil
+}
+
 // ---- compile-time checks ----------------------------------------------------
 
 var _ repository.UserRepository = (*fakeUserRepo)(nil)
 var _ repository.CourseRepository = (*fakeCourseRepo)(nil)
 var _ repository.PaymentRepository = (*fakePaymentRepo)(nil)
 var _ repository.AdminAuditRepository = (*fakeAuditRepo)(nil)
+var _ repository.NotificationRepository = (*fakeNotificationRepo)(nil)
 var _ repository.RevenueRepository = fakeRevenueRepo{}
 var _ repository.SubscriptionRepository = fakeSubRepo{}
 var _ repository.EnrollmentRepository = fakeEnrollRepo{}
@@ -407,4 +552,8 @@ var _ service.Notifier = (*fakeNotifier)(nil)
 // newSvc builds a Service wired to all fakes.
 func newSvc(users *fakeUserRepo, courses *fakeCourseRepo, payments *fakePaymentRepo, audit *fakeAuditRepo, notify *fakeNotifier) *Service {
 	return NewService(users, courses, payments, fakeEnrollRepo{}, fakeRequestRepo{}, fakeSubRepo{}, fakeRevenueRepo{}, audit, notify, nil)
+}
+
+func newSvcWithNotif(users *fakeUserRepo, notifs repository.NotificationRepository, audit *fakeAuditRepo, notify *fakeNotifier) *Service {
+	return NewService(users, newFakeCourseRepo(), newFakePaymentRepo(), fakeEnrollRepo{}, fakeRequestRepo{}, fakeSubRepo{}, fakeRevenueRepo{}, audit, notify, nil).WithNotificationRepo(notifs)
 }

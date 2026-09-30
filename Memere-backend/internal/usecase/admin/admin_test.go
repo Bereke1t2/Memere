@@ -261,3 +261,67 @@ func TestBroadcast_AuditsOnSuccess(t *testing.T) {
 	}
 }
 
+func TestListAndAdminDeleteAnnouncement(t *testing.T) {
+	ctx := context.Background()
+	audit := &fakeAuditRepo{}
+	notifs := newFakeNotificationRepo()
+	users := newFakeUserRepo()
+
+	// Seed 2 announcement notifications
+	annID := uuid.New()
+	_, _ = notifs.Create(ctx, &entity.Notification{
+		ID:     annID,
+		UserID: uuid.New(),
+		Type:   "announcement",
+		Title:  "Big Update",
+		Body:   "New courses available",
+	})
+	_, _ = notifs.Create(ctx, &entity.Notification{
+		ID:     uuid.New(),
+		UserID: uuid.New(),
+		Type:   "announcement",
+		Title:  "Big Update",
+		Body:   "New courses available",
+	})
+
+	svc := newSvcWithNotif(users, notifs, audit, nil)
+
+	// Student cannot list or delete
+	if _, err := svc.ListAnnouncements(ctx, studentActor(), 10); err == nil {
+		t.Error("expected Forbidden for student listing announcements")
+	}
+	if err := svc.DeleteAnnouncement(ctx, studentActor(), annID); err == nil {
+		t.Error("expected Forbidden for student deleting announcement")
+	}
+
+	// Admin list
+	list, err := svc.ListAnnouncements(ctx, adminActor(), 10)
+	if err != nil {
+		t.Fatalf("ListAnnouncements: %v", err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("expected 1 aggregated announcement group, got %d", len(list))
+	}
+	if list[0].RecipientCount != 2 {
+		t.Errorf("expected recipient count 2, got %d", list[0].RecipientCount)
+	}
+
+	// Admin delete
+	if err := svc.DeleteAnnouncement(ctx, adminActor(), annID); err != nil {
+		t.Fatalf("DeleteAnnouncement: %v", err)
+	}
+	if audit.countAction("announcement.delete") != 1 {
+		t.Error("expected 1 audit row for announcement.delete")
+	}
+
+	// Verify list is now empty
+	after, err := svc.ListAnnouncements(ctx, adminActor(), 10)
+	if err != nil {
+		t.Fatalf("ListAnnouncements after delete: %v", err)
+	}
+	if len(after) != 0 {
+		t.Errorf("expected 0 announcements after delete, got %d", len(after))
+	}
+}
+
+
