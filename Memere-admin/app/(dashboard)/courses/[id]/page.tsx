@@ -4,7 +4,7 @@ import { ApiError } from "@/lib/api/errors";
 import { Badge } from "@/components/ui/badge";
 import { CourseActions } from "@/components/courses/course-actions";
 import { BreadcrumbSetter } from "@/lib/breadcrumb-context";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, formatGrade } from "@/lib/format";
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -105,7 +105,7 @@ export default async function CourseDetailPage({
             <Row label="Subject">
               <span className="capitalize">{course.subject}</span>
             </Row>
-            <Row label="Grade">Grade {course.grade}</Row>
+            <Row label="Grade">{formatGrade(course.grade)}</Row>
             <Row label="Price">{price}</Row>
             {course.level && (
               <Row label="Level">

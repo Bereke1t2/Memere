@@ -1,6 +1,6 @@
 import { type ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, formatGrade } from "@/lib/format";
 import type { Course } from "@/lib/api/schemas";
 
 function priceLabel(course: Course): string {
@@ -27,7 +27,7 @@ export const courseColumns: ColumnDef<Course>[] = [
     accessorKey: "grade",
     header: "Grade",
     cell: ({ getValue }) => (
-      <span className="text-sm tabular-nums">Grade {getValue<number>()}</span>
+      <span className="text-sm tabular-nums">{formatGrade(getValue<number>())}</span>
     ),
   },
   {

@@ -3,6 +3,7 @@
 import { type ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { TeacherCourseActions } from "@/components/courses/teacher-course-actions";
+import { formatGrade } from "@/lib/format";
 import type { Course } from "@/lib/api/schemas";
 
 export const columns: ColumnDef<Course>[] = [
@@ -21,7 +22,7 @@ export const columns: ColumnDef<Course>[] = [
   {
     accessorKey: "grade",
     header: "Grade",
-    cell: ({ row }) => <span className="text-sm">Grade {row.original.grade}</span>,
+    cell: ({ row }) => <span className="text-sm">{formatGrade(row.original.grade)}</span>,
   },
   {
     accessorKey: "price",

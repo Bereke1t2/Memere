@@ -13,6 +13,7 @@ import { QuizzesPanel } from "@/components/courses/quizzes-panel";
 import { ExamsPanel } from "@/components/courses/exams-panel";
 import { TeacherCourseActions } from "@/components/courses/teacher-course-actions";
 import { CourseThumbnailCover } from "@/components/courses/course-thumbnail-cover";
+import { formatGrade } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -79,7 +80,7 @@ export default async function MyCourseDetailPage({
                   {course.is_published ? "Published" : "Draft"}
                 </Badge>
                 <span className="text-xs text-muted-foreground">
-                  {course.subject} · Grade {course.grade}
+                  {course.subject} · {formatGrade(course.grade)}
                 </span>
                 {course.level && (
                   <span className="text-xs text-muted-foreground capitalize">
