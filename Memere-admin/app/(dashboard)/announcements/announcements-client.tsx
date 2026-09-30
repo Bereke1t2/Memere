@@ -69,7 +69,11 @@ function formatDateTime(iso: string | null | undefined): string {
   }
 }
 
-export function AnnouncementsClient() {
+interface AnnouncementsClientProps {
+  initialData?: Announcement[];
+}
+
+export function AnnouncementsClient({ initialData = [] }: AnnouncementsClientProps) {
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [allConfirmed, setAllConfirmed] = useState(false);
@@ -106,6 +110,7 @@ export function AnnouncementsClient() {
     isFetching,
   } = useQuery<AnnouncementListResponse>({
     queryKey: ["admin-announcements"],
+    initialData: { announcements: initialData },
     queryFn: async () => {
       const res = await fetch("/api/admin/announcements");
       if (!res.ok) {
@@ -116,7 +121,9 @@ export function AnnouncementsClient() {
     },
   });
 
-  const announcements = data?.announcements ?? [];
+  const announcements = Array.isArray(data?.announcements)
+    ? data.announcements
+    : [];
 
   // Delete mutation
   const deleteMutation = useMutation({

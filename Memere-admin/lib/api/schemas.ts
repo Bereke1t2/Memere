@@ -461,15 +461,15 @@ export type CourseAccessRequestListResponse = z.infer<typeof CourseAccessRequest
 
 export const AnnouncementSchema = z.object({
   id: z.string(),
-  title: z.string(),
-  body: z.string(),
-  recipient_count: z.number().optional().default(1),
-  created_at: z.string(),
+  title: z.string().nullish().transform((v) => v || "Announcement"),
+  body: z.string().nullish().transform((v) => v || ""),
+  recipient_count: z.number().nullish().transform((v) => v ?? 0),
+  created_at: z.string().nullish().transform((v) => v || new Date().toISOString()),
 });
 export type Announcement = z.infer<typeof AnnouncementSchema>;
 
 export const AnnouncementListResponseSchema = z.object({
-  announcements: z.array(AnnouncementSchema),
+  announcements: z.array(AnnouncementSchema).default([]),
 });
 export type AnnouncementListResponse = z.infer<typeof AnnouncementListResponseSchema>;
 

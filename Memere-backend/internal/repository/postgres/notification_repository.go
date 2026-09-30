@@ -92,12 +92,31 @@ func (r *NotificationRepo) UnreadCount(ctx context.Context, userID uuid.UUID) (i
 }
 
 func (r *NotificationRepo) ListAnnouncements(ctx context.Context, limit int) ([]*entity.AnnouncementSummary, error) {
-	const q = `SELECT MIN(id)::text AS id, title, body, COUNT(*)::int AS recipient_count, MAX(created_at) AS created_at
+	const q = `
+	WITH notifs AS (
+		SELECT MIN(id)::text AS id, title, body, COUNT(*)::int AS recipient_count, MAX(created_at) AS created_at
 		FROM notifications.notifications
 		WHERE type = 'announcement'
 		GROUP BY title, body
-		ORDER BY MAX(created_at) DESC
-		LIMIT $1`
+	),
+	audits AS (
+		SELECT 
+			id::text AS id,
+			COALESCE(details->>'title', 'Announcement') AS title,
+			COALESCE(details->>'body', '') AS body,
+			COALESCE((details->>'recipients')::int, 0) AS recipient_count,
+			created_at
+		FROM auth.admin_audit_log
+		WHERE action = 'broadcast.send'
+		  AND NOT EXISTS (
+			SELECT 1 FROM notifs n WHERE n.title = (details->>'title')
+		  )
+	)
+	SELECT id, title, body, recipient_count, created_at FROM notifs
+	UNION ALL
+	SELECT id, title, body, recipient_count, created_at FROM audits
+	ORDER BY created_at DESC
+	LIMIT $1`
 
 	rows, err := r.pool.Query(ctx, q, limit)
 	if err != nil {
@@ -129,23 +148,28 @@ func (r *NotificationRepo) ListAnnouncements(ctx context.Context, limit int) ([]
 }
 
 func (r *NotificationRepo) DeleteAnnouncementGroup(ctx context.Context, id uuid.UUID) error {
-	const q = `WITH target AS (
+	const q = `
+	WITH target AS (
 		SELECT title, body FROM notifications.notifications WHERE id = $1 LIMIT 1
+		UNION ALL
+		SELECT details->>'title' AS title, COALESCE(details->>'body', '') AS body FROM auth.admin_audit_log WHERE id = $1 LIMIT 1
+	),
+	deleted_notifs AS (
+		DELETE FROM notifications.notifications
+		WHERE type = 'announcement'
+		  AND (
+			title IN (SELECT title FROM target WHERE title IS NOT NULL AND title != '')
+			OR id = $1
+		  )
+		RETURNING id
 	)
-	DELETE FROM notifications.notifications
-	WHERE type = 'announcement'
-	  AND title = (SELECT title FROM target)
-	  AND body = (SELECT body FROM target)`
+	DELETE FROM auth.admin_audit_log
+	WHERE id = $1
+	   OR (action = 'broadcast.send' AND details->>'title' IN (SELECT title FROM target WHERE title IS NOT NULL AND title != ''));`
 
-	tag, err := r.pool.Exec(ctx, q, toPgUUID(id))
+	_, err := r.pool.Exec(ctx, q, toPgUUID(id))
 	if err != nil {
 		return apperror.Internal(err)
-	}
-	if tag.RowsAffected() == 0 {
-		const qDirect = `DELETE FROM notifications.notifications WHERE id = $1`
-		if _, err := r.pool.Exec(ctx, qDirect, toPgUUID(id)); err != nil {
-			return apperror.Internal(err)
-		}
 	}
 	return nil
 }

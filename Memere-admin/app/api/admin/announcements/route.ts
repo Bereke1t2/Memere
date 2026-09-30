@@ -2,6 +2,8 @@ import { broadcast, listAnnouncements, deleteAnnouncement } from "@/lib/api/endp
 import { ApiError, friendlyMessage } from "@/lib/api/errors";
 import { z } from "zod";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);

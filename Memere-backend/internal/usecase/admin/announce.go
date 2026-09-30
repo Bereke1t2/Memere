@@ -10,6 +10,7 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/service"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
+	"github.com/Bereke1t2/Memere/memere-backend/pkg/pagination"
 )
 
 // BroadcastSegment identifies which users receive an announcement.
@@ -53,11 +54,23 @@ func (s *Service) Broadcast(ctx context.Context, actor Actor, input BroadcastInp
 		total += s.broadcastToSubscribers(ctx, input)
 	}
 
+	if s.notify != nil {
+		_ = s.notify.Notify(ctx, service.NotifyEvent{
+			UserID:   actor.UserID.String(),
+			Type:     "announcement",
+			Title:    input.Title,
+			Body:     input.Body,
+			Data:     input.Data,
+			Channels: []service.Channel{service.ChannelInApp},
+		})
+	}
+
 	log.Printf("admin.Broadcast: sent to %d recipient(s) for segment=%s", total, input.Segment)
 	s.writeAudit(ctx, actor, "broadcast.send", "system", nil, map[string]any{
 		"segment":    string(input.Segment),
 		"recipients": total,
 		"title":      input.Title,
+		"body":       input.Body,
 	})
 	return nil
 }
@@ -103,22 +116,31 @@ func (s *Service) broadcastToRole(ctx context.Context, input BroadcastInput, rol
 		return 0
 	}
 	roleStr := string(role)
-	users, _, err := s.users.List(ctx, repository.AdminUserFilter{Role: &roleStr}, nil, broadcastPageSize)
-	if err != nil {
-		log.Printf("admin.Broadcast: list users role=%s: %v", role, err)
-		return 0
+	total := 0
+	var cursor *pagination.Cursor
+	for {
+		users, next, err := s.users.List(ctx, repository.AdminUserFilter{Role: &roleStr}, cursor, broadcastPageSize)
+		if err != nil {
+			log.Printf("admin.Broadcast: list users role=%s: %v", role, err)
+			break
+		}
+		for _, u := range users {
+			_ = s.notify.Notify(ctx, service.NotifyEvent{
+				UserID:   u.ID.String(),
+				Type:     "announcement",
+				Title:    input.Title,
+				Body:     input.Body,
+				Data:     input.Data,
+				Channels: []service.Channel{service.ChannelPush, service.ChannelInApp},
+			})
+			total++
+		}
+		if next == nil || len(users) == 0 {
+			break
+		}
+		cursor = next
 	}
-	for _, u := range users {
-		_ = s.notify.Notify(ctx, service.NotifyEvent{
-			UserID:   u.ID.String(),
-			Type:     "announcement",
-			Title:    input.Title,
-			Body:     input.Body,
-			Data:     input.Data,
-			Channels: []service.Channel{service.ChannelPush, service.ChannelInApp},
-		})
-	}
-	return len(users)
+	return total
 }
 
 // broadcastToSubscribers pages through active subscribers.

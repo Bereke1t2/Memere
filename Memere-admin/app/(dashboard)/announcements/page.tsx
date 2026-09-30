@@ -1,19 +1,32 @@
 import { redirect } from "next/navigation";
 import { requireStaff } from "@/lib/auth/session";
+import { listAnnouncements } from "@/lib/api/endpoints";
 import { AnnouncementsClient } from "./announcements-client";
+import type { Announcement } from "@/lib/api/schemas";
+
+export const dynamic = "force-dynamic";
 
 export default async function AnnouncementsPage() {
   const { user } = await requireStaff();
   if (user.role !== "admin") redirect("/");
+
+  let initialAnnouncements: Announcement[] = [];
+  try {
+    const res = await listAnnouncements();
+    initialAnnouncements = res?.announcements ?? [];
+  } catch (err) {
+    console.error("[AnnouncementsPage] failed to fetch initial announcements:", err);
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Announcements</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Broadcast a push notification to a user segment.
+          Broadcast and manage push notifications and in-app announcements.
         </p>
       </div>
-      <AnnouncementsClient />
+      <AnnouncementsClient initialData={initialAnnouncements} />
     </div>
   );
 }
