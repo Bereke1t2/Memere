@@ -221,7 +221,7 @@ export const ExamListResponseSchema = z.object({ data: ExamSchema.array() });
 export const CreateExamInputSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   subject: z.string().min(1, "Subject is required").max(100),
-  grade: z.number().int().min(1).max(12),
+  grade: z.number().int().min(1).max(13),
   duration_minutes: z.number().min(1).optional(),
   pass_marks: z.number().min(0).optional(),
   instructions: z.string().max(5000).optional().nullable(),
@@ -379,7 +379,7 @@ export const CreateCourseInputSchema = z.object({
   description: z.string().min(10, "Description must be at least 10 characters"),
   short_description: z.string().max(300).optional().nullable(),
   subject: z.string().min(1, "Subject is required"),
-  grade: z.number().int().min(1, "Grade is required").max(12),
+  grade: z.number().int().min(1, "Grade is required").max(13),
   level: z.enum(["beginner", "intermediate", "advanced"]),
   price: z.number().min(0).optional(),
   currency: z.string().optional(),
