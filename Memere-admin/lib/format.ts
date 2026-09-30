@@ -36,3 +36,23 @@ export function formatDate(iso: string | null | undefined): string {
     day: "numeric",
   }).format(new Date(iso));
 }
+
+export interface GradeOption {
+  value: number;
+  label: string;
+}
+
+export const GRADE_OPTIONS: GradeOption[] = [
+  ...Array.from({ length: 12 }, (_, i) => ({
+    value: i + 1,
+    label: `Grade ${i + 1}`,
+  })),
+  { value: 13, label: "Freshman" },
+];
+
+export function formatGrade(grade?: number | null): string {
+  if (grade === undefined || grade === null) return "—";
+  if (grade === 13) return "Freshman";
+  return `Grade ${grade}`;
+}
+
