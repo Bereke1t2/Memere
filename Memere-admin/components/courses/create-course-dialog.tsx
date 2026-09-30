@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { clientAction } from "@/lib/client-action";
 import { CreateCourseInputSchema, type CreateCourseInput } from "@/lib/api/schemas";
+import { GRADE_OPTIONS } from "@/lib/format";
 
 export function CreateCourseDialog() {
   const [open, setOpen] = useState(false);
@@ -125,8 +126,8 @@ export function CreateCourseDialog() {
                 <Select defaultValue="12" onValueChange={(v) => setValue("grade", Number(v))}>
                   <SelectTrigger><SelectValue placeholder="Select grade" /></SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((g) => (
-                      <SelectItem key={g} value={String(g)}>Grade {g}</SelectItem>
+                    {GRADE_OPTIONS.map((g) => (
+                      <SelectItem key={g.value} value={String(g.value)}>{g.label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
