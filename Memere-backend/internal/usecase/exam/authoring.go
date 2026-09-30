@@ -16,7 +16,7 @@ const (
 	maxExamTitleLen   = 200
 	maxInstructionLen = 5000
 	minGrade          = 1
-	maxGrade          = 12
+	maxGrade          = 13 // Grade 1..12 and Freshman (13)
 )
 
 // CreateExamInput is the teacher-facing exam create request after decoding.

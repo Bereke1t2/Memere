@@ -17,7 +17,7 @@ const (
 	maxTitleLen     = 200
 	maxShortDescLen = 500
 	minGrade        = 1
-	maxGrade        = 12
+	maxGrade        = 13 // Grade 1..12 and Freshman (13)
 	// slugSuffixRetries bounds the attempts to find a free slug before giving up.
 	slugSuffixRetries = 5
 )

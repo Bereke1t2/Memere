@@ -103,6 +103,26 @@ func TestCreateCourse_ValidationError(t *testing.T) {
 	}
 }
 
+func TestCreateCourse_FreshmanGradeAllowed(t *testing.T) {
+	h := newHarness()
+	in := validCreateInput()
+	in.Grade = 13 // Freshman
+	c, err := h.svc.CreateCourse(context.Background(), teacher(), in)
+	if err != nil {
+		t.Fatalf("unexpected error creating freshman course: %v", err)
+	}
+	if c.Grade != 13 {
+		t.Errorf("got grade %d, want 13", c.Grade)
+	}
+
+	// Grade 14 must fail
+	in.Grade = 14
+	_, err = h.svc.CreateCourse(context.Background(), teacher(), in)
+	if !apperror.IsCode(err, "VALIDATION_ERROR") {
+		t.Fatalf("err = %v, want VALIDATION_ERROR for grade 14", err)
+	}
+}
+
 func TestUpdateCourse_NotOwnerForbidden(t *testing.T) {
 	h := newHarness()
 	owner := teacher()

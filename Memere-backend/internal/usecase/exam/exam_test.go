@@ -523,3 +523,39 @@ func TestStartExam_GuestUnregisteredAllowed(t *testing.T) {
 		t.Fatalf("expected result view matching submitted result, got %+v", resView)
 	}
 }
+
+func TestCreateExam_FreshmanGradeAllowed(t *testing.T) {
+	h := newHarness(t)
+	course := &entity.Course{ID: uuid.New(), TeacherID: uuid.New(), IsPublished: true, IsFree: true}
+	h.courses.add(course)
+	owner := &Actor{UserID: course.TeacherID, Role: entity.RoleTeacher}
+
+	exam, err := h.svc.CreateExam(context.Background(), owner, CreateExamInput{
+		CourseID:        &course.ID,
+		Title:           "Freshman Math Exam",
+		Subject:         "Math",
+		Grade:           13, // Freshman
+		DurationMinutes: 60,
+		PassMarks:       50,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error creating freshman exam: %v", err)
+	}
+	if exam.Grade != 13 {
+		t.Errorf("got exam grade %d, want 13", exam.Grade)
+	}
+
+	// Grade 14 must fail
+	_, err = h.svc.CreateExam(context.Background(), owner, CreateExamInput{
+		CourseID:        &course.ID,
+		Title:           "Invalid Grade Exam",
+		Subject:         "Math",
+		Grade:           14,
+		DurationMinutes: 60,
+		PassMarks:       50,
+	})
+	if !apperror.IsCode(err, "VALIDATION_ERROR") {
+		t.Fatalf("err = %v, want VALIDATION_ERROR for grade 14", err)
+	}
+}
+
