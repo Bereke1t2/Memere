@@ -74,6 +74,10 @@ func (r *CachedUserRepo) FindByEmail(ctx context.Context, email string) (*entity
 	return r.next.FindByEmail(ctx, email)
 }
 
+func (r *CachedUserRepo) FindByEmailVerificationToken(ctx context.Context, token string) (*entity.User, error) {
+	return r.next.FindByEmailVerificationToken(ctx, token)
+}
+
 func (r *CachedUserRepo) SetLastLogin(ctx context.Context, id uuid.UUID, t time.Time) error {
 	return r.next.SetLastLogin(ctx, id, t)
 }

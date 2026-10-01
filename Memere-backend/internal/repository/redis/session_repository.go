@@ -4,6 +4,7 @@ package redis
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -36,23 +37,45 @@ func sessionKey(userID uuid.UUID) string {
 // SetSession stores the token hash with the given TTL, replacing any existing
 // session for the user.
 func (r *SessionRepo) SetSession(ctx context.Context, userID uuid.UUID, tokenHash string, ttl time.Duration) error {
-	if err := r.client.Set(ctx, sessionKey(userID), tokenHash, ttl).Err(); err != nil {
+	return r.SetSessionData(ctx, userID, repository.SessionData{TokenHash: tokenHash}, ttl)
+}
+
+// GetSession returns the stored hash, or "" when no session exists.
+func (r *SessionRepo) GetSession(ctx context.Context, userID uuid.UUID) (string, error) {
+	data, err := r.GetSessionData(ctx, userID)
+	if err != nil || data == nil {
+		return "", err
+	}
+	return data.TokenHash, nil
+}
+
+// SetSessionData stores structured session data for the user.
+func (r *SessionRepo) SetSessionData(ctx context.Context, userID uuid.UUID, data repository.SessionData, ttl time.Duration) error {
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		return apperror.Internal(err)
+	}
+	if err := r.client.Set(ctx, sessionKey(userID), string(bytes), ttl).Err(); err != nil {
 		return apperror.Internal(err)
 	}
 	return nil
 }
 
-// GetSession returns the stored hash, or "" when no session exists (a Redis
-// miss is a normal, non-error outcome — the caller falls back to Postgres).
-func (r *SessionRepo) GetSession(ctx context.Context, userID uuid.UUID) (string, error) {
-	hash, err := r.client.Get(ctx, sessionKey(userID)).Result()
+// GetSessionData returns the stored session data, or nil when no session exists.
+func (r *SessionRepo) GetSessionData(ctx context.Context, userID uuid.UUID) (*repository.SessionData, error) {
+	val, err := r.client.Get(ctx, sessionKey(userID)).Result()
 	if errors.Is(err, goredis.Nil) {
-		return "", nil
+		return nil, nil
 	}
 	if err != nil {
-		return "", apperror.Internal(err)
+		return nil, apperror.Internal(err)
 	}
-	return hash, nil
+	var data repository.SessionData
+	if err := json.Unmarshal([]byte(val), &data); err != nil {
+		// Fallback for legacy plain token_hash strings stored before structured sessions.
+		return &repository.SessionData{TokenHash: val}, nil
+	}
+	return &data, nil
 }
 
 // DeleteSession removes the user's session. Deleting a missing key is a no-op.

@@ -152,6 +152,18 @@ WHERE email = $1 AND deleted_at IS NULL;`
 	return r.scanUser(r.pool.QueryRow(ctx, query, email))
 }
 
+// FindByEmailVerificationToken returns the user by email_verification_token or apperror.NotFound.
+func (r *UserRepo) FindByEmailVerificationToken(ctx context.Context, token string) (*entity.User, error) {
+	query := `
+SELECT id, email, phone, password_hash, role, approval_status, first_name, last_name, avatar_url,
+       is_active, is_email_verified, email_verification_token, password_reset_token,
+       password_reset_expires_at, last_login_at, created_at, updated_at, deleted_at
+FROM auth.users
+WHERE email_verification_token = $1 AND deleted_at IS NULL;`
+
+	return r.scanUser(r.pool.QueryRow(ctx, query, token))
+}
+
 // Update persists the mutable user fields (the query itself filters deleted_at IS NULL).
 func (r *UserRepo) Update(ctx context.Context, u *entity.User) error {
 	approvalStatus := string(u.ApprovalStatus)

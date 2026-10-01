@@ -7,6 +7,12 @@ import (
 	"github.com/google/uuid"
 )
 
+// SessionData holds the active session metadata for a user.
+type SessionData struct {
+	DeviceID  string `json:"device_id"`
+	TokenHash string `json:"token_hash"`
+}
+
 // SessionRepository is the fast-path store for a user's current refresh-token
 // hash, keyed by user id (key format `session:{user_id}`). It mirrors the
 // authoritative record in Postgres so the common refresh path can validate a
@@ -18,6 +24,10 @@ type SessionRepository interface {
 	SetSession(ctx context.Context, userID uuid.UUID, tokenHash string, ttl time.Duration) error
 	// GetSession returns the stored hash, or ("", nil) when no session exists.
 	GetSession(ctx context.Context, userID uuid.UUID) (string, error)
+	// SetSessionData stores structured session data for the user.
+	SetSessionData(ctx context.Context, userID uuid.UUID, data SessionData, ttl time.Duration) error
+	// GetSessionData returns the stored session data, or (nil, nil) when no session exists.
+	GetSessionData(ctx context.Context, userID uuid.UUID) (*SessionData, error)
 	// DeleteSession removes the user's session (logout).
 	DeleteSession(ctx context.Context, userID uuid.UUID) error
 

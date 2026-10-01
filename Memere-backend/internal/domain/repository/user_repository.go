@@ -20,6 +20,7 @@ type UserRepository interface {
 	Create(ctx context.Context, u *entity.User) error
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.User, error)
 	FindByEmail(ctx context.Context, email string) (*entity.User, error)
+	FindByEmailVerificationToken(ctx context.Context, token string) (*entity.User, error)
 	Update(ctx context.Context, u *entity.User) error
 	SoftDelete(ctx context.Context, id uuid.UUID) error
 	SetLastLogin(ctx context.Context, id uuid.UUID, t time.Time) error
