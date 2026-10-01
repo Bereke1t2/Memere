@@ -110,7 +110,7 @@ export function AnnouncementsClient({ initialData = [] }: AnnouncementsClientPro
     isFetching,
   } = useQuery<AnnouncementListResponse>({
     queryKey: ["admin-announcements"],
-    initialData: { announcements: initialData },
+    initialData: initialData && initialData.length > 0 ? { announcements: initialData } : undefined,
     queryFn: async () => {
       const res = await fetch("/api/admin/announcements");
       if (!res.ok) {

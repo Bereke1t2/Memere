@@ -178,7 +178,7 @@ func (r *NotificationRepo) ListAnnouncements(ctx context.Context, limit int) ([]
 		FROM notifications.announcements
 	),
 	notifs AS (
-		SELECT MIN(id)::text AS id, title, body, COUNT(*)::int AS recipient_count, MAX(created_at) AS created_at
+		SELECT MIN(id::text) AS id, title, body, COUNT(*)::int AS recipient_count, MAX(created_at) AS created_at
 		FROM notifications.notifications
 		WHERE type = 'announcement'
 		GROUP BY title, body
