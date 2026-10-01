@@ -236,6 +236,9 @@ func (f *fakeUserRepo) Create(context.Context, *entity.User) error { return nil 
 func (f *fakeUserRepo) FindByEmail(context.Context, string) (*entity.User, error) {
 	return nil, apperror.NotFound("not found", nil)
 }
+func (f *fakeUserRepo) FindByEmailVerificationToken(context.Context, string) (*entity.User, error) {
+	return nil, apperror.NotFound("not found", nil)
+}
 func (f *fakeUserRepo) Update(context.Context, *entity.User) error       { return nil }
 func (f *fakeUserRepo) SoftDelete(context.Context, uuid.UUID) error      { return nil }
 func (f *fakeUserRepo) SetLastLogin(context.Context, uuid.UUID, time.Time) error { return nil }

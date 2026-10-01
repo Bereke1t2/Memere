@@ -26,6 +26,18 @@ type LoginRequest struct {
 	Email      string  `json:"email"`
 	Password   string  `json:"password"`
 	DeviceInfo *string `json:"device_info"`
+	DeviceID   *string `json:"device_id"`
+	Force      bool    `json:"force"`
+}
+
+// VerifyEmailRequest is the body of POST /auth/verify-email.
+type VerifyEmailRequest struct {
+	Token string `json:"token" binding:"required"`
+}
+
+// ResendVerificationRequest is the body of POST /auth/resend-verification.
+type ResendVerificationRequest struct {
+	Email string `json:"email" binding:"required"`
 }
 
 // RefreshRequest is the body of POST /auth/refresh.

@@ -68,6 +68,18 @@ func (f *fakeUserRepo) FindByEmail(_ context.Context, email string) (*entity.Use
 	return nil, apperror.NotFound("user not found", nil)
 }
 
+func (f *fakeUserRepo) FindByEmailVerificationToken(_ context.Context, token string) (*entity.User, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, u := range f.byID {
+		if u.EmailVerificationToken != nil && *u.EmailVerificationToken == token {
+			cp := *u
+			return &cp, nil
+		}
+	}
+	return nil, apperror.NotFound("user not found", nil)
+}
+
 func (f *fakeUserRepo) Update(_ context.Context, u *entity.User) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -175,24 +187,41 @@ func (f *fakeTokenRepo) DeleteExpired(_ context.Context) error { return nil }
 // fakeSessionRepo is an in-memory SessionRepository keyed by user id.
 type fakeSessionRepo struct {
 	mu     sync.Mutex
-	byUser map[uuid.UUID]string
+	byUser map[uuid.UUID]repository.SessionData
 }
 
 func newFakeSessionRepo() *fakeSessionRepo {
-	return &fakeSessionRepo{byUser: map[uuid.UUID]string{}}
+	return &fakeSessionRepo{byUser: map[uuid.UUID]repository.SessionData{}}
 }
 
 func (f *fakeSessionRepo) SetSession(_ context.Context, userID uuid.UUID, tokenHash string, _ time.Duration) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.byUser[userID] = tokenHash
+	f.byUser[userID] = repository.SessionData{TokenHash: tokenHash}
 	return nil
 }
 
 func (f *fakeSessionRepo) GetSession(_ context.Context, userID uuid.UUID) (string, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return f.byUser[userID], nil
+	return f.byUser[userID].TokenHash, nil
+}
+
+func (f *fakeSessionRepo) SetSessionData(_ context.Context, userID uuid.UUID, data repository.SessionData, _ time.Duration) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.byUser[userID] = data
+	return nil
+}
+
+func (f *fakeSessionRepo) GetSessionData(_ context.Context, userID uuid.UUID) (*repository.SessionData, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	data, ok := f.byUser[userID]
+	if !ok {
+		return nil, nil
+	}
+	return &data, nil
 }
 
 func (f *fakeSessionRepo) DeleteSession(_ context.Context, userID uuid.UUID) error {
@@ -200,6 +229,33 @@ func (f *fakeSessionRepo) DeleteSession(_ context.Context, userID uuid.UUID) err
 	defer f.mu.Unlock()
 	delete(f.byUser, userID)
 	return nil
+}
+
+type fakeEmailSender struct {
+	mu    sync.Mutex
+	sent  []emailMessage
+}
+
+type emailMessage struct {
+	To      string
+	Subject string
+	Body    string
+}
+
+func (f *fakeEmailSender) Send(_ context.Context, to, subject, html string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.sent = append(f.sent, emailMessage{To: to, Subject: subject, Body: html})
+	return nil
+}
+
+func (f *fakeEmailSender) lastSent() *emailMessage {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if len(f.sent) == 0 {
+		return nil
+	}
+	return &f.sent[len(f.sent)-1]
 }
 
 // --- account lockout stubs ---

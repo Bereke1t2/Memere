@@ -212,6 +212,7 @@ func (r *fakeUserRepo) FindByID(_ context.Context, id uuid.UUID) (*entity.User, 
 	return nil, apperror.NotFound("user not found", nil)
 }
 func (r *fakeUserRepo) FindByEmail(_ context.Context, _ string) (*entity.User, error) { return nil, nil }
+func (r *fakeUserRepo) FindByEmailVerificationToken(_ context.Context, _ string) (*entity.User, error) { return nil, nil }
 func (r *fakeUserRepo) Update(_ context.Context, u *entity.User) error {
 	cp := *u
 	r.users[u.ID] = &cp

@@ -9,6 +9,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"net/mail"
 	"strings"
@@ -18,6 +20,7 @@ import (
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
+	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/service"
 	infmetrics "github.com/Bereke1t2/Memere/memere-backend/internal/infrastructure/metrics"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/jwt"
@@ -59,20 +62,26 @@ type RegisterInput struct {
 
 // LoginInput is the login request after transport decoding.
 type LoginInput struct {
-	Email    string
-	Password string
+	Email      string
+	Password   string
 	// DeviceInfo is an optional free-form client descriptor stored alongside the
 	// refresh token for auditing.
 	DeviceInfo *string
+	// DeviceID is a unique client device identifier to distinguish sessions.
+	DeviceID   *string
+	// Force when true supersedes any existing session on another device.
+	Force      bool
 }
 
 // Service implements the auth usecases over the domain repository interfaces.
 type Service struct {
-	users    repository.UserRepository
-	tokens   repository.RefreshTokenRepository
-	sessions repository.SessionRepository
-	jwt      *jwt.Manager
-	lockout  LockoutConfig
+	users     repository.UserRepository
+	tokens    repository.RefreshTokenRepository
+	sessions  repository.SessionRepository
+	jwt       *jwt.Manager
+	email     service.EmailSender
+	publicURL string
+	lockout   LockoutConfig
 	// now is injectable for tests; defaults to time.Now.
 	now func() time.Time
 }
@@ -83,15 +92,33 @@ func NewService(
 	tokens repository.RefreshTokenRepository,
 	sessions repository.SessionRepository,
 	jwtMgr *jwt.Manager,
+	emailSender ...service.EmailSender,
 ) *Service {
+	var es service.EmailSender
+	if len(emailSender) > 0 {
+		es = emailSender[0]
+	}
 	return &Service{
 		users:    users,
 		tokens:   tokens,
 		sessions: sessions,
 		jwt:      jwtMgr,
+		email:    es,
 		lockout:  LockoutConfig{MaxFailures: 10, LockoutTTL: 30 * time.Minute},
 		now:      time.Now,
 	}
+}
+
+// WithEmailSender attaches an email sender to the service.
+func (s *Service) WithEmailSender(es service.EmailSender) *Service {
+	s.email = es
+	return s
+}
+
+// WithPublicURL sets the public base URL for verification links.
+func (s *Service) WithPublicURL(publicURL string) *Service {
+	s.publicURL = strings.TrimRight(publicURL, "/")
+	return s
 }
 
 // WithLockout overrides the default account-lockout policy. Call from main after
@@ -102,8 +129,8 @@ func (s *Service) WithLockout(cfg LockoutConfig) *Service {
 }
 
 // Register validates the input, ensures the email is free, hashes the password,
-// and creates an unverified user with a stored email-verification token (the
-// email itself is sent in a later phase). The returned user is sanitized.
+// and creates an unverified user with a stored email-verification token.
+// If an email sender is wired, it delivers a verification email. The returned user is sanitized.
 func (s *Service) Register(ctx context.Context, in RegisterInput) (*entity.User, error) {
 	email := normalizeEmail(in.Email)
 	if details := validateRegister(in, email); len(details) > 0 {
@@ -157,6 +184,8 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (*entity.User,
 	if err := s.users.Create(ctx, u); err != nil {
 		return nil, err
 	}
+
+	s.sendVerificationEmail(ctx, u, verifyToken)
 
 	sanitized := u.Sanitized()
 	return &sanitized, nil
@@ -214,21 +243,33 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*AuthTokens, *entit
 	// Only students are restricted to a single device session. Admin and teacher
 	// accounts can log in concurrently from multiple/different devices.
 	if u.Role == entity.RoleStudent {
-		activeSession, err := s.sessions.GetSession(ctx, u.ID)
+		activeSession, err := s.sessions.GetSessionData(ctx, u.ID)
 		if err != nil {
 			return nil, nil, err
 		}
-		if activeSession != "" {
-			return nil, nil, apperror.New(
-				http.StatusConflict,
-				"ACTIVE_SESSION_EXISTS",
-				"This account is currently active on another device. Please log out from that device first before logging in here.",
-				nil,
-			)
+		if activeSession != nil && activeSession.TokenHash != "" {
+			reqDeviceID := ""
+			if in.DeviceID != nil {
+				reqDeviceID = strings.TrimSpace(*in.DeviceID)
+			}
+			isSameDevice := reqDeviceID != "" && activeSession.DeviceID != "" && reqDeviceID == activeSession.DeviceID
+			if !isSameDevice && !in.Force {
+				return nil, nil, apperror.New(
+					http.StatusConflict,
+					"ACTIVE_SESSION_EXISTS",
+					"This account is currently active on another device. Please log out from that device first before logging in here.",
+					nil,
+				)
+			}
+			// Same device or forced takeover: revoke old refresh token so old session is cleaned up.
+			oldToken, err := s.tokens.FindByHash(ctx, activeSession.TokenHash)
+			if err == nil && oldToken != nil {
+				_ = s.tokens.Revoke(ctx, oldToken.ID)
+			}
 		}
 	}
 
-	tokens, err := s.issueTokens(ctx, u, in.DeviceInfo)
+	tokens, err := s.issueTokens(ctx, u, in.DeviceInfo, in.DeviceID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -239,6 +280,80 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*AuthTokens, *entit
 
 	sanitized := u.Sanitized()
 	return tokens, &sanitized, nil
+}
+
+// VerifyEmail validates the token and marks the user's email verified.
+func (s *Service) VerifyEmail(ctx context.Context, token string) (*entity.User, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return nil, apperror.BadRequest("verification token is required", nil)
+	}
+
+	u, err := s.users.FindByEmailVerificationToken(ctx, token)
+	if err != nil {
+		if apperror.IsNotFound(err) {
+			return nil, apperror.New(http.StatusBadRequest, "INVALID_VERIFICATION_TOKEN", "invalid or expired email verification token", nil)
+		}
+		return nil, err
+	}
+
+	if u.IsEmailVerified {
+		sanitized := u.Sanitized()
+		return &sanitized, nil
+	}
+
+	u.IsEmailVerified = true
+	u.EmailVerificationToken = nil
+	if err := s.users.Update(ctx, u); err != nil {
+		return nil, err
+	}
+
+	sanitized := u.Sanitized()
+	return &sanitized, nil
+}
+
+// ResendVerificationEmail issues a fresh verification token and emails the user.
+func (s *Service) ResendVerificationEmail(ctx context.Context, email string) error {
+	email = normalizeEmail(email)
+	if email == "" {
+		return apperror.BadRequest("email is required", nil)
+	}
+
+	u, err := s.users.FindByEmail(ctx, email)
+	if err != nil {
+		if apperror.IsNotFound(err) {
+			// Do not leak email existence
+			return nil
+		}
+		return err
+	}
+
+	if u.IsEmailVerified {
+		return nil
+	}
+
+	token := randomToken()
+	u.EmailVerificationToken = &token
+	if err := s.users.Update(ctx, u); err != nil {
+		return err
+	}
+
+	s.sendVerificationEmail(ctx, u, token)
+	return nil
+}
+
+func (s *Service) sendVerificationEmail(ctx context.Context, u *entity.User, token string) {
+	if s.email == nil {
+		return
+	}
+	subject := "Verify your Mirkuz account email"
+	body := fmt.Sprintf(
+		`<h2>Welcome to Mirkuz, %s!</h2><p>Please use this verification code to verify your email address:</p><p style="font-size: 24px; font-weight: bold; letter-spacing: 2px;">%s</p><p>If you did not register this account, please disregard this email.</p>`,
+		u.FirstName, token,
+	)
+	if err := s.email.Send(ctx, u.Email, subject, body); err != nil {
+		slog.Error("failed to send email verification", "err", err, "email", u.Email)
+	}
 }
 
 // RevokeAccessToken adds the token's JTI to the denylist so it is rejected by
@@ -287,12 +402,20 @@ func (s *Service) Refresh(ctx context.Context, refreshToken string) (*AuthTokens
 		return nil, err
 	}
 
+	var devID *string
+	if u.Role == entity.RoleStudent {
+		sessionData, err := s.sessions.GetSessionData(ctx, u.ID)
+		if err == nil && sessionData != nil && sessionData.DeviceID != "" {
+			devID = &sessionData.DeviceID
+		}
+	}
+
 	// Rotate: revoke the presented token before minting its replacement so a
 	// replay of the old token fails even if issuing the new one races.
 	if err := s.tokens.Revoke(ctx, stored.ID); err != nil {
 		return nil, err
 	}
-	return s.issueTokens(ctx, u, stored.DeviceInfo)
+	return s.issueTokens(ctx, u, stored.DeviceInfo, devID)
 }
 
 // Logout revokes the presented refresh token in Postgres and clears the Redis
@@ -316,7 +439,7 @@ func (s *Service) Logout(ctx context.Context, userID uuid.UUID, refreshToken str
 
 // issueTokens mints an access+refresh pair, persists the refresh-token hash in
 // Postgres (authoritative) and Redis (fast path), and returns the raw tokens.
-func (s *Service) issueTokens(ctx context.Context, u *entity.User, deviceInfo *string) (*AuthTokens, error) {
+func (s *Service) issueTokens(ctx context.Context, u *entity.User, deviceInfo *string, deviceID *string) (*AuthTokens, error) {
 	access, err := s.jwt.GenerateAccessToken(u)
 	if err != nil {
 		return nil, apperror.Internal(err)
@@ -338,7 +461,15 @@ func (s *Service) issueTokens(ctx context.Context, u *entity.User, deviceInfo *s
 		return nil, err
 	}
 	if u.Role == entity.RoleStudent {
-		if err := s.sessions.SetSession(ctx, u.ID, refreshHash, refreshTTL); err != nil {
+		devID := ""
+		if deviceID != nil {
+			devID = *deviceID
+		}
+		data := repository.SessionData{
+			DeviceID:  devID,
+			TokenHash: refreshHash,
+		}
+		if err := s.sessions.SetSessionData(ctx, u.ID, data, refreshTTL); err != nil {
 			return nil, err
 		}
 	}

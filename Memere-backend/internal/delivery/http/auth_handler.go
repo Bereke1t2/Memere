@@ -61,12 +61,46 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		Email:      req.Email,
 		Password:   req.Password,
 		DeviceInfo: req.DeviceInfo,
+		DeviceID:   req.DeviceID,
+		Force:      req.Force,
 	})
 	if err != nil {
 		respondError(c, err)
 		return
 	}
 	respondJSON(c, http.StatusOK, authResponse(tokens, user))
+}
+
+// VerifyEmail handles POST /auth/verify-email → 200 with the verified user.
+func (h *AuthHandler) VerifyEmail(c *gin.Context) {
+	var req dto.VerifyEmailRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, apperror.BadRequest("invalid request body", err))
+		return
+	}
+
+	user, err := h.svc.VerifyEmail(c.Request.Context(), req.Token)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	resp := dto.NewUserResponse(user)
+	respondJSON(c, http.StatusOK, &resp)
+}
+
+// ResendVerification handles POST /auth/resend-verification → 200.
+func (h *AuthHandler) ResendVerification(c *gin.Context) {
+	var req dto.ResendVerificationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, apperror.BadRequest("invalid request body", err))
+		return
+	}
+
+	if err := h.svc.ResendVerificationEmail(c.Request.Context(), req.Email); err != nil {
+		respondError(c, err)
+		return
+	}
+	respondJSON(c, http.StatusOK, gin.H{"status": "ok", "message": "verification email sent if account exists"})
 }
 
 // Refresh handles POST /auth/refresh → 200 with a fresh token pair (the

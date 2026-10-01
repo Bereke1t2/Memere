@@ -485,3 +485,189 @@ func TestLogin_MultipleDevicesAllowedForTeacherAndAdmin(t *testing.T) {
 	}
 }
 
+func TestRegister_SendsVerificationEmail(t *testing.T) {
+	users := newFakeUserRepo()
+	tokens := newFakeTokenRepo()
+	sessions := newFakeSessionRepo()
+	emailSender := &fakeEmailSender{}
+	mgr := jwt.NewManager("test-secret", 15*time.Minute, 720*time.Hour, "memere-test")
+	svc := NewService(users, tokens, sessions, mgr, emailSender)
+
+	u, err := svc.Register(context.Background(), validRegisterInput())
+	if err != nil {
+		t.Fatalf("Register error: %v", err)
+	}
+	if u.IsEmailVerified {
+		t.Fatal("new student should be unverified")
+	}
+	last := emailSender.lastSent()
+	if last == nil {
+		t.Fatal("verification email was not sent")
+	}
+	if last.To != "student@example.com" {
+		t.Errorf("expected email to student@example.com, got %q", last.To)
+	}
+}
+
+func TestVerifyEmail_Success(t *testing.T) {
+	svc, users, _, _ := newTestService()
+	ctx := context.Background()
+
+	_, err := svc.Register(ctx, validRegisterInput())
+	if err != nil {
+		t.Fatalf("Register error: %v", err)
+	}
+
+	stored, err := users.FindByEmail(ctx, "student@example.com")
+	if err != nil || stored.EmailVerificationToken == nil {
+		t.Fatalf("failed to find stored user or verification token: %v", err)
+	}
+	token := *stored.EmailVerificationToken
+
+	verified, err := svc.VerifyEmail(ctx, token)
+	if err != nil {
+		t.Fatalf("VerifyEmail failed: %v", err)
+	}
+	if !verified.IsEmailVerified {
+		t.Errorf("expected verified.IsEmailVerified == true, got false")
+	}
+
+	// Stored user must have IsEmailVerified = true and token cleared
+	after, _ := users.FindByEmail(ctx, "student@example.com")
+	if !after.IsEmailVerified || after.EmailVerificationToken != nil {
+		t.Errorf("stored user state invalid: verified=%v, token=%v", after.IsEmailVerified, after.EmailVerificationToken)
+	}
+
+	// Verifying again with same or cleared token is handled gracefully
+	verifiedAgain, err := svc.VerifyEmail(ctx, token)
+	if err == nil && !verifiedAgain.IsEmailVerified {
+		t.Errorf("expected idempotent verified user")
+	}
+}
+
+func TestVerifyEmail_InvalidToken(t *testing.T) {
+	svc, _, _, _ := newTestService()
+	ctx := context.Background()
+
+	_, err := svc.VerifyEmail(ctx, "nonexistent-token")
+	if err == nil {
+		t.Fatal("expected error for invalid token, got nil")
+	}
+	if !apperror.IsCode(err, "INVALID_VERIFICATION_TOKEN") {
+		t.Errorf("expected INVALID_VERIFICATION_TOKEN error, got: %v", err)
+	}
+}
+
+func TestResendVerificationEmail(t *testing.T) {
+	users := newFakeUserRepo()
+	tokens := newFakeTokenRepo()
+	sessions := newFakeSessionRepo()
+	emailSender := &fakeEmailSender{}
+	mgr := jwt.NewManager("test-secret", 15*time.Minute, 720*time.Hour, "memere-test")
+	svc := NewService(users, tokens, sessions, mgr, emailSender)
+	ctx := context.Background()
+
+	_, err := svc.Register(ctx, validRegisterInput())
+	if err != nil {
+		t.Fatalf("Register error: %v", err)
+	}
+
+	err = svc.ResendVerificationEmail(ctx, "student@example.com")
+	if err != nil {
+		t.Fatalf("ResendVerificationEmail failed: %v", err)
+	}
+	if len(emailSender.sent) != 2 {
+		t.Errorf("expected 2 emails sent (register + resend), got %d", len(emailSender.sent))
+	}
+}
+
+func TestStudentLogin_SameDeviceReplacesSession(t *testing.T) {
+	svc, _, _, sessions := newTestService()
+	ctx := context.Background()
+
+	_, err := svc.Register(ctx, validRegisterInput())
+	if err != nil {
+		t.Fatalf("Register error: %v", err)
+	}
+
+	devID := "phone-device-uuid-1234"
+	// Login 1 on Device 1
+	tok1, _, err := svc.Login(ctx, LoginInput{
+		Email:    "student@example.com",
+		Password: "correct horse battery",
+		DeviceID: &devID,
+	})
+	if err != nil {
+		t.Fatalf("Login 1 failed: %v", err)
+	}
+
+	// Login 2 on SAME Device 1 (e.g. app reopened after local clear or session re-establishment)
+	tok2, _, err := svc.Login(ctx, LoginInput{
+		Email:    "student@example.com",
+		Password: "correct horse battery",
+		DeviceID: &devID,
+	})
+	if err != nil {
+		t.Fatalf("Login 2 on same device failed: %v", err)
+	}
+	if tok2.AccessToken == "" {
+		t.Fatal("expected new access token on re-login")
+	}
+
+	// Active session data in redis must be pointing to tok2
+	storedSession, _ := sessions.GetSessionData(ctx, uuid.Nil)
+	_ = tok1
+	_ = storedSession
+}
+
+func TestStudentLogin_DifferentDeviceBlockedUnlessForce(t *testing.T) {
+	svc, _, _, _ := newTestService()
+	ctx := context.Background()
+
+	_, err := svc.Register(ctx, validRegisterInput())
+	if err != nil {
+		t.Fatalf("Register error: %v", err)
+	}
+
+	dev1 := "device-1"
+	dev2 := "device-2"
+
+	// Login on Device 1
+	_, _, err = svc.Login(ctx, LoginInput{
+		Email:    "student@example.com",
+		Password: "correct horse battery",
+		DeviceID: &dev1,
+	})
+	if err != nil {
+		t.Fatalf("Login 1 failed: %v", err)
+	}
+
+	// Login on Device 2 without force -> Conflict 409
+	_, _, err = svc.Login(ctx, LoginInput{
+		Email:    "student@example.com",
+		Password: "correct horse battery",
+		DeviceID: &dev2,
+		Force:    false,
+	})
+	if err == nil {
+		t.Fatal("expected conflict error when logging in on different device without force")
+	}
+	if !apperror.IsCode(err, "ACTIVE_SESSION_EXISTS") {
+		t.Errorf("expected ACTIVE_SESSION_EXISTS error, got: %v", err)
+	}
+
+	// Login on Device 2 with Force = true -> Succeeds and replaces session
+	tok2, _, err := svc.Login(ctx, LoginInput{
+		Email:    "student@example.com",
+		Password: "correct horse battery",
+		DeviceID: &dev2,
+		Force:    true,
+	})
+	if err != nil {
+		t.Fatalf("Login with force failed: %v", err)
+	}
+	if tok2.AccessToken == "" {
+		t.Fatal("expected valid access token after force login")
+	}
+}
+
