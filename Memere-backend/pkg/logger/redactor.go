@@ -11,7 +11,7 @@ import (
 var sensitiveKeys = []string{
 	"password", "passwd", "secret", "token", "authorization",
 	"card", "cvv", "pan", "pin", "webhook_secret", "api_key", "apikey",
-	"private_key", "access_key", "refresh_token", "fcm_key", "sendgrid",
+	"private_key", "access_key", "refresh_token", "fcm_key", "sendgrid", "brevo", "resend",
 }
 
 const redacted = "[REDACTED]"

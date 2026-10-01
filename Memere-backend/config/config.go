@@ -37,6 +37,8 @@ type Config struct {
 	Telebirr TelebirrConfig
 	Stripe   StripeConfig
 	FCM      FCMConfig
+	Resend   ResendConfig
+	Brevo    BrevoConfig
 	SendGrid SendGridConfig
 }
 
@@ -326,6 +328,18 @@ type TelebirrConfig struct {
 
 type FCMConfig struct {
 	ServerKey string `envconfig:"FCM_SERVER_KEY" default:""`
+}
+
+type ResendConfig struct {
+	APIKey    string `envconfig:"RESEND_API_KEY" default:""`
+	FromEmail string `envconfig:"RESEND_FROM_EMAIL" default:"noreply@memere.app"`
+	FromName  string `envconfig:"RESEND_FROM_NAME" default:"Memere"`
+}
+
+type BrevoConfig struct {
+	APIKey    string `envconfig:"BREVO_API_KEY" default:""`
+	FromEmail string `envconfig:"BREVO_FROM_EMAIL" default:"noreply@memere.app"`
+	FromName  string `envconfig:"BREVO_FROM_NAME" default:"Memere"`
 }
 
 type SendGridConfig struct {
