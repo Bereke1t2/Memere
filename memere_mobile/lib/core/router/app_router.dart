@@ -4,6 +4,7 @@ import '../../features/auth/presentation/screens/splash_screen.dart';
 import '../../features/auth/presentation/screens/onboarding_screen.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/auth/presentation/screens/email_verification_screen.dart';
 import '../../features/auth/presentation/providers/auth_state_provider.dart';
 import '../../features/courses/presentation/screens/course_detail_screen.dart';
 import '../../features/courses/presentation/screens/course_list_screen.dart';
@@ -30,6 +31,7 @@ abstract class AppRoutes {
   static const onboarding = '/onboarding';
   static const login = '/login';
   static const register = '/register';
+  static const verifyEmail = '/verify-email';
   static const home = '/home';
   static const learn = '/learn';
   static const saved = '/saved';
@@ -48,6 +50,16 @@ abstract class AppRoutes {
   static const purchaseHistory = '/payments';
   static const subscriptionPlans = '/subscription-plans';
   static const pdfReader = '/pdf-reader';
+
+  static String verifyEmailPath({String? email, String? token}) {
+    return Uri(
+      path: '/verify-email',
+      queryParameters: {
+        if (email != null && email.isNotEmpty) 'email': email,
+        if (token != null && token.isNotEmpty) 'token': token,
+      },
+    ).toString();
+  }
 
   static String courseDetailPath(String courseId) => '/courses/$courseId';
   static String pdfReaderPath({
@@ -186,6 +198,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(path: AppRoutes.login, builder: (_, __) => const LoginScreen()),
       GoRoute(
           path: AppRoutes.register, builder: (_, __) => const RegisterScreen()),
+      GoRoute(
+        path: AppRoutes.verifyEmail,
+        builder: (_, state) {
+          final query = state.uri.queryParameters;
+          return EmailVerificationScreen(
+            email: query['email'],
+            initialToken: query['token'],
+          );
+        },
+      ),
       StatefulShellRoute.indexedStack(
         builder: (_, __, navigationShell) =>
             AppShell(navigationShell: navigationShell),
