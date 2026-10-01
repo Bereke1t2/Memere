@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireStaff } from "@/lib/auth/session";
-import { listAnnouncements } from "@/lib/api/endpoints";
+import { listAnnouncementsFromDB } from "@/lib/api/announcements-db";
 import { AnnouncementsClient } from "./announcements-client";
 import type { Announcement } from "@/lib/api/schemas";
 
@@ -12,7 +12,7 @@ export default async function AnnouncementsPage() {
 
   let initialAnnouncements: Announcement[] = [];
   try {
-    const res = await listAnnouncements();
+    const res = await listAnnouncementsFromDB(50);
     initialAnnouncements = res?.announcements ?? [];
   } catch (err) {
     console.error("[AnnouncementsPage] failed to fetch initial announcements:", err);

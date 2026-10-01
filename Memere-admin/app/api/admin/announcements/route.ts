@@ -1,19 +1,23 @@
-import { broadcast, listAnnouncements, deleteAnnouncement } from "@/lib/api/endpoints";
-import { ApiError, friendlyMessage } from "@/lib/api/errors";
+import { listAnnouncementsFromDB, createAnnouncementInDB } from "@/lib/api/announcements-db";
+import { broadcast } from "@/lib/api/endpoints";
+import { getRouteAdminSession } from "@/lib/auth/session";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
+  const session = await getRouteAdminSession();
+  if (!session) {
+    return Response.json({ message: "Admin authentication required." }, { status: 401 });
+  }
+
   try {
     const { searchParams } = new URL(req.url);
     const limit = Number(searchParams.get("limit")) || 50;
-    const data = await listAnnouncements(limit);
+    const data = await listAnnouncementsFromDB(limit);
     return Response.json(data);
   } catch (err) {
-    if (err instanceof ApiError) {
-      return Response.json({ message: friendlyMessage(err) }, { status: err.status });
-    }
+    console.error("[GET /api/admin/announcements] Error:", err);
     return Response.json({ message: "Failed to fetch announcements." }, { status: 500 });
   }
 }
@@ -26,6 +30,11 @@ const BodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const session = await getRouteAdminSession();
+  if (!session) {
+    return Response.json({ message: "Admin authentication required." }, { status: 401 });
+  }
+
   const raw = await req.json().catch(() => null);
   const parsed = BodySchema.safeParse(raw);
 
@@ -34,31 +43,17 @@ export async function POST(req: Request) {
   }
 
   try {
-    await broadcast(parsed.data);
+    // 1. Direct persistent DB creation & fanout
+    await createAnnouncementInDB(parsed.data, session.user.id);
+
+    // 2. Best-effort broadcast to backend notification dispatcher (fire-and-forget)
+    broadcast(parsed.data).catch((err) => {
+      console.warn("[POST /api/admin/announcements] Backend notify ping (optional):", err.message);
+    });
+
     return new Response(null, { status: 204 });
   } catch (err) {
-    if (err instanceof ApiError) {
-      return Response.json({ message: friendlyMessage(err) }, { status: err.status });
-    }
+    console.error("[POST /api/admin/announcements] Error:", err);
     return Response.json({ message: "Failed to send announcement." }, { status: 500 });
   }
 }
-
-export async function DELETE(req: Request) {
-  const { searchParams } = new URL(req.url);
-  const id = searchParams.get("id");
-  if (!id) {
-    return Response.json({ message: "Announcement ID is required." }, { status: 400 });
-  }
-
-  try {
-    await deleteAnnouncement(id);
-    return new Response(null, { status: 204 });
-  } catch (err) {
-    if (err instanceof ApiError) {
-      return Response.json({ message: friendlyMessage(err) }, { status: err.status });
-    }
-    return Response.json({ message: "Failed to delete announcement." }, { status: 500 });
-  }
-}
-
