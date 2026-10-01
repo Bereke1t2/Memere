@@ -2,6 +2,8 @@ abstract class AppConstants {
   // ── Storage Keys ─────────────────────────────────────────────────────────
   static const String accessTokenKey = 'access_token';
   static const String refreshTokenKey = 'refresh_token';
+  static const String deviceIdKey = 'device_id';
+  static const String cachedUserKey = 'cached_user_profile';
   static const String onboardingSeenKey = 'onboarding_seen';
   static const String userBoxKey = 'user_box';
   static const String courseBoxKey = 'course_box';

@@ -48,6 +48,45 @@ Future<bool> requireAccount(
   return false;
 }
 
+/// Gates actions that strictly require a verified email account (e.g. course enrollment,
+/// exams, certificates, access requests).
+Future<bool> requireVerifiedAccount(
+  BuildContext context,
+  WidgetRef ref, {
+  String title = 'Verify your email to continue',
+  String message =
+      'Please verify your email address to access full course content, tests, and mock exams.',
+}) async {
+  final hasAccount = await requireAccount(context, ref);
+  if (!hasAccount) return false;
+
+  final user = ref.read(authStateProvider).valueOrNull?.user;
+  if (user == null) return false;
+
+  // Teachers and Admins bypass or have verified workflow
+  if (!user.isStudent || user.isEmailVerified) return true;
+  if (!context.mounted) return false;
+
+  final verifyNow = await showModalBottomSheet<bool>(
+    context: context,
+    backgroundColor: AppColors.bgSecondary,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (_) => _EmailVerificationGateSheet(
+      title: title,
+      message: message,
+      email: user.email,
+    ),
+  );
+
+  if (verifyNow == true && context.mounted) {
+    context.push(AppRoutes.verifyEmailPath(email: user.email));
+  }
+  return false;
+}
+
+
 enum _GateChoice { signIn, register }
 
 class _AccountGateSheet extends StatelessWidget {
@@ -167,3 +206,111 @@ class _AccountGateSheet extends StatelessWidget {
     );
   }
 }
+
+class _EmailVerificationGateSheet extends StatelessWidget {
+  const _EmailVerificationGateSheet({
+    required this.title,
+    required this.message,
+    required this.email,
+  });
+
+  final String title;
+  final String message;
+  final String email;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSizes.screenPaddingH,
+          AppSizes.lg,
+          AppSizes.screenPaddingH,
+          AppSizes.md,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: AppSizes.lg),
+              decoration: BoxDecoration(
+                color: AppColors.borderStrong,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Align(
+              alignment: Alignment.center,
+              child: Container(
+                width: 52,
+                height: 52,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: Color(0x1D22C55E),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.mark_email_unread_outlined,
+                  color: AppColors.brandEmerald,
+                  size: 24,
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSizes.md),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'Sora',
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: AppSizes.xs),
+            Text(
+              '$message\n\nRegistered: $email',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.45,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: AppSizes.lg),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.brandEmerald,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text(
+                'Verify Email Now',
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+              ),
+            ),
+            const SizedBox(height: AppSizes.xs),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(
+                'Later',
+                style: TextStyle(
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
