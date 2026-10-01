@@ -5,6 +5,8 @@ abstract class AuthRemoteDataSource {
   Future<({UserModel user, String accessToken, String refreshToken})> login({
     required String email,
     required String password,
+    String? deviceId,
+    bool force = false,
   });
   Future<UserModel> register({
     required String email,
@@ -13,6 +15,8 @@ abstract class AuthRemoteDataSource {
     required String lastName,
     String? phone,
   });
+  Future<void> verifyEmail(String token);
+  Future<void> resendVerificationEmail(String email);
   Future<UserModel> getCurrentUser();
   Future<void> logout(String refreshToken);
   Future<void> forgotPassword(String email);
@@ -26,11 +30,15 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<({UserModel user, String accessToken, String refreshToken})> login({
     required String email,
     required String password,
+    String? deviceId,
+    bool force = false,
   }) async {
     final response =
         await _client.post<Map<String, dynamic>>('/auth/login', data: {
       'email': email,
       'password': password,
+      if (deviceId != null) 'device_id': deviceId,
+      'force': force,
     });
     return _authPayloadFromResponse(response.data);
   }
@@ -57,6 +65,20 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       throw const FormatException('Missing registration response body');
     }
     return UserModel.fromJson(data);
+  }
+
+  @override
+  Future<void> verifyEmail(String token) async {
+    await _client.post<Map<String, dynamic>>('/auth/verify-email', data: {
+      'token': token,
+    });
+  }
+
+  @override
+  Future<void> resendVerificationEmail(String email) async {
+    await _client.post<Map<String, dynamic>>('/auth/resend-verification', data: {
+      'email': email,
+    });
   }
 
   @override
