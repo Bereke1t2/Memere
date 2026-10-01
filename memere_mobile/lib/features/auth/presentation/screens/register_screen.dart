@@ -60,7 +60,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     ref.listen(authStateProvider, (_, next) {
       final auth = next.valueOrNull;
       if (auth?.isAuthenticated ?? false) {
-        context.go(AppRoutes.home);
+        if (auth?.user?.isEmailVerified == false) {
+          context.go(AppRoutes.verifyEmailPath(email: _emailCtrl.text.trim()));
+        } else {
+          context.go(AppRoutes.home);
+        }
         return;
       }
 

@@ -56,12 +56,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         var message = 'Invalid email or password. Please check your credentials or tap Create Account below.';
         IconData icon = Icons.lock_reset_rounded;
 
+        final isSessionConflict = error is ServerFailure &&
+            (error.code == 'ACTIVE_SESSION_EXISTS' ||
+                error.message.toLowerCase().contains('active on another device') ||
+                error.message.toLowerCase().contains('already logged in'));
+
         if (error is ServerFailure) {
-          if (error.code == 'ACTIVE_SESSION_EXISTS' ||
-              error.message.toLowerCase().contains('active on another device') ||
-              error.message.toLowerCase().contains('already logged in')) {
+          if (isSessionConflict) {
             message =
-                'Account Active on Another Device: This account is currently logged in on another phone. Please log out from that phone first before logging in here.';
+                'Account Active on Another Device: This account is currently active on another phone.';
             icon = Icons.phonelink_lock_rounded;
           } else if (error.statusCode != 401) {
             message = error.message;
@@ -81,7 +84,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Expanded(child: Text(message)),
               ],
             ),
+            action: isSessionConflict
+                ? SnackBarAction(
+                    label: 'Use Here',
+                    textColor: AppColors.brandEmerald,
+                    onPressed: () {
+                      ref.read(authStateProvider.notifier).login(
+                            _emailCtrl.text.trim(),
+                            _passwordCtrl.text,
+                            force: true,
+                          );
+                    },
+                  )
+                : null,
             backgroundColor: AppColors.bgQuaternary,
+            duration: const Duration(seconds: 6),
             behavior: SnackBarBehavior.floating,
             margin: const EdgeInsets.all(AppSizes.md),
             shape: RoundedRectangleBorder(
