@@ -7,6 +7,8 @@ import '../../domain/entities/payment_provider_entity.dart';
 import '../../domain/usecases/initiate_course_payment_usecase.dart';
 import 'course_access_provider.dart';
 import 'payment_providers.dart';
+import 'purchase_history_provider.dart';
+import 'subscription_provider.dart';
 
 const _uuid = Uuid();
 
@@ -164,5 +166,8 @@ class CheckoutFlowNotifier
 
   void _refreshAccess() {
     ref.invalidate(courseAccessProvider(_courseId));
+    ref.invalidate(enrollmentListProvider);
+    ref.invalidate(paymentHistoryProvider);
+    ref.invalidate(mySubscriptionProvider);
   }
 }

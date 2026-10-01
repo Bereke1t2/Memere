@@ -184,6 +184,37 @@ class ProfileScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
+                    if (user != null && !user.isEmailVerified && user.isStudent) ...[
+                      const SizedBox(height: 10),
+                      GestureDetector(
+                        onTap: () => context.push(AppRoutes.verifyEmailPath(email: user.email)),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0x22F59E0B),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0x66F59E0B)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.mark_email_unread_rounded, size: 18, color: Color(0xFFF59E0B)),
+                              SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Email not verified. Tap to verify.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFFF59E0B),
+                                  ),
+                                ),
+                              ),
+                              Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFFF59E0B)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
 
                     // 3. Waitlist Announcement Banner (Shown only when pending approval)

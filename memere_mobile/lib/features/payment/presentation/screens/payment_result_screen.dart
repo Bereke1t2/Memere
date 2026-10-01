@@ -9,6 +9,7 @@ import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../providers/course_access_provider.dart';
 import '../providers/payment_status_polling_provider.dart';
+import '../providers/purchase_history_provider.dart';
 import '../providers/subscription_provider.dart';
 
 /// Shows the backend-verified outcome of a checkout. Course access is only
@@ -100,6 +101,12 @@ class PaymentResultScreen extends ConsumerWidget {
           label: isSubscription ? 'Start learning' : 'Go to course',
           // Only leave after access state has refreshed to confirm the unlock.
           onPressed: () async {
+            ref.invalidate(enrollmentListProvider);
+            ref.invalidate(paymentHistoryProvider);
+            ref.invalidate(mySubscriptionProvider);
+            if (!isSubscription) {
+              ref.invalidate(courseAccessProvider(courseId));
+            }
             if (isSubscription) {
               await ref.read(mySubscriptionProvider.future);
             } else {
