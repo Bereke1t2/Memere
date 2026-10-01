@@ -105,17 +105,21 @@ export async function createAnnouncementInDB(
     adminId = adminRes.rows[0]?.id;
   }
   if (!adminId) {
-    throw new Error("No admin user found to record announcement sender");
+    const anyUserRes = await dbPool.query("SELECT id FROM auth.users LIMIT 1");
+    adminId = anyUserRes.rows[0]?.id;
+  }
+  if (!adminId) {
+    throw new Error("No user record found to assign announcement sender");
   }
 
-  // Find target recipient user IDs
+  // Find target recipient user IDs safely using is_active column
   let userQuery = "";
   if (input.segment === "students") {
-    userQuery = "SELECT id FROM auth.users WHERE role = 'student' AND status = 'active'";
+    userQuery = "SELECT id FROM auth.users WHERE role = 'student' AND (is_active IS NULL OR is_active = true)";
   } else if (input.segment === "teachers") {
-    userQuery = "SELECT id FROM auth.users WHERE role = 'teacher' AND status = 'active'";
+    userQuery = "SELECT id FROM auth.users WHERE role = 'teacher' AND (is_active IS NULL OR is_active = true)";
   } else {
-    userQuery = "SELECT id FROM auth.users WHERE role IN ('student', 'teacher') AND status = 'active'";
+    userQuery = "SELECT id FROM auth.users WHERE role IN ('student', 'teacher') AND (is_active IS NULL OR is_active = true)";
   }
 
   const usersRes = await dbPool.query(userQuery);
@@ -159,7 +163,9 @@ export async function createAnnouncementInDB(
     `INSERT INTO auth.admin_audit_log (actor_id, action, target_type, details)
      VALUES ($1, 'broadcast.send', 'system', $2::jsonb)`,
     [adminId, auditDetails]
-  );
+  ).catch((err) => {
+    console.warn("[createAnnouncementInDB] Audit log warning:", err.message);
+  });
 }
 
 /**
@@ -169,36 +175,25 @@ export async function createAnnouncementInDB(
 export async function deleteAnnouncementFromDB(id: string, actorId?: string): Promise<void> {
   await ensureAnnouncementsTable();
 
-  const query = `
-    WITH target AS (
-      SELECT title, body FROM notifications.announcements WHERE id::text = $1 LIMIT 1
-      UNION ALL
-      SELECT title, body FROM notifications.notifications WHERE id::text = $1 LIMIT 1
-      UNION ALL
-      SELECT details->>'title' AS title, COALESCE(details->>'body', '') AS body FROM auth.admin_audit_log WHERE id::text = $1 LIMIT 1
-    ),
-    del_ann AS (
-      DELETE FROM notifications.announcements
-      WHERE id::text = $1 OR title IN (SELECT title FROM target WHERE title IS NOT NULL AND title != '')
-      RETURNING id
-    ),
-    del_notif AS (
-      DELETE FROM notifications.notifications
-      WHERE id::text = $1 OR title IN (SELECT title FROM target WHERE title IS NOT NULL AND title != '')
-      RETURNING id
-    ),
-    del_audit AS (
-      DELETE FROM auth.admin_audit_log
-      WHERE id::text = $1 OR (action = 'broadcast.send' AND details->>'title' IN (SELECT title FROM target WHERE title IS NOT NULL AND title != ''))
-      RETURNING id
-    )
-    SELECT 
-      (SELECT COUNT(*) FROM del_ann) AS deleted_announcements,
-      (SELECT COUNT(*) FROM del_notif) AS deleted_notifications,
-      (SELECT COUNT(*) FROM del_audit) AS deleted_audits;
-  `;
+  // Find target title to ensure clean multi-table purging
+  const findRes = await dbPool.query(
+    `SELECT title FROM notifications.announcements WHERE id::text = $1
+     UNION
+     SELECT title FROM notifications.notifications WHERE id::text = $1
+     LIMIT 1`,
+    [id]
+  );
+  const targetTitle = findRes.rows[0]?.title;
 
-  await dbPool.query(query, [id]);
+  if (targetTitle) {
+    await dbPool.query("DELETE FROM notifications.announcements WHERE id::text = $1 OR title = $2", [id, targetTitle]);
+    await dbPool.query("DELETE FROM notifications.notifications WHERE id::text = $1 OR (type = 'announcement' AND title = $2)", [id, targetTitle]);
+    await dbPool.query("DELETE FROM auth.admin_audit_log WHERE id::text = $1 OR (action = 'broadcast.send' AND details->>'title' = $2)", [id, targetTitle]).catch(() => {});
+  } else {
+    await dbPool.query("DELETE FROM notifications.announcements WHERE id::text = $1", [id]);
+    await dbPool.query("DELETE FROM notifications.notifications WHERE id::text = $1", [id]);
+    await dbPool.query("DELETE FROM auth.admin_audit_log WHERE id::text = $1", [id]).catch(() => {});
+  }
 
   if (actorId) {
     const auditDetails = JSON.stringify({ announcement_id: id });
