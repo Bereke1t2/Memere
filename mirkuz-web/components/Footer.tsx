@@ -2,17 +2,48 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Send, CheckCircle2 } from "lucide-react";
+import { Send, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 
 export function Footer() {
   const [email, setEmail] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) {
-      setSubscribed(true);
+    if (!email) return;
+
+    setLoading(true);
+    setStatusMessage(null);
+
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to subscribe.");
+      }
+
+      setStatusMessage({
+        type: "success",
+        text: "Welcome email sent! Thank you for subscribing.",
+      });
       setEmail("");
+    } catch (err: any) {
+      setStatusMessage({
+        type: "error",
+        text: err.message || "Subscription failed. Please try again.",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -44,7 +75,7 @@ export function Footer() {
               </Link>
 
               <div className="space-y-1 text-xs text-[#89939E]">
-                <p>Copyright © 2026 Nexcent ltd. / Mirkuz.</p>
+                <p>Copyright © 2026 Mirkuz (ምርኩዝ) / Nexcent ltd.</p>
                 <p>All rights reserved.</p>
               </div>
             </div>
@@ -120,17 +151,17 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Column 3: Support (Col span 2) */}
+          {/* Column 3: Support & Legal (Col span 2) */}
           <div className="lg:col-span-2 space-y-4">
             <h4 className="text-base font-bold text-white tracking-tight">
-              Support
+              Support & Legal
             </h4>
             <ul className="space-y-2.5 text-xs text-[#ABBED1]">
               <li><a href="#faq" className="hover:text-white transition-colors">Help center</a></li>
-              <li><a href="#faq" className="hover:text-white transition-colors">Terms of service</a></li>
-              <li><a href="#faq" className="hover:text-white transition-colors">Legal</a></li>
-              <li><a href="#faq" className="hover:text-white transition-colors">Privacy policy</a></li>
-              <li><a href="#faq" className="hover:text-white transition-colors">Status</a></li>
+              <li><Link href="/terms" className="hover:text-white transition-colors">Terms of service</Link></li>
+              <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy policy</Link></li>
+              <li><Link href="/delete-account" className="hover:text-white text-[#f87171] transition-colors">Delete account</Link></li>
+              <li><a href="mailto:support@mirkuz.et" className="hover:text-white transition-colors">Contact support</a></li>
             </ul>
           </div>
 
@@ -147,21 +178,37 @@ export function Footer() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Your email address"
                 required
-                className="w-full bg-[#515B60]/70 text-white placeholder-[#ABBED1] text-xs px-4 py-3 rounded-md border border-transparent focus:border-[#4CAF4F] focus:outline-hidden pr-10 transition-colors"
+                disabled={loading}
+                className="w-full bg-[#515B60]/70 text-white placeholder-[#ABBED1] text-xs px-4 py-3 rounded-md border border-transparent focus:border-[#4CAF4F] focus:outline-hidden pr-10 transition-colors disabled:opacity-60"
               />
               <button
                 type="submit"
+                disabled={loading}
                 aria-label="Subscribe"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white hover:text-[#4CAF4F] transition-colors p-1 cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white hover:text-[#4CAF4F] transition-colors p-1 cursor-pointer disabled:opacity-50"
               >
-                <Send className="w-4 h-4" />
+                {loading ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-[#4CAF4F]" />
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
               </button>
             </form>
 
-            {subscribed && (
-              <div className="flex items-center gap-1.5 text-xs text-[#4CAF4F]">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>Thank you for subscribing!</span>
+            {statusMessage && (
+              <div
+                className={`flex items-start gap-1.5 text-xs ${
+                  statusMessage.type === "success"
+                    ? "text-[#4CAF4F]"
+                    : "text-red-400"
+                } animate-in fade-in duration-200`}
+              >
+                {statusMessage.type === "success" ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                )}
+                <span>{statusMessage.text}</span>
               </div>
             )}
           </div>
@@ -170,7 +217,7 @@ export function Footer() {
 
         {/* Bottom sub-footer */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#89939E]">
-          <p>Designed with Figma Minimal Agency UI System • Built with Next.js & Tailwind CSS</p>
+          <p>© 2026 Mirkuz (ምርኩዝ) • Domain: mirkuz.app</p>
           <div className="flex items-center gap-4">
             <span>🇪🇹 Ethiopian Grade 12 National Curriculum</span>
           </div>
