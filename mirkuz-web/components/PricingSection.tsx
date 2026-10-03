@@ -8,7 +8,8 @@ import {
   ShieldCheck, 
   Zap, 
   Download,
-  Smartphone
+  Smartphone,
+  ArrowRight
 } from "lucide-react";
 
 export function PricingSection() {
@@ -22,7 +23,7 @@ export function PricingSection() {
       badge: null,
       highlight: false,
       features: [
-        "Sample introductory video lessons in all 6 subjects",
+        "Sample introductory video lessons in all subjects",
         "2 Past National Exam Papers (2015 & 2016 E.C.)",
         "Basic downloadable PDF chapter summaries",
         "In-app question practice mode",
@@ -40,151 +41,123 @@ export function PricingSection() {
       badge: "MOST POPULAR",
       highlight: true,
       features: [
-        "Complete video courses for ALL 6 subjects (Natural or Social)",
-        "10,000+ Past National Exam Questions (2008 – 2016 E.C.)",
-        "Step-by-step video solutions for every past exam question",
-        "Full timed mock exams with real countdown timers",
-        "100% Unlimited encrypted offline downloads",
-        "Comprehensive PDF chapter study notes & formula sheets",
-        "Mirkuz AI Mascot concept tutor assistance",
-        "Diagnostic weak-area score improvement analytics",
+        "All 50+ Grade 12 Video Masterclasses (HD)",
+        "10,000+ Past Matric Questions (2008 – 2016 E.C.)",
+        "Step-by-step Examiner Video Explanations",
+        "100% Data-Free Offline Encrypted Storage",
+        "Full Timed National Mock Exam Simulator",
+        "Direct Telebirr & CBE Birr Instant Activation",
       ],
-      ctaText: "Unlock All-Access on Google Play",
+      ctaText: "Unlock All-Access Pass",
       ctaLink: "https://play.google.com/store/apps",
     },
     {
-      name: "Single Subject Pass",
-      price: "350",
-      currency: "ETB",
-      period: "Per Subject / Year",
-      description: "Focus on mastering a specific difficult subject like Mathematics or Physics.",
-      badge: "FLEXIBLE",
+      name: "School & Group Pass",
+      price: "950",
+      currency: "ETB / Student",
+      period: "Min 10 Students",
+      description: "Discounted bulk access for high schools, tutoring centers, and study clubs.",
+      badge: "GROUP SAVINGS",
       highlight: false,
       features: [
-        "Complete video library for 1 selected subject",
-        "All chapter quizzes & unit assessments",
-        "10-Year past national exam question bank for that subject",
-        "Full downloadable unit PDF notes",
-        "Offline video saving for that subject",
-        "Subject-specific progress tracking",
+        "Everything in the All-Access Pass included",
+        "Teacher & School Administrator Dashboard",
+        "Student class analytics & weak-area diagnostics",
+        "Bulk Telebirr / CBE invoice payments",
+        "Dedicated Telegram priority support manager",
       ],
-      ctaText: "Select Subject in App",
-      ctaLink: "https://play.google.com/store/apps",
+      ctaText: "Contact for School Pass",
+      ctaLink: "https://t.me/mirkuz_exam",
     },
   ];
 
   return (
-    <section id="pricing" className="py-24 bg-[#050505] relative overflow-hidden">
-      {/* Background radial glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[500px] bg-[#10b981]/10 rounded-full blur-[160px] pointer-events-none" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+    <section id="pricing" className="bg-[#F5F7FA] py-20 md:py-28 border-b border-[#E8ECF2]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Header */}
-        <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#10b981]/15 text-[#10b981] border border-[#10b981]/30 text-xs font-bold">
-            <CreditCard className="w-3.5 h-3.5" />
-            <span>Transparent Ethiopian Birr (ETB) Pricing</span>
+        {/* Section Header */}
+        <div className="text-center max-w-2xl mx-auto space-y-3 mb-16">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F5E9] text-[#4CAF4F] text-xs font-semibold">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Fair & Transparent Local Pricing</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-            Invest in Your University Admission at an Affordable Price
+          <h2 className="text-3xl sm:text-4xl font-bold text-[#4D4D4D] tracking-tight">
+            Simple, Transparent ETB Pricing
           </h2>
-          <p className="text-sm sm:text-base text-[#94a3b8]">
-            Pay seamlessly with Telebirr or CBE Birr with instant automated activation. No recurring credit card hassle.
+          <p className="text-sm sm:text-base text-[#717171]">
+            One-time academic year fee. Pay seamlessly with Telebirr, CBE Birr, or Chapa. Zero recurring surprise charges.
           </p>
         </div>
 
-        {/* Pricing Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+        {/* Pricing Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
           {plans.map((plan, idx) => (
             <div
               key={idx}
-              className={`rounded-3xl p-8 flex flex-col justify-between transition-all relative ${
+              className={`rounded-xl p-8 flex flex-col justify-between transition-all relative ${
                 plan.highlight
-                  ? "bg-[#111115] border-2 border-[#10b981] shadow-2xl shadow-[#10b981]/20 scale-105 z-20"
-                  : "bg-[#111115]/90 border border-[#1a1a20] hover:border-[#2c2c35]"
+                  ? "bg-white border-2 border-[#4CAF4F] shadow-[0_8px_24px_rgba(76,175,79,0.2)] md:-translate-y-2"
+                  : "bg-white border border-[#E8ECF2] shadow-[0_2px_4px_rgba(171,190,209,0.2)] hover:shadow-[0_8px_16px_rgba(171,190,209,0.3)]"
               }`}
             >
+              {/* Badge for Popular Plan */}
               {plan.badge && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-[#10b981] to-[#059669] text-white text-[11px] font-bold tracking-wider uppercase shadow-lg shadow-[#10b981]/30">
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-[#4CAF4F] text-white text-[11px] font-bold tracking-wider uppercase shadow-xs">
                   {plan.badge}
                 </div>
               )}
 
               <div>
-                {/* Plan Title & Price */}
-                <div className="mb-6 space-y-2">
-                  <h3 className="text-xl font-bold text-white">{plan.name}</h3>
-                  <p className="text-xs text-[#94a3b8]">{plan.description}</p>
-                  
-                  <div className="pt-4 flex items-baseline gap-1">
-                    <span className="text-3xl sm:text-4xl font-extrabold text-white">
-                      {plan.price}
-                    </span>
-                    <span className="text-base font-bold text-[#10b981]">{plan.currency}</span>
-                    <span className="text-xs text-[#94a3b8] ml-2 font-medium">/ {plan.period}</span>
-                  </div>
-                </div>
+                <h3 className="text-xl font-bold text-[#4D4D4D] mb-1">
+                  {plan.name}
+                </h3>
+                <p className="text-xs text-[#717171] mb-6 min-h-[36px]">
+                  {plan.description}
+                </p>
 
-                {/* Features List */}
-                <div className="space-y-3 pt-6 border-t border-[#1a1a20]">
-                  <span className="text-xs font-semibold text-[#d4d4d8] uppercase tracking-wider block">
-                    What&apos;s Included:
+                {/* Price Display */}
+                <div className="flex items-baseline gap-1.5 pb-6 mb-6 border-b border-[#F5F7FA]">
+                  <span className="text-4xl font-bold text-[#263238] tracking-tight">
+                    {plan.price}
                   </span>
-                  <ul className="space-y-2.5">
-                    {plan.features.map((feat, fIdx) => (
-                      <li key={fIdx} className="flex items-start gap-2.5 text-xs text-[#d4d4d8] leading-relaxed">
-                        <Check className="w-4 h-4 text-[#10b981] shrink-0 mt-0.5" />
-                        <span>{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  <span className="text-sm font-semibold text-[#4CAF4F]">
+                    {plan.currency}
+                  </span>
+                  <span className="text-xs text-[#89939E] ml-1">
+                    / {plan.period}
+                  </span>
+                </div>
+
+                {/* Feature List */}
+                <div className="space-y-3 mb-8">
+                  {plan.features.map((feat, i) => (
+                    <div key={i} className="flex items-start gap-2.5 text-xs text-[#4D4D4D]">
+                      <div className="w-4 h-4 rounded-full bg-[#E8F5E9] flex items-center justify-center text-[#4CAF4F] shrink-0 mt-0.5">
+                        <Check className="w-3 h-3" />
+                      </div>
+                      <span className="leading-snug">{feat}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Action Button */}
-              <div className="mt-8 pt-6 border-t border-[#1a1a20]">
-                <a
-                  href={plan.ctaLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`w-full py-3.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                    plan.highlight
-                      ? "bg-gradient-to-r from-[#10b981] to-[#059669] text-white hover:opacity-95 shadow-lg shadow-[#10b981]/25"
-                      : "bg-[#18181e] text-white hover:bg-[#25252e] border border-[#2c2c35]"
-                  }`}
-                >
-                  <Download className="w-4 h-4" />
-                  <span>{plan.ctaText}</span>
-                </a>
-              </div>
+              {/* CTA Button */}
+              <a
+                href={plan.ctaLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`w-full py-3 px-4 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${
+                  plan.highlight
+                    ? "bg-[#4CAF4F] hover:bg-[#388E3C] text-white shadow-xs hover:shadow"
+                    : "bg-[#F5F7FA] hover:bg-[#E8F5E9] text-[#4D4D4D] hover:text-[#2E7D32] border border-[#E8ECF2]"
+                }`}
+              >
+                <span>{plan.ctaText}</span>
+                <ArrowRight className="w-4 h-4" />
+              </a>
+
             </div>
           ))}
-        </div>
-
-        {/* Local Payment Methods Banner */}
-        <div className="mt-16 p-6 rounded-2xl bg-[#111115] border border-[#1a1a20] flex flex-wrap items-center justify-between gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#f59e0b]/15 flex items-center justify-center text-[#f59e0b]">
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-white">Instant Local Payment Activation</h4>
-              <p className="text-xs text-[#94a3b8]">Courses unlock automatically the moment payment is completed.</p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="px-3 py-1 rounded-lg bg-[#18181e] border border-[#2c2c35] text-xs font-bold text-[#f59e0b]">
-              📱 Telebirr (Ethio Telecom)
-            </span>
-            <span className="px-3 py-1 rounded-lg bg-[#18181e] border border-[#2c2c35] text-xs font-bold text-[#38bdf8]">
-              🏦 CBE Birr
-            </span>
-            <span className="px-3 py-1 rounded-lg bg-[#18181e] border border-[#2c2c35] text-xs font-bold text-[#10b981]">
-              💳 Chapa (All Banks & Cards)
-            </span>
-          </div>
         </div>
 
       </div>

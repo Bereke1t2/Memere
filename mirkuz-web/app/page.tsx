@@ -1,57 +1,69 @@
 import React from "react";
 import { Navbar } from "@/components/Navbar";
 import { HeroSection } from "@/components/HeroSection";
-import { StatsBar } from "@/components/StatsBar";
-import { StreamCurriculum } from "@/components/StreamCurriculum";
-import { FeaturesBento } from "@/components/FeaturesBento";
+import { ClientsBar } from "@/components/ClientsBar";
+import { CommunitySection } from "@/components/CommunitySection";
+import { FeatureSplitOne } from "@/components/FeatureSplitOne";
+import { StatsCounter } from "@/components/StatsCounter";
+import { FeatureSplitTwo } from "@/components/FeatureSplitTwo";
+import { TestimonialSpotlight } from "@/components/TestimonialSpotlight";
+import { BlogMarketingSection } from "@/components/BlogMarketingSection";
 import { InteractiveExamDemo } from "@/components/InteractiveExamDemo";
-import { OfflineShowcase } from "@/components/OfflineShowcase";
+import { StreamCurriculum } from "@/components/StreamCurriculum";
 import { PricingSection } from "@/components/PricingSection";
-import { Testimonials } from "@/components/Testimonials";
 import { FaqSection } from "@/components/FaqSection";
 import { CtaBanner } from "@/components/CtaBanner";
 import { Footer } from "@/components/Footer";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#050505] text-[#f4f4f5] selection:bg-[#10b981]/30 selection:text-white relative">
-      {/* Sticky Top Navigation */}
+    <div className="min-h-screen bg-white text-[#4D4D4D] selection:bg-[#4CAF4F]/20 selection:text-[#263238] relative">
+      {/* 1. Header / Navbar */}
       <Navbar />
 
-      {/* Main Sections */}
+      {/* Main Page Flow matching Figma Minimal Landing Page */}
       <main>
-        {/* 1. Hero Section */}
+        {/* 2. Hero Section: Lessons and insights from 8 years */}
         <HeroSection />
 
-        {/* 2. Trust & Metrics Bar */}
-        <StatsBar />
+        {/* 3. Our Clients: Trust & Institution Logos */}
+        <ClientsBar />
 
-        {/* 3. Interactive Stream & Subject Curriculum */}
-        <StreamCurriculum />
+        {/* 4. Manage your entire community in a single system: 3-Card Grid */}
+        <CommunitySection />
 
-        {/* 4. Core Features Bento Grid */}
-        <FeaturesBento />
+        {/* 5. Feature Split 1: The unseen of spending three years at Pixelgrade */}
+        <FeatureSplitOne />
 
-        {/* 5. Live Interactive Mock Exam Question Micro-Experience */}
+        {/* 6. Stats & Achievements: Helping a local business reinvent itself */}
+        <StatsCounter />
+
+        {/* 7. Feature Split 2: How to design your site footer like we did */}
+        <FeatureSplitTwo />
+
+        {/* 8. Customer Spotlight: Tim Smith / Kalkidan Bekele Case Study */}
+        <TestimonialSpotlight />
+
+        {/* 9. Blog & Insights: Caring is the new marketing */}
+        <BlogMarketingSection />
+
+        {/* 10. Interactive Exam Simulator Micro-Experience */}
         <InteractiveExamDemo />
 
-        {/* 6. 100% Offline Study Architecture Showcase */}
-        <OfflineShowcase />
+        {/* 11. Stream & Curriculum Breakdown */}
+        <StreamCurriculum />
 
-        {/* 7. ETB Pricing & Local Telebirr/Chapa Gateways */}
+        {/* 12. Transparent ETB Pricing & Local Gateways */}
         <PricingSection />
 
-        {/* 8. Student Success Stories & Placements */}
-        <Testimonials />
-
-        {/* 9. Frequently Asked Questions */}
+        {/* 13. Frequently Asked Questions */}
         <FaqSection />
 
-        {/* 10. Bottom High-Conversion Call To Action */}
+        {/* 14. Bottom High-Impact CTA: Pellentesque suscipit fringilla libero eu. */}
         <CtaBanner />
       </main>
 
-      {/* Footer */}
+      {/* 15. Minimal Dark Footer */}
       <Footer />
     </div>
   );

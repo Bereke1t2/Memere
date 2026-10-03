@@ -1,285 +1,254 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
+import Image from "next/image";
 import { 
-  Download, 
-  Send, 
-  Play, 
+  ArrowRight, 
   CheckCircle2, 
-  Star, 
   Sparkles, 
-  Clock, 
-  FileText, 
-  WifiOff, 
-  ShieldCheck, 
-  ArrowRight,
-  TrendingUp,
-  BrainCircuit,
-  BookOpen
+  TrendingUp, 
+  Download, 
+  Play, 
+  BookOpen,
+  Award,
+  Smartphone,
+  ShieldCheck
 } from "lucide-react";
 
 export function HeroSection() {
-  return (
-    <section className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden bg-grid-pattern">
-      {/* Radial Glow Backdrops */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#10b981]/15 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute top-1/3 right-10 w-[400px] h-[400px] bg-[#f59e0b]/10 rounded-full blur-[120px] pointer-events-none" />
+  const [activeSlide, setActiveSlide] = useState(0);
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+  const slides = [
+    {
+      titlePrefix: "Lessons and insights",
+      titleHighlight: "from 8 years",
+      subtitle:
+        "Where to grow your academic potential: master the Ethiopian Grade 12 University Entrance Exam with senior examiner video lessons, timed national mock tests, and offline PDF notes.",
+      ctaPrimary: "Register",
+      ctaSecondary: "Explore Courses",
+      badge: "National Matric Exam Curriculum",
+      accent: "#4CAF4F"
+    },
+    {
+      titlePrefix: "Master Your National Exam",
+      titleHighlight: "with Mirkuz Prep",
+      subtitle:
+        "10,000+ national entrance questions (2008–2016 E.C.) with step-by-step video solutions, timed exam simulator, and instant score prediction.",
+      ctaPrimary: "Download App",
+      ctaSecondary: "Try Mock Exam",
+      badge: "Over 50,000 Active Students",
+      accent: "#4CAF4F"
+    },
+    {
+      titlePrefix: "100% Offline Study Mode",
+      titleHighlight: "Zero Mobile Data",
+      subtitle:
+        "Save all chapters and video courses directly to your phone. Turn off mobile data and study anywhere across Ethiopia without spending Birr on internet packages.",
+      ctaPrimary: "Get Free Access",
+      ctaSecondary: "See How It Works",
+      badge: "Built for Low Bandwidth",
+      accent: "#4CAF4F"
+    },
+  ];
+
+  // Auto rotate slides every 7 seconds
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % slides.length);
+    }, 7000);
+    return () => clearInterval(timer);
+  }, [slides.length]);
+
+  const current = slides[activeSlide];
+
+  return (
+    <section id="hero" className="bg-[#F5F7FA] pt-32 pb-20 md:pt-40 md:pb-28 relative overflow-hidden transition-colors duration-500">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center min-h-[460px]">
           
-          {/* Left Column: Copy & CTAs */}
-          <div className="lg:col-span-7 flex flex-col items-start text-left space-y-6">
+          {/* Left Column: Typography & CTAs */}
+          <div className="lg:col-span-7 flex flex-col items-start space-y-6">
             
-            {/* National Exam Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#18181e] border border-[#2c2c35] text-xs font-medium text-[#94a3b8] shadow-inner">
-              <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#10b981] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#10b981]"></span>
-              </span>
-              <span>🇪🇹 Aligned with Ethiopian Grade 12 National Curriculum</span>
+            {/* Top Minimal Badge */}
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#E8ECF2] shadow-xs text-xs font-semibold text-[#4D4D4D]">
+              <span className="w-2 h-2 rounded-full bg-[#4CAF4F] animate-pulse"></span>
+              <span>{current.badge}</span>
             </div>
 
-            {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-[1.15]">
-              Master Your Grade 12{" "}
-              <span className="bg-gradient-to-r from-[#10b981] via-[#34d399] to-[#f59e0b] bg-clip-text text-transparent">
-                Entrance Exam
-              </span>{" "}
-              with Mirkuz
+            {/* Main Headline */}
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#4D4D4D] leading-[1.15]">
+              {current.titlePrefix} <br />
+              <span className="text-[#4CAF4F]">{current.titleHighlight}</span>
             </h1>
 
-            {/* Sub-headline */}
-            <p className="text-base sm:text-lg text-[#94a3b8] max-w-2xl leading-relaxed">
-              Ethiopia’s premier exam prep platform. HD video lessons by top Ethiopian educators, downloadable PDF chapter summaries, realistic timed mock exams with instant step-by-step solutions, and <strong className="text-white font-semibold">100% data-free offline study</strong>.
+            {/* Subtitle */}
+            <p className="text-base sm:text-lg text-[#717171] max-w-xl leading-relaxed">
+              {current.subtitle}
             </p>
 
-            {/* Primary Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto pt-2">
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-4 pt-2">
               <a
                 href="https://play.google.com/store/apps"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-gradient-to-r from-[#10b981] to-[#059669] text-white font-semibold shadow-xl shadow-[#10b981]/25 hover:shadow-2xl hover:shadow-[#10b981]/40 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-md bg-[#4CAF4F] hover:bg-[#388E3C] text-white font-medium text-base shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all"
               >
-                <div className="w-6 h-6 flex items-center justify-center">
-                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                    <path d="M3.609 1.814L13.792 12 3.61 22.186a2.41 2.41 0 0 1-.61-.926V2.74c.15-.36.368-.68.61-.926zm11.597 11.598l2.584 2.585-12.01 6.864 9.426-9.449zm2.584-2.824l-2.584 2.584L5.78 3.723l12.01 6.865zm1.536.878l2.94 1.68a1.2 1.2 0 0 1 0 2.086l-2.94 1.68-2.197-2.197 2.197-2.249z" />
-                  </svg>
-                </div>
-                <div className="flex flex-col text-left">
-                  <span className="text-[10px] uppercase tracking-wider text-emerald-100 font-bold">Available on</span>
-                  <span className="text-base font-bold leading-tight">Google Play Store</span>
-                </div>
-                <ArrowRight className="w-4 h-4 ml-1 opacity-70 group-hover:translate-x-1 transition-transform" />
+                <span>{current.ctaPrimary}</span>
+                <ArrowRight className="w-4 h-4" />
               </a>
 
               <a
-                href="https://t.me/mirkuz_exam"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-[#18181e] hover:bg-[#25252e] text-white font-semibold border border-[#2c2c35] hover:border-[#38bdf8]/50 shadow-lg hover:shadow-xl hover:shadow-[#38bdf8]/10 transition-all active:scale-[0.98]"
+                href="#services"
+                className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-md bg-white hover:bg-neutral-50 text-[#4D4D4D] border border-[#D5E0D5] font-medium text-base shadow-2xs hover:border-[#4CAF4F] transition-all"
               >
-                <Send className="w-5 h-5 text-[#38bdf8]" />
-                <div className="flex flex-col text-left">
-                  <span className="text-[10px] uppercase tracking-wider text-[#94a3b8] font-bold">Join Community</span>
-                  <span className="text-base font-bold leading-tight text-white">Telegram Channel</span>
-                </div>
+                <span>{current.ctaSecondary}</span>
               </a>
             </div>
 
-            {/* Quick interactive test jump & ratings */}
-            <div className="flex flex-wrap items-center gap-6 pt-2 text-xs text-[#94a3b8]">
-              <div className="flex items-center gap-1.5 text-[#f59e0b]">
-                <div className="flex">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="w-4 h-4 fill-current text-[#f59e0b]" />
-                  ))}
-                </div>
-                <span className="font-bold text-white ml-1">4.9 / 5</span>
-                <span className="text-[#71717a]">(3,400+ Grade 12 Reviews)</span>
+            {/* Trust points */}
+            <div className="flex flex-wrap items-center gap-6 pt-4 text-xs text-[#717171]">
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-[#4CAF4F]" />
+                <span>Free Starter Access</span>
               </div>
-
-              <a
-                href="#exam-demo"
-                className="inline-flex items-center gap-1.5 text-[#10b981] font-semibold hover:underline"
-              >
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Try Live Entrance Question Demo</span>
-              </a>
-            </div>
-
-            {/* Value Pillars Pills */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full pt-4 border-t border-[#1a1a20]">
-              <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-[#111115]/80 border border-[#1a1a20]">
-                <WifiOff className="w-4 h-4 text-[#10b981]" />
-                <span className="text-xs font-medium text-[#d4d4d8]">100% Offline Study</span>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-[#4CAF4F]" />
+                <span>Natural & Social Streams</span>
               </div>
-              <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-[#111115]/80 border border-[#1a1a20]">
-                <Clock className="w-4 h-4 text-[#f59e0b]" />
-                <span className="text-xs font-medium text-[#d4d4d8]">Timed Mock Exams</span>
-              </div>
-              <div className="flex items-center gap-2.5 p-2.5 rounded-lg bg-[#111115]/80 border border-[#1a1a20] col-span-2 sm:col-span-1">
-                <ShieldCheck className="w-4 h-4 text-[#38bdf8]" />
-                <span className="text-xs font-medium text-[#d4d4d8]">Telebirr & Chapa Pay</span>
+              <div className="flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-[#4CAF4F]" />
+                <span>Telebirr & Chapa Ready</span>
               </div>
             </div>
 
           </div>
 
-          {/* Right Column: High-Fidelity Interactive App Mockup */}
-          <div className="lg:col-span-5 relative flex justify-center lg:justify-end">
-            {/* Glowing Aura Behind Phone */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-[#10b981]/20 via-[#f59e0b]/15 to-transparent rounded-3xl blur-2xl transform rotate-3 scale-95 pointer-events-none" />
-
-            {/* Smartphone Frame Container */}
-            <div className="relative w-full max-w-[340px] sm:max-w-[370px] rounded-[42px] p-3.5 bg-gradient-to-b from-[#2c2c35] via-[#1a1a20] to-[#111115] shadow-2xl shadow-black/80 border border-[#3f3f4e]">
+          {/* Right Column: Clean Vector Hero Illustration */}
+          <div className="lg:col-span-5 relative flex items-center justify-center">
+            
+            {/* Minimal Vector Illustration Canvas */}
+            <div className="relative w-full max-w-[440px] aspect-4/3 flex items-center justify-center">
               
-              {/* Inner Bezel Screen */}
-              <div className="relative rounded-[32px] bg-[#050505] overflow-hidden border border-[#18181e] text-white">
-                
-                {/* Phone Status Bar */}
-                <div className="px-5 pt-3 pb-2 flex items-center justify-between text-[11px] text-[#94a3b8] bg-[#09090b]">
-                  <span className="font-semibold text-white">09:41</span>
-                  {/* Speaker Notch */}
-                  <div className="w-20 h-4 bg-[#18181e] rounded-full mx-auto border border-[#2c2c35]/50 flex items-center justify-center">
-                    <div className="w-3 h-3 rounded-full bg-[#10b981]/40"></div>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-bold text-[#10b981]">4G</span>
-                    <div className="w-4 h-2.5 border border-[#94a3b8] rounded-sm p-0.5 flex items-center">
-                      <div className="w-full h-full bg-[#10b981] rounded-2xs"></div>
-                    </div>
-                  </div>
-                </div>
+              {/* Modern Vector Computer & Study Setup */}
+              <svg viewBox="0 0 500 400" className="w-full h-auto drop-shadow-md">
+                <defs>
+                  <linearGradient id="screenGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#4CAF4F" stopOpacity="0.15" />
+                    <stop offset="100%" stopColor="#E8F5E9" stopOpacity="0.8" />
+                  </linearGradient>
+                  <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#4CAF4F" />
+                    <stop offset="100%" stopColor="#388E3C" />
+                  </linearGradient>
+                </defs>
 
-                {/* App Header */}
-                <div className="px-4 py-3 bg-[#111115] border-b border-[#1a1a20] flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-[#10b981] flex items-center justify-center text-white text-xs font-bold">
-                      M
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-white">Mathematics (Grade 12)</h4>
-                      <p className="text-[10px] text-[#94a3b8]">Unit 3: Integral Calculus</p>
-                    </div>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#10b981]/20 text-[#10b981] border border-[#10b981]/40">
-                    Offline Saved
-                  </span>
-                </div>
+                {/* Desk Surface Shadow */}
+                <ellipse cx="250" cy="365" rx="190" ry="14" fill="#E8ECF2" />
 
-                {/* Simulated Video Player / Lesson Card */}
-                <div className="relative aspect-video bg-[#18181e] flex flex-col justify-between p-3 overflow-hidden group">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/60" />
-                  
-                  {/* Top video controls */}
-                  <div className="relative z-10 flex items-center justify-between text-[10px] text-white/90">
-                    <span className="px-2 py-0.5 rounded bg-black/60 backdrop-blur font-mono">
-                      Lesson 4 of 12
-                    </span>
-                    <span className="px-2 py-0.5 rounded bg-[#10b981]/80 font-bold text-black text-[9px]">
-                      HLS HD 720p
-                    </span>
-                  </div>
+                {/* Monitor Stand */}
+                <rect x="235" y="270" width="30" height="60" rx="4" fill="#89939E" />
+                <path d="M190 330 L310 330 L320 345 L180 345 Z" fill="#717171" />
 
-                  {/* Center Play Indicator */}
-                  <div className="relative z-10 self-center w-12 h-12 rounded-full bg-[#10b981]/90 backdrop-blur flex items-center justify-center text-white shadow-lg shadow-[#10b981]/40 cursor-pointer hover:scale-110 transition-transform">
-                    <Play className="w-5 h-5 fill-current ml-0.5" />
-                  </div>
+                {/* Monitor Frame */}
+                <rect x="90" y="70" width="320" height="210" rx="12" fill="#263238" />
+                {/* Screen Bezel / Display */}
+                <rect x="100" y="80" width="300" height="185" rx="6" fill="url(#screenGrad)" />
 
-                  {/* Bottom Video Progress */}
-                  <div className="relative z-10 space-y-1">
-                    <div className="flex justify-between text-[10px] text-white/80 font-mono">
-                      <span>14:20</span>
-                      <span>28:45</span>
-                    </div>
-                    <div className="w-full h-1.5 bg-white/20 rounded-full overflow-hidden">
-                      <div className="w-[52%] h-full bg-[#10b981] rounded-full"></div>
-                    </div>
-                  </div>
-                </div>
+                {/* Screen Top Bar */}
+                <rect x="100" y="80" width="300" height="24" rx="4" fill="#FFFFFF" />
+                <circle cx="115" cy="92" r="4" fill="#E53835" />
+                <circle cx="127" cy="92" r="4" fill="#FBC02D" />
+                <circle cx="139" cy="92" r="4" fill="#4CAF4F" />
+                <rect x="155" y="87" width="120" height="10" rx="5" fill="#F5F7FA" />
 
-                {/* Live Mock Quiz Card Inside App Mockup */}
-                <div className="p-4 space-y-3 bg-[#0c0c10]">
-                  
-                  {/* Timer & Question Number */}
-                  <div className="flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-1.5 text-[#f59e0b] font-bold">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>Time Left: 01:45</span>
-                    </div>
-                    <span className="text-[11px] text-[#94a3b8] font-medium">Question 14/50</span>
-                  </div>
+                {/* Screen Content: Charts & Analytics */}
+                {/* Left Mini Sidebar */}
+                <rect x="110" y="114" width="50" height="140" rx="4" fill="#FFFFFF" />
+                <rect x="116" y="122" width="38" height="6" rx="3" fill="#4CAF4F" />
+                <rect x="116" y="134" width="30" height="4" rx="2" fill="#ABBED1" />
+                <rect x="116" y="144" width="34" height="4" rx="2" fill="#ABBED1" />
+                <rect x="116" y="154" width="28" height="4" rx="2" fill="#ABBED1" />
+                <rect x="116" y="164" width="32" height="4" rx="2" fill="#ABBED1" />
 
-                  {/* Question Box */}
-                  <div className="p-3 rounded-xl bg-[#18181e] border border-[#2c2c35]">
-                    <p className="text-xs font-semibold text-white leading-relaxed">
-                      Evaluate the integral: <code className="text-[#38bdf8] font-mono">∫ (3x² + 4x - 5) dx</code>
-                    </p>
-                  </div>
+                {/* Main Graph Area */}
+                <rect x="170" y="114" width="220" height="85" rx="6" fill="#FFFFFF" />
+                <text x="180" y="132" fill="#4D4D4D" fontSize="10" fontWeight="bold">Exam Score Progression</text>
+                {/* Bar chart lines */}
+                <line x1="180" y1="185" x2="375" y2="185" stroke="#E8ECF2" strokeWidth="1" />
+                <rect x="195" y="155" width="18" height="30" rx="2" fill="#ABBED1" />
+                <rect x="225" y="145" width="18" height="40" rx="2" fill="#ABBED1" />
+                <rect x="255" y="135" width="18" height="50" rx="2" fill="#4CAF4F" />
+                <rect x="285" y="125" width="18" height="60" rx="2" fill="url(#barGrad)" />
+                <rect x="315" y="118" width="18" height="67" rx="2" fill="#4CAF4F" />
+                <rect x="345" y="112" width="18" height="73" rx="2" fill="#2E7D32" />
 
-                  {/* Answer Options */}
-                  <div className="space-y-1.5 text-xs">
-                    <div className="p-2.5 rounded-lg bg-[#10b981]/20 border border-[#10b981] text-[#10b981] font-medium flex items-center justify-between">
-                      <span>A. x³ + 2x² - 5x + C</span>
-                      <CheckCircle2 className="w-4 h-4 text-[#10b981]" />
-                    </div>
-                    <div className="p-2.5 rounded-lg bg-[#111115] border border-[#1a1a20] text-[#94a3b8]">
-                      <span>B. 6x + 4 + C</span>
-                    </div>
-                  </div>
+                {/* Screen Cards Bottom Row */}
+                <rect x="170" y="208" width="105" height="46" rx="4" fill="#FFFFFF" />
+                <circle cx="185" cy="225" r="8" fill="#E8F5E9" />
+                <path d="M182 225 L184 227 L189 222" stroke="#4CAF4F" strokeWidth="2" fill="none" />
+                <rect x="200" y="220" width="60" height="5" rx="2.5" fill="#4D4D4D" />
+                <rect x="200" y="228" width="40" height="4" rx="2" fill="#89939E" />
 
-                  {/* Mirkuz Mascot AI Tutor Pill */}
-                  <div className="p-2.5 rounded-xl bg-gradient-to-r from-[#18181e] to-[#111115] border border-[#2c2c35] flex items-center gap-3 shadow-md">
-                    <div className="w-8 h-8 rounded-full bg-[#10b981]/20 border border-[#10b981]/50 flex items-center justify-center shrink-0">
-                      <BrainCircuit className="w-4 h-4 text-[#10b981]" />
-                    </div>
-                    <div className="text-[11px]">
-                      <span className="font-bold text-white block">Mirkuz AI Step-by-Step</span>
-                      <span className="text-[#94a3b8] text-[10px]">Power rule applied: 3(x³/3) + 4(x²/2) - 5x + C</span>
-                    </div>
-                  </div>
+                <rect x="285" y="208" width="105" height="46" rx="4" fill="#FFFFFF" />
+                <circle cx="300" cy="225" r="8" fill="#E8F5E9" />
+                <text x="296" y="229" fill="#4CAF4F" fontSize="10" fontWeight="bold">★</text>
+                <rect x="315" y="220" width="60" height="5" rx="2.5" fill="#4D4D4D" />
+                <rect x="315" y="228" width="45" height="4" rx="2" fill="#89939E" />
 
-                </div>
+                {/* Person / Character on the Right (Nexcent Style) */}
+                {/* Body / Torso */}
+                <path d="M380 260 C380 230, 420 230, 420 260 L425 350 L375 350 Z" fill="#4CAF4F" />
+                {/* Arms */}
+                <path d="M380 250 L350 220 L360 215 L390 240 Z" fill="#388E3C" />
+                <circle cx="348" cy="216" r="6" fill="#F8CBA6" />
+                {/* Head */}
+                <circle cx="400" cy="210" r="18" fill="#F8CBA6" />
+                {/* Hair */}
+                <path d="M384 205 C384 190, 416 190, 416 205 C416 195, 384 195, 384 205 Z" fill="#263238" />
+                {/* Glasses / Face detail */}
+                <rect x="390" y="208" width="9" height="5" rx="1" fill="#263238" />
+                <rect x="403" y="208" width="9" height="5" rx="1" fill="#263238" />
+                {/* Pants */}
+                <rect x="382" y="340" width="16" height="40" fill="#263238" />
+                <rect x="402" y="340" width="16" height="40" fill="#263238" />
+                {/* Shoes */}
+                <rect x="375" y="375" width="23" height="8" rx="4" fill="#717171" />
+                <rect x="402" y="375" width="23" height="8" rx="4" fill="#717171" />
 
-                {/* App Bottom Navigation */}
-                <div className="px-6 py-2.5 bg-[#09090b] border-t border-[#1a1a20] flex items-center justify-around text-[#71717a]">
-                  <div className="flex flex-col items-center gap-1 text-[#10b981]">
-                    <BookOpen className="w-4 h-4" />
-                    <span className="text-[9px] font-semibold">Courses</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    <span className="text-[9px]">Mock Exam</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <TrendingUp className="w-4 h-4" />
-                    <span className="text-[9px]">Analytics</span>
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <WifiOff className="w-4 h-4" />
-                    <span className="text-[9px]">Saved</span>
-                  </div>
-                </div>
+                {/* Floating Elements / Success Indicator */}
+                <g className="animate-bounce" style={{ animationDuration: "3s" }}>
+                  <rect x="40" y="140" width="90" height="34" rx="6" fill="#FFFFFF" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.08))" />
+                  <circle cx="56" cy="157" r="7" fill="#E8F5E9" />
+                  <path d="M53 157 L55 159 L60 154" stroke="#4CAF4F" strokeWidth="1.5" fill="none" />
+                  <text x="68" y="154" fill="#4D4D4D" fontSize="9" fontWeight="bold">+18.5% Score</text>
+                  <text x="68" y="164" fill="#717171" fontSize="7">AAU Medical Cutoff</text>
+                </g>
+              </svg>
 
-              </div>
-            </div>
-
-            {/* Floating Live Indicator Badge */}
-            <div className="hidden sm:flex absolute -bottom-6 -left-6 bg-[#18181e]/95 backdrop-blur-md p-3.5 rounded-2xl border border-[#2c2c35] shadow-2xl items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#10b981]/20 flex items-center justify-center text-[#10b981]">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="text-xs font-bold text-white">+18.5% Score Boost</div>
-                <div className="text-[11px] text-[#94a3b8]">Average National Exam Improvement</div>
-              </div>
             </div>
 
           </div>
 
         </div>
+
+        {/* Carousel Pagination Dots */}
+        <div className="flex items-center justify-center gap-2 pt-10">
+          {slides.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setActiveSlide(idx)}
+              className={`transition-all rounded-full ${
+                activeSlide === idx
+                  ? "w-8 h-2.5 bg-[#4CAF4F]"
+                  : "w-2.5 h-2.5 bg-[#ABBED1] hover:bg-[#717171]"
+              }`}
+              aria-label={`Go to slide ${idx + 1}`}
+            />
+          ))}
+        </div>
+
       </div>
     </section>
   );

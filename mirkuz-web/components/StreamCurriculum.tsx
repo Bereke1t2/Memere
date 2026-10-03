@@ -2,19 +2,17 @@
 
 import React, { useState } from "react";
 import { 
+  Calculator, 
   Atom, 
   FlaskConical, 
   Dna, 
-  Calculator, 
   BookText, 
   Landmark, 
   Globe2, 
   TrendingUp, 
-  FileText, 
-  PlayCircle, 
   CheckCircle2, 
-  Sparkles,
-  Layers
+  ArrowRight,
+  Sparkles
 } from "lucide-react";
 
 export function StreamCurriculum() {
@@ -24,244 +22,157 @@ export function StreamCurriculum() {
     {
       title: "Mathematics (Natural)",
       icon: Calculator,
-      color: "text-[#10b981]",
-      badgeColor: "bg-[#10b981]/15 text-[#10b981] border-[#10b981]/30",
       units: "6 Core Units",
-      videos: "48 Video Lessons (24 hrs)",
-      exams: "2008 - 2016 E.C. Solutions",
-      topics: ["Sequences & Series", "Vectors & Matrices", "Differential Calculus", "Integral Calculus", "Coordinate Geometry", "Probability"],
+      videos: "48 Video Lessons",
+      exams: "2008 - 2016 E.C. Matric Solutions",
+      topics: ["Differential Calculus", "Integral Calculus", "Vectors & Matrices", "Sequences & Series", "Probability & Statistics"],
     },
     {
       title: "Physics",
       icon: Atom,
-      color: "text-[#38bdf8]",
-      badgeColor: "bg-[#38bdf8]/15 text-[#38bdf8] border-[#38bdf8]/30",
       units: "7 Core Units",
-      videos: "42 Video Lessons (20 hrs)",
-      exams: "2008 - 2016 E.C. Solutions",
-      topics: ["Thermodynamics", "Electromagnetism", "Optics & Wave Motion", "Atomic & Nuclear Physics", "Fluid Dynamics", "Rotational Dynamics"],
+      videos: "42 Video Lessons",
+      exams: "2008 - 2016 E.C. Matric Solutions",
+      topics: ["Two-Dimensional Motion", "Electromagnetism", "Rotational Dynamics", "Wave Optics & Sound", "Atomic Physics"],
     },
     {
       title: "Chemistry",
       icon: FlaskConical,
-      color: "text-[#f59e0b]",
-      badgeColor: "bg-[#f59e0b]/15 text-[#f59e0b] border-[#f59e0b]/30",
       units: "6 Core Units",
-      videos: "38 Video Lessons (18 hrs)",
-      exams: "2008 - 2016 E.C. Solutions",
-      topics: ["Reaction Kinetics", "Chemical Equilibrium", "Acid-Base Equilibria", "Electrochemistry", "Polymers & Organic Chemistry", "Industrial Chemistry"],
+      videos: "36 Video Lessons",
+      exams: "2008 - 2016 E.C. Matric Solutions",
+      topics: ["Chemical Kinetics", "Equilibrium Systems", "Electrochemistry", "Polymers & Organic", "Industrial Chemistry"],
     },
     {
       title: "Biology",
       icon: Dna,
-      color: "text-[#ec4899]",
-      badgeColor: "bg-[#ec4899]/15 text-[#ec4899] border-[#ec4899]/30",
       units: "5 Core Units",
-      videos: "34 Video Lessons (16 hrs)",
-      exams: "2008 - 2016 E.C. Solutions",
-      topics: ["Molecular Genetics", "Human Biology & Physiology", "Cellular Respiration & Photosynthesis", "Ecology & Conservation", "Biotechnology"],
-    },
-    {
-      title: "English (Advanced)",
-      icon: BookText,
-      color: "text-[#8b5cf6]",
-      badgeColor: "bg-[#8b5cf6]/15 text-[#8b5cf6] border-[#8b5cf6]/30",
-      units: "5 Core Units",
-      videos: "30 Video Lessons (14 hrs)",
-      exams: "2008 - 2016 E.C. Solutions",
-      topics: ["Reading Comprehension Strategies", "Advanced Grammar & Mechanics", "Vocabulary in Context", "Sentence Structure", "Exam Essay Techniques"],
-    },
-    {
-      title: "Civics & General Aptitude",
-      icon: Landmark,
-      color: "text-[#14b8a6]",
-      badgeColor: "bg-[#14b8a6]/15 text-[#14b8a6] border-[#14b8a6]/30",
-      units: "5 Core Units",
-      videos: "26 Video Lessons (12 hrs)",
-      exams: "2008 - 2016 E.C. Solutions",
-      topics: ["Constitution & Federalism", "Rule of Law & Human Rights", "Logical Reasoning", "Quantitative Aptitude", "Analytical Problem Solving"],
+      videos: "32 Video Lessons",
+      exams: "2008 - 2016 E.C. Matric Solutions",
+      topics: ["Genetics & Evolution", "Human Physiology", "Ecology & Ecosystems", "Microbiology & Biotech", "Cell Biology"],
     },
   ];
 
   const socialCourses = [
     {
-      title: "General Mathematics (Social)",
-      icon: Calculator,
-      color: "text-[#10b981]",
-      badgeColor: "bg-[#10b981]/15 text-[#10b981] border-[#10b981]/30",
-      units: "5 Core Units",
-      videos: "36 Video Lessons (18 hrs)",
-      exams: "2008 - 2016 E.C. Solutions",
-      topics: ["Commercial Mathematics", "Business Statistics", "Probability", "Linear Programming", "Functions & Graphs"],
-    },
-    {
       title: "History of Ethiopia & The World",
       icon: Landmark,
-      color: "text-[#f59e0b]",
-      badgeColor: "bg-[#f59e0b]/15 text-[#f59e0b] border-[#f59e0b]/30",
-      units: "6 Core Units",
-      videos: "40 Video Lessons (19 hrs)",
-      exams: "2008 - 2016 E.C. Solutions",
-      topics: ["Modern Ethiopian State Formation", "World Wars & Global Politics", "Pan-African Movements", "Cold War Dynamics", "Contemporary Ethiopian Developments"],
+      units: "7 Core Units",
+      videos: "40 Video Lessons",
+      exams: "2008 - 2016 E.C. Matric Solutions",
+      topics: ["Modern Ethiopian State", "Imperial Era & Battles", "World Wars & Cold War", "African Independence", "Historiography"],
     },
     {
       title: "Geography",
       icon: Globe2,
-      color: "text-[#38bdf8]",
-      badgeColor: "bg-[#38bdf8]/15 text-[#38bdf8] border-[#38bdf8]/30",
       units: "6 Core Units",
-      videos: "36 Video Lessons (17 hrs)",
-      exams: "2008 - 2016 E.C. Solutions",
-      topics: ["Map Reading & GIS Fundamentals", "Physical Geography of Ethiopia & Horn", "Human Population & Settlement", "Economic Resources", "Global Climate Change"],
+      videos: "34 Video Lessons",
+      exams: "2008 - 2016 E.C. Matric Solutions",
+      topics: ["GIS & Map Interpretation", "Physical Geography of Ethiopia", "Climatology", "Population Dynamics", "Economic Geography"],
     },
     {
       title: "Economics",
       icon: TrendingUp,
-      color: "text-[#8b5cf6]",
-      badgeColor: "bg-[#8b5cf6]/15 text-[#8b5cf6] border-[#8b5cf6]/30",
       units: "6 Core Units",
-      videos: "38 Video Lessons (18 hrs)",
-      exams: "2008 - 2016 E.C. Solutions",
-      topics: ["Microeconomic Theory (Supply/Demand)", "Macroeconomic Indicators (GDP, Inflation)", "Fiscal & Monetary Policy", "International Trade", "Ethiopian Economic Structure"],
+      videos: "38 Video Lessons",
+      exams: "2008 - 2016 E.C. Matric Solutions",
+      topics: ["Microeconomics & Elasticity", "Macroeconomic Policies", "Fiscal & Monetary Policy", "International Trade", "Development Econ"],
     },
     {
-      title: "English (Advanced)",
-      icon: BookText,
-      color: "text-[#ec4899]",
-      badgeColor: "bg-[#ec4899]/15 text-[#ec4899] border-[#ec4899]/30",
+      title: "General Mathematics (Social)",
+      icon: Calculator,
       units: "5 Core Units",
-      videos: "30 Video Lessons (14 hrs)",
-      exams: "2008 - 2016 E.C. Solutions",
-      topics: ["Contextual Vocabulary", "Grammar & Error Identification", "Passage Analysis", "Punctuation & Syntax", "Critical Reasoning"],
-    },
-    {
-      title: "Civics & General Aptitude",
-      icon: Landmark,
-      color: "text-[#14b8a6]",
-      badgeColor: "bg-[#14b8a6]/15 text-[#14b8a6] border-[#14b8a6]/30",
-      units: "5 Core Units",
-      videos: "26 Video Lessons (12 hrs)",
-      exams: "2008 - 2016 E.C. Solutions",
-      topics: ["Ethiopian Constitutional Framework", "Democratic Governance", "Logical Fallacies & Syllogisms", "Data Interpretation", "Verbal Aptitude"],
+      videos: "30 Video Lessons",
+      exams: "2008 - 2016 E.C. Matric Solutions",
+      topics: ["Commercial Mathematics", "Functions & Graphs", "Statistics & Probability", "Financial Calculations", "Linear Programming"],
     },
   ];
 
-  const currentCourses = activeStream === "natural" ? naturalCourses : socialCourses;
+  const currentList = activeStream === "natural" ? naturalCourses : socialCourses;
 
   return (
-    <section id="curriculum" className="py-24 bg-[#050505] relative">
+    <section id="curriculum" className="bg-white py-20 border-b border-[#E8ECF2]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#10b981]/10 text-[#10b981] border border-[#10b981]/25 text-xs font-semibold">
-            <Layers className="w-3.5 h-3.5" />
-            <span>Grade 12 Curriculum Streams</span>
-          </div>
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-            100% Comprehensive Coverage for Both Streams
+        <div className="text-center max-w-2xl mx-auto space-y-3 mb-10">
+          <h2 className="text-3xl sm:text-4xl font-bold text-[#4D4D4D] tracking-tight">
+            Comprehensive Stream Curriculum
           </h2>
-          <p className="text-sm sm:text-base text-[#94a3b8]">
-            Every single topic mandated by the Ethiopian Ministry of Education, taught by seasoned university prep instructors with step-by-step past national exam walkthroughs.
+          <p className="text-sm sm:text-base text-[#717171]">
+            Aligned 100% with the Ethiopian Ministry of Education matrix exam guidelines
           </p>
 
-          {/* Stream Switcher Tabs */}
-          <div className="inline-flex p-1.5 rounded-2xl bg-[#111115] border border-[#1a1a20] shadow-xl mt-4">
+          {/* Stream Switcher Tab Buttons */}
+          <div className="inline-flex p-1 rounded-lg bg-[#F5F7FA] border border-[#E8ECF2] shadow-2xs mt-4">
             <button
               onClick={() => setActiveStream("natural")}
-              className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-bold transition-all ${
+              className={`px-6 py-2.5 rounded-md text-xs sm:text-sm font-bold transition-all ${
                 activeStream === "natural"
-                  ? "bg-gradient-to-r from-[#10b981] to-[#059669] text-white shadow-lg shadow-[#10b981]/25"
-                  : "text-[#94a3b8] hover:text-white"
+                  ? "bg-[#4CAF4F] text-white shadow-xs"
+                  : "text-[#717171] hover:text-[#4D4D4D]"
               }`}
             >
-              <Atom className="w-4 h-4" />
-              <span>🌿 Natural Science Stream</span>
+              🌿 Natural Science
             </button>
             <button
               onClick={() => setActiveStream("social")}
-              className={`flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-bold transition-all ${
+              className={`px-6 py-2.5 rounded-md text-xs sm:text-sm font-bold transition-all ${
                 activeStream === "social"
-                  ? "bg-gradient-to-r from-[#8b5cf6] to-[#6d28d9] text-white shadow-lg shadow-[#8b5cf6]/25"
-                  : "text-[#94a3b8] hover:text-white"
+                  ? "bg-[#4CAF4F] text-white shadow-xs"
+                  : "text-[#717171] hover:text-[#4D4D4D]"
               }`}
             >
-              <Landmark className="w-4 h-4" />
-              <span>🏛️ Social Science Stream</span>
+              🏛️ Social Science
             </button>
           </div>
         </div>
 
-        {/* Subjects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {currentCourses.map((course, idx) => {
+        {/* 4 Subject Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {currentList.map((course, idx) => {
             const Icon = course.icon;
             return (
               <div
                 key={idx}
-                className="p-6 rounded-2xl bg-[#111115] border border-[#1a1a20] hover:border-[#2c2c35] transition-all hover:translate-y-[-2px] hover:shadow-2xl hover:shadow-black/50 flex flex-col justify-between group"
+                className="bg-white rounded-lg p-6 border border-[#E8ECF2] shadow-[0_2px_4px_rgba(171,190,209,0.2)] hover:shadow-[0_8px_16px_rgba(171,190,209,0.3)] hover:-translate-y-1 transition-all flex flex-col justify-between"
               >
                 <div>
-                  {/* Top Row: Icon + Badge */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 rounded-xl bg-[#18181e] border border-[#2c2c35] flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <Icon className={`w-6 h-6 ${course.color}`} />
-                    </div>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${course.badgeColor}`}>
-                      {course.units}
-                    </span>
+                  <div className="w-12 h-12 rounded-xl bg-[#E8F5E9] flex items-center justify-center text-[#4CAF4F] mb-4">
+                    <Icon className="w-6 h-6" />
                   </div>
 
-                  {/* Course Title */}
-                  <h3 className="text-lg font-bold text-white mb-2 group-hover:text-[#10b981] transition-colors">
+                  <h3 className="text-lg font-bold text-[#4D4D4D] mb-2">
                     {course.title}
                   </h3>
 
-                  {/* Video & Exam Metadata */}
-                  <div className="space-y-1.5 text-xs text-[#94a3b8] mb-4">
-                    <div className="flex items-center gap-2">
-                      <PlayCircle className="w-3.5 h-3.5 text-[#10b981]" />
-                      <span>{course.videos}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-[#f59e0b]" />
-                      <span>Past National Exams: {course.exams}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-3.5 h-3.5 text-[#38bdf8]" />
-                      <span>Downloadable PDF Chapter Notes Included</span>
-                    </div>
+                  <div className="text-xs text-[#717171] space-y-1 mb-4 pb-3 border-b border-[#F5F7FA]">
+                    <div className="font-semibold text-[#4CAF4F]">{course.units} • {course.videos}</div>
+                    <div className="text-[#89939E]">{course.exams}</div>
                   </div>
 
-                  {/* Topic Pill Tags */}
-                  <div className="border-t border-[#1a1a20] pt-3">
-                    <span className="text-[11px] font-semibold text-[#71717a] block mb-2 uppercase tracking-wider">
-                      Key Topics Covered:
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {course.topics.map((topic, tIdx) => (
-                        <span
-                          key={tIdx}
-                          className="px-2 py-0.5 rounded-md bg-[#18181e] text-[#d4d4d8] text-[11px] border border-[#25252e]"
-                        >
-                          {topic}
-                        </span>
-                      ))}
+                  <div className="space-y-1.5">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-[#89939E]">
+                      Key Chapters:
                     </div>
+                    {course.topics.map((t, i) => (
+                      <div key={i} className="flex items-center gap-1.5 text-xs text-[#717171]">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#4CAF4F] shrink-0" />
+                        <span className="truncate">{t}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
-                {/* Card Footer CTA */}
-                <div className="mt-6 pt-4 border-t border-[#1a1a20] flex items-center justify-between text-xs">
-                  <span className="text-[#94a3b8]">Offline Downloadable</span>
+                <div className="mt-6 pt-4 border-t border-[#F5F7FA]">
                   <a
                     href="https://play.google.com/store/apps"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-bold text-[#10b981] hover:underline flex items-center gap-1"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4CAF4F] hover:text-[#388E3C] transition-colors"
                   >
-                    <span>Start Learning</span>
-                    <span>→</span>
+                    <span>Start Studying</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </a>
                 </div>
               </div>
