@@ -141,6 +141,7 @@ func NewRouter(deps Deps) *gin.Engine {
 		authGroup.POST("/refresh", deps.Auth.Refresh)
 		authGroup.POST("/logout", requireAuth, deps.Auth.Logout)
 		authGroup.GET("/me", requireAuth, deps.Auth.Me)
+		authGroup.DELETE("/me", requireAuth, deps.Auth.DeleteAccount)
 	}
 
 	// Course routes. Reads use OptionalAuth so visibility adapts to the viewer;

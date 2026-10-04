@@ -155,6 +155,21 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	respondJSON(c, http.StatusOK, &resp)
 }
 
+// DeleteAccount handles DELETE /auth/me → 200. It soft-deletes the current user
+// and revokes all active sessions and refresh tokens.
+func (h *AuthHandler) DeleteAccount(c *gin.Context) {
+	actor, ok := middleware.ActorFromContext(c)
+	if !ok || actor == nil {
+		respondError(c, apperror.Unauthorized("authentication required", nil))
+		return
+	}
+	if err := h.svc.DeleteAccount(c.Request.Context(), actor.UserID); err != nil {
+		respondError(c, err)
+		return
+	}
+	respondJSON(c, http.StatusOK, gin.H{"status": "ok", "message": "account deleted successfully"})
+}
+
 // authResponse builds the AuthResponse envelope from tokens and an optional
 // user (refresh omits the user).
 func authResponse(tokens *auth.AuthTokens, user *entity.User) *dto.AuthResponse {

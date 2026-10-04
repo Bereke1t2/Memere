@@ -437,6 +437,16 @@ func (s *Service) Logout(ctx context.Context, userID uuid.UUID, refreshToken str
 	return s.sessions.DeleteSession(ctx, userID)
 }
 
+// DeleteAccount soft-deletes the user record and revokes all sessions and refresh tokens.
+func (s *Service) DeleteAccount(ctx context.Context, userID uuid.UUID) error {
+	if err := s.users.SoftDelete(ctx, userID); err != nil {
+		return err
+	}
+	_ = s.tokens.RevokeAllForUser(ctx, userID)
+	_ = s.sessions.DeleteSession(ctx, userID)
+	return nil
+}
+
 // issueTokens mints an access+refresh pair, persists the refresh-token hash in
 // Postgres (authoritative) and Redis (fast path), and returns the raw tokens.
 func (s *Service) issueTokens(ctx context.Context, u *entity.User, deviceInfo *string, deviceID *string) (*AuthTokens, error) {
