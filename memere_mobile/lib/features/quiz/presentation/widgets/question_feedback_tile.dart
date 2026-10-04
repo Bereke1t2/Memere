@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
-import '../../../../core/constants/app_text_styles.dart';
 import '../../domain/entities/question_feedback_entity.dart';
 
 class QuestionFeedbackTile extends StatelessWidget {

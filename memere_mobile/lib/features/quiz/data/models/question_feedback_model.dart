@@ -32,9 +32,9 @@ class QuestionFeedbackModel extends QuestionFeedbackEntity {
 
   factory QuestionFeedbackModel.fromJson(Map<String, dynamic> json) {
     final answersList = (json['answers'] as List<dynamic>?)
-            ?.where((e) => e is Map)
+            ?.whereType<Map>()
             .map((e) => QuizAnswerFeedbackModel.fromJson(
-                  Map<String, dynamic>.from(e as Map),
+                  Map<String, dynamic>.from(e),
                 ))
             .toList() ??
         [];

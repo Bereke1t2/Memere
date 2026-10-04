@@ -19,6 +19,7 @@ abstract class AuthRemoteDataSource {
   Future<void> resendVerificationEmail(String email);
   Future<UserModel> getCurrentUser();
   Future<void> logout(String refreshToken);
+  Future<void> deleteAccount();
   Future<void> forgotPassword(String email);
 }
 
@@ -94,6 +95,11 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<void> logout(String refreshToken) async {
     await _client.post('/auth/logout', data: {'refresh_token': refreshToken});
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    await _client.delete('/auth/me');
   }
 
   @override

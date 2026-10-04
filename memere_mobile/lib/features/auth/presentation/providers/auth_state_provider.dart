@@ -251,6 +251,15 @@ class AuthStateNotifier extends AsyncNotifier<AuthState> {
     _invalidateUserDataProviders();
   }
 
+  Future<void> deleteAccount() async {
+    final repo = ref.read(authRepositoryProvider);
+    await repo.deleteAccount();
+    final hasSeenOnboarding =
+        await ref.read(preferencesServiceProvider).hasSeenOnboarding();
+    state = AsyncData(AuthState(hasSeenOnboarding: hasSeenOnboarding));
+    _invalidateUserDataProviders();
+  }
+
   void _invalidateUserDataProviders() {
     ref.invalidate(enrollmentListProvider);
     ref.invalidate(paymentHistoryProvider);

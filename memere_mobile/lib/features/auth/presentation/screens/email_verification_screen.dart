@@ -12,7 +12,6 @@ import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_button.dart';
 import '../../../../shared/widgets/app_surface.dart';
 import '../../../../shared/widgets/app_text_field.dart';
-import '../../../../shared/widgets/memere_mascot.dart';
 import '../providers/auth_state_provider.dart';
 
 class EmailVerificationScreen extends ConsumerStatefulWidget {

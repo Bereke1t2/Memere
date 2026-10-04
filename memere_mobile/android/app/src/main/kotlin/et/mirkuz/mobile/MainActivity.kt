@@ -1,4 +1,4 @@
-package com.example.memere_mobile
+package et.mirkuz.mobile
 
 import android.os.Bundle
 import android.view.WindowManager
@@ -11,4 +11,3 @@ class MainActivity : FlutterActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
     }
 }
-

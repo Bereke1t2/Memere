@@ -321,8 +321,29 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 20),
 
-                    // 9. Account Session & Sign Out
-                    const _SectionHeader(title: 'Account Session'),
+                    // 9. Legal & Privacy Group
+                    const _SectionHeader(title: 'Legal & Privacy'),
+                    const SizedBox(height: 6),
+                    _SettingsGroup(
+                      items: [
+                        _SettingsItemData(
+                          icon: Icons.privacy_tip_outlined,
+                          title: 'Privacy Policy',
+                          subtitle: 'Data protection and privacy commitments',
+                          onTap: () => _showPrivacyPolicyDialog(context),
+                        ),
+                        _SettingsItemData(
+                          icon: Icons.description_outlined,
+                          title: 'Terms of Service',
+                          subtitle: 'Usage guidelines and educational rules',
+                          onTap: () => _showTermsDialog(context),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+
+                    // 10. Account Session & Danger Zone
+                    const _SectionHeader(title: 'Account Session & Security'),
                     const SizedBox(height: 6),
                     _SettingsGroup(
                       items: [
@@ -330,8 +351,14 @@ class ProfileScreen extends ConsumerWidget {
                           icon: Icons.logout_rounded,
                           title: 'Sign Out',
                           subtitle: 'Log out of your account on this device',
-                          isDestructive: true,
                           onTap: () => _confirmSignOut(context, ref),
+                        ),
+                        _SettingsItemData(
+                          icon: Icons.delete_forever_rounded,
+                          title: 'Delete Account',
+                          subtitle: 'Permanently remove account and data',
+                          isDestructive: true,
+                          onTap: () => _confirmDeleteAccount(context, ref),
                         ),
                       ],
                     ),
@@ -598,6 +625,286 @@ class ProfileScreen extends ConsumerWidget {
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text(
               'Done',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmDeleteAccount(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.bgSecondary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppColors.borderStrong),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: const BoxDecoration(
+                color: Color(0x1DEF4444),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.delete_forever_rounded,
+                color: AppColors.error,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Delete Account',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Are you sure you want to permanently delete your Mirkuz account?',
+              style: TextStyle(
+                fontSize: 13.5,
+                color: AppColors.textSecondary,
+                height: 1.45,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0x1DEF4444),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0x55EF4444)),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.warning_amber_rounded,
+                    color: Color(0xFFEF4444),
+                    size: 20,
+                  ),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Warning: This action is permanent and cannot be undone. All your course enrollments, mock exam results, academic scores, and downloaded materials will be permanently erased.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFFFCA5A5),
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actionsPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text(
+              'Delete Forever',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await ref.read(authStateProvider.notifier).deleteAccount();
+    if (context.mounted) context.go(AppRoutes.login);
+  }
+
+  void _showPrivacyPolicyDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.bgSecondary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppColors.borderStrong),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.privacy_tip_outlined, color: AppColors.brandEmerald, size: 20),
+            SizedBox(width: 10),
+            Text(
+              'Privacy Policy',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Mirkuz (ምርኩዝ) is committed to protecting your privacy. We collect only necessary student information to facilitate learning, track entrance exam progress, and securely synchronize your study history.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                  height: 1.45,
+                ),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Data Security & Retention:',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                '• All network communications are encrypted with TLS/HTTPS.\n• Passwords and local credentials are protected with secure storage.\n• You can request full account and data deletion at any time in Profile settings or at https://mirkuz.et/delete-account.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.textMuted,
+                  height: 1.45,
+                ),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'For our full privacy policy, visit https://mirkuz.et/privacy or email support@mirkuz.et.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF38BDF8),
+                  height: 1.4,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actionsPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.brandEmerald,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text(
+              'Understood',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTermsDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.bgSecondary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppColors.borderStrong),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.description_outlined, color: Color(0xFF38BDF8), size: 20),
+            SizedBox(width: 10),
+            Text(
+              'Terms of Service',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'By using Mirkuz, you agree to utilize our educational curriculum, videos, study notes, and mock entrance exams for personal academic preparation.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                  height: 1.45,
+                ),
+              ),
+              SizedBox(height: 10),
+              Text(
+                '• Unauthorized redistribution or scraping of course media is prohibited.\n• Single device session policies ensure exam integrity.\n• For full terms, visit https://mirkuz.et/terms.',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.textMuted,
+                  height: 1.45,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actionsPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.brandEmerald,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text(
+              'Close',
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
@@ -1342,6 +1649,125 @@ class _GuestProfileView extends StatelessWidget {
                         title: 'Saved & Downloaded',
                         subtitle: 'Study offline — no account needed',
                         onTap: () => context.go(AppRoutes.saved),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Legal & Privacy for Guest
+                  const _SectionHeader(title: 'Legal & Privacy'),
+                  const SizedBox(height: 6),
+                  _SettingsGroup(
+                    items: [
+                      _SettingsItemData(
+                        icon: Icons.privacy_tip_outlined,
+                        title: 'Privacy Policy',
+                        subtitle: 'Read our student privacy policy',
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (dialogContext) => AlertDialog(
+                              backgroundColor: AppColors.bgSecondary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                side: const BorderSide(color: AppColors.borderStrong),
+                              ),
+                              title: const Row(
+                                children: [
+                                  Icon(Icons.privacy_tip_outlined, color: AppColors.brandEmerald, size: 20),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    'Privacy Policy',
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              content: const Text(
+                                'Mirkuz is committed to protecting your privacy. Visit https://mirkuz.et/privacy for the full policy or email support@mirkuz.et with inquiries.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                  height: 1.45,
+                                ),
+                              ),
+                              actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              actions: [
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.brandEmerald,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  onPressed: () => Navigator.of(dialogContext).pop(),
+                                  child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w700)),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                      _SettingsItemData(
+                        icon: Icons.description_outlined,
+                        title: 'Terms of Service',
+                        subtitle: 'Platform usage guidelines',
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (dialogContext) => AlertDialog(
+                              backgroundColor: AppColors.bgSecondary,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20),
+                                side: const BorderSide(color: AppColors.borderStrong),
+                              ),
+                              title: const Row(
+                                children: [
+                                  Icon(Icons.description_outlined, color: Color(0xFF38BDF8), size: 20),
+                                  SizedBox(width: 10),
+                                  Text(
+                                    'Terms of Service',
+                                    style: TextStyle(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              content: const Text(
+                                'Educational course materials and entrance mock exams are provided for personal study. Visit https://mirkuz.et/terms for details.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                  height: 1.45,
+                                ),
+                              ),
+                              actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              actions: [
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.brandEmerald,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                  ),
+                                  onPressed: () => Navigator.of(dialogContext).pop(),
+                                  child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w700)),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

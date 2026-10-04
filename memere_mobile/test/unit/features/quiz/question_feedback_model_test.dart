@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:memere_mobile/features/quiz/data/models/question_feedback_model.dart';
-import 'package:memere_mobile/features/quiz/domain/entities/quiz_result_entity.dart';
 
 void main() {
   group('QuestionFeedbackModel serialization', () {

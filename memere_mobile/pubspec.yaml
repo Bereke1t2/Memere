@@ -90,4 +90,3 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/lottie/
-    - .env                        # loaded via envied — not committed to git

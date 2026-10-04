@@ -4,7 +4,6 @@ import 'package:memere_mobile/core/errors/failures.dart';
 import 'package:memere_mobile/features/auth/domain/entities/user_entity.dart';
 import 'package:memere_mobile/features/auth/domain/repositories/auth_repository.dart';
 import 'package:memere_mobile/features/auth/domain/usecases/login_usecase.dart';
-import 'package:memere_mobile/features/auth/domain/usecases/register_usecase.dart';
 
 class FakeAuthRepository implements AuthRepository {
   bool loggedIn = true;
@@ -110,6 +109,13 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<Either<Failure, void>> logout() async {
+    loggedIn = false;
+    cachedUser = null;
+    return const Right(null);
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteAccount() async {
     loggedIn = false;
     cachedUser = null;
     return const Right(null);
