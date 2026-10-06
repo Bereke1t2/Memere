@@ -1,8 +1,8 @@
 import { Resend } from "resend";
 
-// Initialize the Resend client with the production API key
+// Initialize the Resend client with the production API key (or safe build-time fallback)
 export const resend = new Resend(
-  process.env.RESEND_API_KEY || ""
+  process.env.RESEND_API_KEY || "re_placeholder_key_for_build_time"
 );
 
 // Default sender configurations
