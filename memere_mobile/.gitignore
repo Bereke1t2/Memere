@@ -48,3 +48,9 @@ app.*.map.json
 auth.json
 *.g.dart
 lib/core/constants/env.g.dart
+
+# Signing & Keystore security
+*.jks
+*.keystore
+key.properties
+android/key.properties

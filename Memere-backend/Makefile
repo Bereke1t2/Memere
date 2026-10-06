@@ -131,6 +131,12 @@ seed-admin:
 seed-teacher:
 	go run ./cmd/seed-teacher
 
+# seed-reviewer — create (or reset) the Google Play reviewer student account.
+# Idempotent. Override defaults:
+#   REVIEWER_EMAIL=reviewer@mirkuz.app REVIEWER_PASSWORD=secret make seed-reviewer
+seed-reviewer:
+	go run ./cmd/seed-reviewer
+
 # ---------------------------------------------------------------------------
 # Kubernetes targets (Phase 6 Skill 5)
 # ---------------------------------------------------------------------------

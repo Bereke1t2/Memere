@@ -161,7 +161,7 @@ export function Footer() {
               <li><Link href="/terms" className="hover:text-white transition-colors">Terms of service</Link></li>
               <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy policy</Link></li>
               <li><Link href="/delete-account" className="hover:text-white text-[#f87171] transition-colors">Delete account</Link></li>
-              <li><a href="mailto:support@mirkuz.et" className="hover:text-white transition-colors">Contact support</a></li>
+              <li><a href="mailto:support@mirkuz.app" className="hover:text-white transition-colors">Contact support</a></li>
             </ul>
           </div>
 

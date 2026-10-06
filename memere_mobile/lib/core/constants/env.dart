@@ -7,9 +7,9 @@ abstract class Env {
   @EnviedField(varName: 'BASE_URL')
   static const String baseUrl = _Env.baseUrl;
 
-  @EnviedField(varName: 'CHAPA_PUBLIC_KEY', obfuscate: true)
+  @EnviedField(varName: 'CHAPA_PUBLIC_KEY', obfuscate: true, defaultValue: '')
   static final String chapaPublicKey = _Env.chapaPublicKey;
 
-  @EnviedField(varName: 'FIREBASE_PROJECT_ID')
+  @EnviedField(varName: 'FIREBASE_PROJECT_ID', defaultValue: '')
   static const String firebaseProjectId = _Env.firebaseProjectId;
 }

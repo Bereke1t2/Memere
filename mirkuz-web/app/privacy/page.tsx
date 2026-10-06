@@ -188,7 +188,7 @@ export default function PrivacyPage() {
             If you have questions regarding this Privacy Policy or wish to make an inquiry regarding your data, reach out to our team at:
           </p>
           <div className="text-xs font-semibold text-[#38bdf8]">
-            Email: <a href="mailto:support@mirkuz.et" className="underline">support@mirkuz.et</a> • Addis Ababa, Ethiopia
+            Email: <a href="mailto:support@mirkuz.app" className="underline">support@mirkuz.app</a> • Addis Ababa, Ethiopia
           </div>
         </section>
       </main>

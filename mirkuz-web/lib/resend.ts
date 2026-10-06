@@ -220,3 +220,57 @@ export async function sendContactInquiry({
     user: userRes.data,
   };
 }
+
+/**
+ * Send Account Deletion Request Notification to Admin & Confirmation to User
+ */
+export async function sendAccountDeletionRequest({
+  email,
+  reason,
+}: {
+  email: string;
+  reason?: string;
+}) {
+  const adminHtml = `
+    <h2>⚠️ Account Deletion Request Received (Google Play Data Safety)</h2>
+    <p>A student has requested permanent deletion of their account and all personal data via mirkuz.app.</p>
+    <p><strong>Account Email:</strong> ${email}</p>
+    <p><strong>Reason Provided:</strong> ${reason || "None specified"}</p>
+    <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
+    <p>Please process this deletion in the admin dashboard within 48 hours to comply with Google Play User Data policies.</p>
+  `;
+
+  const userHtml = `
+    <div style="font-family: sans-serif; color: #4D4D4D; max-width: 550px;">
+      <h2 style="color: #ef4444;">Account Deletion Request Received</h2>
+      <p>Hello,</p>
+      <p>We have received your formal request to delete your Mirkuz account linked to <strong>${email}</strong>.</p>
+      <p>Your request is currently being processed. All account data, study history, and enrollment records will be permanently removed within 48 hours.</p>
+      <p>If you did not request this deletion, please reply to this email immediately at <a href="mailto:support@mirkuz.app">support@mirkuz.app</a>.</p>
+      <hr style="border: 0; border-top: 1px solid #E8ECF2; margin: 20px 0;" />
+      <p style="font-size: 12px; color: #89939E;">Mirkuz (ምርኩዝ) Education Platform • Addis Ababa, Ethiopia</p>
+    </div>
+  `;
+
+  try {
+    const adminRes = await resend.emails.send({
+      from: SENDER_EMAIL,
+      to: ADMIN_EMAIL,
+      subject: `[ACTION REQUIRED] Account Deletion Request: ${email}`,
+      html: adminHtml,
+    });
+
+    const userRes = await resend.emails.send({
+      from: SENDER_EMAIL,
+      to: email,
+      subject: "Account Deletion Request Confirmation — Mirkuz",
+      html: userHtml,
+    });
+
+    return { admin: adminRes.data, user: userRes.data };
+  } catch (error: any) {
+    console.error("Account deletion email dispatch error:", error);
+    // Don't throw if email service fails, to ensure request is recorded
+    return { success: true };
+  }
+}

@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     title: "Mirkuz (ምርኩዝ) — Minimal Exam Preparation Platform",
     description:
       "Prepare for your Grade 12 University Entrance Exam with HD video lessons, offline PDF notes, and timed mock exams. Download the app on Google Play.",
-    url: "https://mirkuz.et",
+    url: "https://mirkuz.app",
     siteName: "Mirkuz Exam Prep",
     locale: "en_US",
     type: "website",

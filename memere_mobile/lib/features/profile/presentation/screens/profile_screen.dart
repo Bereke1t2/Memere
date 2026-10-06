@@ -601,7 +601,7 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ),
         content: const Text(
-          'Need help with course materials, mock exams, or payment confirmations? Contact the Mirkuz academic support team at support@mirkuz.et.',
+          'Need help with course materials, mock exams, or payment confirmations? Contact the Mirkuz academic support team at support@mirkuz.app.',
           style: TextStyle(
             fontSize: 13.5,
             color: AppColors.textSecondary,
@@ -797,7 +797,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               SizedBox(height: 4),
               Text(
-                '• All network communications are encrypted with TLS/HTTPS.\n• Passwords and local credentials are protected with secure storage.\n• You can request full account and data deletion at any time in Profile settings or at https://mirkuz.et/delete-account.',
+                '• All network communications are encrypted with TLS/HTTPS.\n• Passwords and local credentials are protected with secure storage.\n• You can request full account and data deletion at any time in Profile settings or at https://mirkuz.app/delete-account.',
                 style: TextStyle(
                   fontSize: 12.5,
                   color: AppColors.textMuted,
@@ -806,7 +806,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               SizedBox(height: 12),
               Text(
-                'For our full privacy policy, visit https://mirkuz.et/privacy or email support@mirkuz.et.',
+                'For our full privacy policy, visit https://mirkuz.app/privacy or email support@mirkuz.app.',
                 style: TextStyle(
                   fontSize: 12,
                   color: Color(0xFF38BDF8),
@@ -878,7 +878,7 @@ class ProfileScreen extends ConsumerWidget {
               ),
               SizedBox(height: 10),
               Text(
-                '• Unauthorized redistribution or scraping of course media is prohibited.\n• Single device session policies ensure exam integrity.\n• For full terms, visit https://mirkuz.et/terms.',
+                '• Unauthorized redistribution or scraping of course media is prohibited.\n• Single device session policies ensure exam integrity.\n• For full terms, visit https://mirkuz.app/terms.',
                 style: TextStyle(
                   fontSize: 12.5,
                   color: AppColors.textMuted,
@@ -1686,8 +1686,8 @@ class _GuestProfileView extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              content: const Text(
-                                'Mirkuz is committed to protecting your privacy. Visit https://mirkuz.et/privacy for the full policy or email support@mirkuz.et with inquiries.',
+                               content: const Text(
+                                'Mirkuz is committed to protecting your privacy. Visit https://mirkuz.app/privacy for the full policy or email support@mirkuz.app with inquiries.',
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: AppColors.textSecondary,
@@ -1742,7 +1742,7 @@ class _GuestProfileView extends StatelessWidget {
                                 ],
                               ),
                               content: const Text(
-                                'Educational course materials and entrance mock exams are provided for personal study. Visit https://mirkuz.et/terms for details.',
+                                'Educational course materials and entrance mock exams are provided for personal study. Visit https://mirkuz.app/terms for details.',
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: AppColors.textSecondary,

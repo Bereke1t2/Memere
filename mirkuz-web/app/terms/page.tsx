@@ -114,7 +114,7 @@ export default function TermsPage() {
             These terms are governed by the laws and regulations of the Federal Democratic Republic of Ethiopia.
           </p>
           <p className="text-xs text-[#94a3b8]">
-            Questions? Contact <a href="mailto:support@mirkuz.et" className="text-[#38bdf8] underline">support@mirkuz.et</a>.
+            Questions? Contact <a href="mailto:support@mirkuz.app" className="text-[#38bdf8] underline">support@mirkuz.app</a>.
           </p>
         </section>
       </main>
