@@ -48,10 +48,10 @@ export function Footer() {
   };
 
   return (
-    <footer className="bg-[#263238] text-white pt-16 pb-14 text-sm">
+    <footer className="bg-[#101730] text-white pt-20 pb-14 text-sm border-t border-[#1E2B58]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8 pb-12 border-b border-[#3A454B]">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8 pb-14 border-b border-[#1E2B58]">
           
           {/* Left Column: Brand & Copyright & Socials (Col span 5) */}
           <div className="lg:col-span-5 flex flex-col justify-between space-y-8">
@@ -59,24 +59,24 @@ export function Footer() {
             {/* Logo */}
             <div className="space-y-4">
               <Link href="/" className="flex items-center gap-2.5 group">
-                <div className="w-8 h-8 rounded-lg bg-[#4CAF4F] flex items-center justify-center text-white shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-[#00B894] flex items-center justify-center text-white shadow-sm">
                   <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                     <path d="M12 2L2 7l10 5 10-5-10-5zm0 9.2L4.5 7.4 12 3.6l7.5 3.8L12 11.2zm0 2.8L2 9v6l10 5 10-5V9l-10 5zm0 2.2l-7.5-3.8V11l7.5 3.8 7.5-3.8v2.6L12 16.2z"/>
                   </svg>
                 </div>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-2xl font-bold tracking-tight text-white">
+                  <span className="text-2xl font-black tracking-tight text-white">
                     Mirkuz
                   </span>
-                  <span className="text-xs font-semibold text-[#4CAF4F] bg-[#3A454B] px-2 py-0.5 rounded-full">
+                  <span className="text-xs font-bold text-[#00B894] bg-[#1E2B58] px-2.5 py-0.5 rounded-full border border-[#00B894]/30">
                     ምርኩዝ
                   </span>
                 </div>
               </Link>
 
-              <div className="space-y-1 text-xs text-[#89939E]">
+              <div className="space-y-1.5 text-xs text-[#94A3B8]">
                 <p>Copyright © 2026 Mirkuz (ምርኩዝ) Education Platform.</p>
-                <p>All rights reserved. Dedicated to Ethiopian students.</p>
+                <p>All rights reserved. Dedicated to Ethiopian Grade 12 students.</p>
               </div>
             </div>
 
@@ -87,7 +87,7 @@ export function Footer() {
                 href="https://t.me/mirkuz_exam"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full bg-[#3A454B] hover:bg-[#4CAF4F] flex items-center justify-center text-white transition-colors"
+                className="w-10 h-10 rounded-full bg-[#1E2B58] hover:bg-[#00B894] flex items-center justify-center text-white transition-all hover:scale-105"
                 aria-label="Telegram"
                 title="Telegram Channel"
               >
@@ -99,7 +99,7 @@ export function Footer() {
                 href="https://instagram.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full bg-[#3A454B] hover:bg-[#4CAF4F] flex items-center justify-center text-white transition-colors"
+                className="w-10 h-10 rounded-full bg-[#1E2B58] hover:bg-[#00B894] flex items-center justify-center text-white transition-all hover:scale-105"
                 aria-label="Instagram"
               >
                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -112,7 +112,7 @@ export function Footer() {
                 href="https://youtube.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full bg-[#3A454B] hover:bg-[#4CAF4F] flex items-center justify-center text-white transition-colors"
+                className="w-10 h-10 rounded-full bg-[#1E2B58] hover:bg-[#00B894] flex items-center justify-center text-white transition-all hover:scale-105"
                 aria-label="YouTube"
               >
                 <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -128,12 +128,12 @@ export function Footer() {
             <h4 className="text-base font-bold text-white tracking-tight">
               Platform
             </h4>
-            <ul className="space-y-2.5 text-xs text-[#ABBED1]">
-              <li><a href="#hero" className="hover:text-white transition-colors">Overview</a></li>
-              <li><a href="#curriculum" className="hover:text-white transition-colors">Curriculum Streams</a></li>
-              <li><a href="#features" className="hover:text-white transition-colors">Video Lessons</a></li>
-              <li><a href="#mock-exams" className="hover:text-white transition-colors">Mock Exam Engine</a></li>
-              <li><a href="#study-guides" className="hover:text-white transition-colors">Study Guides</a></li>
+            <ul className="space-y-2.5 text-xs text-[#94A3B8]">
+              <li><a href="#hero" className="hover:text-[#00B894] transition-colors">Overview</a></li>
+              <li><a href="#curriculum" className="hover:text-[#00B894] transition-colors">Curriculum Streams</a></li>
+              <li><a href="#features" className="hover:text-[#00B894] transition-colors">Video Lessons</a></li>
+              <li><a href="#mock-exams" className="hover:text-[#00B894] transition-colors">Mock Exam Engine</a></li>
+              <li><a href="#study-guides" className="hover:text-[#00B894] transition-colors">Study Guides</a></li>
             </ul>
           </div>
 
@@ -142,12 +142,12 @@ export function Footer() {
             <h4 className="text-base font-bold text-white tracking-tight">
               Support & Legal
             </h4>
-            <ul className="space-y-2.5 text-xs text-[#ABBED1]">
-              <li><a href="#faq" className="hover:text-white transition-colors">Help center</a></li>
-              <li><Link href="/terms" className="hover:text-white transition-colors">Terms of service</Link></li>
-              <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy policy</Link></li>
-              <li><Link href="/delete-account" className="hover:text-white text-[#f87171] transition-colors">Delete account</Link></li>
-              <li><a href="mailto:support@mirkuz.app" className="hover:text-white transition-colors">Contact support</a></li>
+            <ul className="space-y-2.5 text-xs text-[#94A3B8]">
+              <li><a href="#faq" className="hover:text-[#00B894] transition-colors">Help center</a></li>
+              <li><Link href="/terms" className="hover:text-[#00B894] transition-colors">Terms of service</Link></li>
+              <li><Link href="/privacy" className="hover:text-[#00B894] transition-colors">Privacy policy</Link></li>
+              <li><Link href="/delete-account" className="hover:text-rose-400 text-rose-400/80 transition-colors">Delete account</Link></li>
+              <li><a href="mailto:support@mirkuz.app" className="hover:text-[#00B894] transition-colors">Contact support</a></li>
             </ul>
           </div>
 
@@ -165,18 +165,18 @@ export function Footer() {
                 placeholder="Your email address"
                 required
                 disabled={loading}
-                className="w-full bg-[#515B60]/70 text-white placeholder-[#ABBED1] text-xs px-4 py-3 rounded-md border border-transparent focus:border-[#4CAF4F] focus:outline-hidden pr-10 transition-colors disabled:opacity-60"
+                className="w-full bg-[#162145] text-white placeholder-[#64748B] text-xs px-4 py-3 rounded-full border border-[#1E2B58] focus:border-[#00B894] focus:outline-hidden pr-12 transition-colors disabled:opacity-60"
               />
               <button
                 type="submit"
                 disabled={loading}
                 aria-label="Subscribe"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white hover:text-[#4CAF4F] transition-colors p-1 cursor-pointer disabled:opacity-50"
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#00B894] hover:bg-[#009874] flex items-center justify-center text-white transition-colors cursor-pointer disabled:opacity-50"
               >
                 {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-[#4CAF4F]" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
                 ) : (
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3.5 h-3.5" />
                 )}
               </button>
             </form>
@@ -185,8 +185,8 @@ export function Footer() {
               <div
                 className={`flex items-start gap-1.5 text-xs ${
                   statusMessage.type === "success"
-                    ? "text-[#4CAF4F]"
-                    : "text-red-400"
+                    ? "text-[#00B894]"
+                    : "text-rose-400"
                 } animate-in fade-in duration-200`}
               >
                 {statusMessage.type === "success" ? (
@@ -202,7 +202,7 @@ export function Footer() {
         </div>
 
         {/* Bottom sub-footer */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#89939E]">
+        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#64748B]">
           <p>© 2026 Mirkuz (ምርኩዝ) • Domain: mirkuz.app</p>
           <div className="flex items-center gap-4">
             <span>🇪🇹 Ethiopian Grade 12 National Curriculum</span>

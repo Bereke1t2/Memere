@@ -3,8 +3,8 @@ import { Navbar } from "@/components/Navbar";
 import { HeroSection } from "@/components/HeroSection";
 import { ClientsBar } from "@/components/ClientsBar";
 import { CommunitySection } from "@/components/CommunitySection";
-import { FeatureSplitOne } from "@/components/FeatureSplitOne";
-import { StatsCounter } from "@/components/StatsCounter";
+import { QuoteBanner } from "@/components/QuoteBanner";
+import { HowWeDoIt } from "@/components/HowWeDoIt";
 import { FeatureSplitTwo } from "@/components/FeatureSplitTwo";
 import { AppShowcase } from "@/components/AppShowcase";
 import { TestimonialSpotlight } from "@/components/TestimonialSpotlight";
@@ -13,39 +13,38 @@ import { InteractiveExamDemo } from "@/components/InteractiveExamDemo";
 import { StreamCurriculum } from "@/components/StreamCurriculum";
 import { PricingSection } from "@/components/PricingSection";
 import { FaqSection } from "@/components/FaqSection";
-import { CtaBanner } from "@/components/CtaBanner";
 import { Footer } from "@/components/Footer";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white text-[#4D4D4D] selection:bg-[#4CAF4F]/20 selection:text-[#263238] relative">
+    <div className="min-h-screen bg-white text-[#64748B] selection:bg-[#00B894]/20 selection:text-[#1E2B58] relative">
       {/* 1. Header / Navbar */}
       <Navbar />
 
-      {/* Main Page Flow matching Figma Minimal Landing Page */}
+      {/* Main Page Flow matching Dribbble Showcase Design Language */}
       <main>
-        {/* 2. Hero Section: Grade 12 National University Entrance Exam */}
+        {/* 2. Hero Section: Two-tone headline, Deep Navy button, SVG puzzle/rocket artwork */}
         <HeroSection />
 
         {/* 3. Partner Universities & Payment Gateways */}
         <ClientsBar />
 
-        {/* 4. Stream Streams: Natural, Social, Offline Mode */}
+        {/* 4. We Focus On: 3-Pillar Cards (Curriculum, Strategy, Offline) */}
         <CommunitySection />
 
-        {/* 5. Feature Split 1: High-Yield Video Lessons by Senior Educators */}
-        <FeatureSplitOne />
+        {/* 5. Wide Glassmorphic Quote Banner */}
+        <QuoteBanner />
 
-        {/* 6. Stats & Achievements: Empowering Students to Reach Top Universities */}
-        <StatsCounter />
+        {/* 6. How We Do It: 4-Step Horizontal Timeline (01-04) + Navy Banner 1 */}
+        <HowWeDoIt />
 
-        {/* 7. Feature Split 2: Timed Mock Entrance Simulator */}
+        {/* 7. Strategic 2x2 Feature Grid & Isometric Dashboard Art */}
         <FeatureSplitTwo />
 
-        {/* 8. Real App Screenshots & Interactive Showcase */}
+        {/* 8. Midnight Navy Mobile App Showcase & Real App Screenshots */}
         <AppShowcase />
 
-        {/* 9. Top Scorer Spotlight: Kalkidan Bekele (642/700 - AAU Medicine) */}
+        {/* 9. What Students Say: Star Rating Testimonials + Navy Banner 2 */}
         <TestimonialSpotlight />
 
         {/* 10. National Exam Insights & Study Guides */}
@@ -54,20 +53,17 @@ export default function LandingPage() {
         {/* 11. Interactive Exam Simulator Micro-Experience */}
         <InteractiveExamDemo />
 
-        {/* 12. Stream & Curriculum Breakdown */}
+        {/* 12. Comprehensive Stream Curriculum (Natural & Social) */}
         <StreamCurriculum />
 
-        {/* 13. Transparent ETB Pricing & Local Gateways */}
+        {/* 13. Transparent ETB Pricing & Local Payment Gateways */}
         <PricingSection />
 
         {/* 14. Frequently Asked Questions */}
         <FaqSection />
-
-        {/* 15. Bottom High-Impact CTA: Ready to Secure Your University Placement? */}
-        <CtaBanner />
       </main>
 
-      {/* 16. Minimal Dark Footer */}
+      {/* 15. Midnight Navy Footer */}
       <Footer />
     </div>
   );

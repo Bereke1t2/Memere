@@ -72,19 +72,19 @@ export function PricingSection() {
   ];
 
   return (
-    <section id="pricing" className="bg-[#F5F7FA] py-20 md:py-28 border-b border-[#E8ECF2]">
+    <section id="pricing" className="bg-white py-20 md:py-28 border-b border-[#E2E8F0]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-16">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F5E9] text-[#4CAF4F] text-xs font-semibold">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#E8F8F5] text-[#00B894] text-xs font-semibold">
             <ShieldCheck className="w-3.5 h-3.5" />
             <span>Fair & Transparent Local Pricing</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold text-[#4D4D4D] tracking-tight">
-            Simple, Transparent ETB Pricing
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1E2B58] tracking-tight">
+            Simple, Transparent <span className="title-underline-center text-[#1E2B58]">ETB Pricing</span>
           </h2>
-          <p className="text-sm sm:text-base text-[#717171]">
+          <p className="text-sm sm:text-base text-[#64748B] pt-1">
             One-time academic year fee. Pay seamlessly with Telebirr, CBE Birr, or Chapa. Zero recurring surprise charges.
           </p>
         </div>
@@ -94,36 +94,36 @@ export function PricingSection() {
           {plans.map((plan, idx) => (
             <div
               key={idx}
-              className={`rounded-xl p-8 flex flex-col justify-between transition-all relative ${
+              className={`rounded-3xl p-8 flex flex-col justify-between transition-all relative ${
                 plan.highlight
-                  ? "bg-white border-2 border-[#4CAF4F] shadow-[0_8px_24px_rgba(76,175,79,0.2)] md:-translate-y-2"
-                  : "bg-white border border-[#E8ECF2] shadow-[0_2px_4px_rgba(171,190,209,0.2)] hover:shadow-[0_8px_16px_rgba(171,190,209,0.3)]"
+                  ? "bg-white border-2 border-[#00B894] shadow-dribbble-lg md:-translate-y-2 ring-4 ring-[#00B894]/10"
+                  : "bg-white border border-[#E2E8F0] shadow-dribbble hover:shadow-dribbble-lg"
               }`}
             >
               {/* Badge for Popular Plan */}
               {plan.badge && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-[#4CAF4F] text-white text-[11px] font-bold tracking-wider uppercase shadow-xs">
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-[#00B894] text-white text-[10px] font-extrabold tracking-wider uppercase shadow-xs">
                   {plan.badge}
                 </div>
               )}
 
               <div>
-                <h3 className="text-xl font-bold text-[#4D4D4D] mb-1">
+                <h3 className="text-xl font-bold text-[#1E2B58] mb-1">
                   {plan.name}
                 </h3>
-                <p className="text-xs text-[#717171] mb-6 min-h-[36px]">
+                <p className="text-xs text-[#64748B] mb-6 min-h-[36px] leading-relaxed">
                   {plan.description}
                 </p>
 
                 {/* Price Display */}
-                <div className="flex items-baseline gap-1.5 pb-6 mb-6 border-b border-[#F5F7FA]">
-                  <span className="text-4xl font-bold text-[#263238] tracking-tight">
+                <div className="flex items-baseline gap-1.5 pb-6 mb-6 border-b border-[#F1F5F9]">
+                  <span className="text-4xl font-extrabold text-[#1E2B58] tracking-tight">
                     {plan.price}
                   </span>
-                  <span className="text-sm font-semibold text-[#4CAF4F]">
+                  <span className="text-sm font-bold text-[#00B894]">
                     {plan.currency}
                   </span>
-                  <span className="text-xs text-[#89939E] ml-1">
+                  <span className="text-xs text-[#94A3B8] ml-1">
                     / {plan.period}
                   </span>
                 </div>
@@ -131,11 +131,11 @@ export function PricingSection() {
                 {/* Feature List */}
                 <div className="space-y-3 mb-8">
                   {plan.features.map((feat, i) => (
-                    <div key={i} className="flex items-start gap-2.5 text-xs text-[#4D4D4D]">
-                      <div className="w-4 h-4 rounded-full bg-[#E8F5E9] flex items-center justify-center text-[#4CAF4F] shrink-0 mt-0.5">
-                        <Check className="w-3 h-3" />
+                    <div key={i} className="flex items-start gap-2.5 text-xs text-[#1E2B58]">
+                      <div className="w-4 h-4 rounded-full bg-[#E8F8F5] flex items-center justify-center text-[#00B894] shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 stroke-[3]" />
                       </div>
-                      <span className="leading-snug">{feat}</span>
+                      <span className="leading-snug text-[#475569]">{feat}</span>
                     </div>
                   ))}
                 </div>
@@ -146,14 +146,14 @@ export function PricingSection() {
                 href={plan.ctaLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`w-full py-3 px-4 rounded-md text-sm font-bold flex items-center justify-center gap-2 transition-all ${
+                className={`w-full py-3.5 px-6 rounded-full text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   plan.highlight
-                    ? "bg-[#4CAF4F] hover:bg-[#388E3C] text-white shadow-xs hover:shadow"
-                    : "bg-[#F5F7FA] hover:bg-[#E8F5E9] text-[#4D4D4D] hover:text-[#2E7D32] border border-[#E8ECF2]"
+                    ? "bg-[#1E2B58] hover:bg-[#152042] text-white shadow-md hover:shadow-lg"
+                    : "bg-[#F1F5F9] hover:bg-[#E8F8F5] text-[#1E2B58] hover:text-[#00B894] border border-[#E2E8F0]"
                 }`}
               >
                 <span>{plan.ctaText}</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-3.5 h-3.5" />
               </a>
 
             </div>

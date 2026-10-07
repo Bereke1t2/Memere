@@ -1,229 +1,195 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Image from "next/image";
+import React, { useState } from "react";
 import { 
   ArrowRight, 
   CheckCircle2, 
   Sparkles, 
-  TrendingUp, 
-  Download, 
-  Play, 
+  Smartphone, 
+  Send,
   BookOpen,
   Award,
-  Smartphone,
-  ShieldCheck
+  Zap
 } from "lucide-react";
 
 export function HeroSection() {
-  const [activeSlide, setActiveSlide] = useState(0);
-
-  const slides = [
-    {
-      titlePrefix: "Master Ethiopia's Grade 12",
-      titleHighlight: "National Entrance Exam",
-      subtitle:
-        "Where top scores begin: excel in your matric exam with senior examiner video lessons, 10,000+ past entrance questions, and 100% data-free offline study.",
-      ctaPrimary: "Download App",
-      ctaSecondary: "Explore Curriculum",
-      badge: "2017 E.C. Ministry Curriculum Aligned",
-      accent: "#4CAF4F"
-    },
-    {
-      titlePrefix: "Master Your National Exam",
-      titleHighlight: "with Mirkuz Prep",
-      subtitle:
-        "10,000+ national entrance questions (2008–2016 E.C.) with step-by-step video solutions, timed exam simulator, and instant score prediction.",
-      ctaPrimary: "Download App",
-      ctaSecondary: "Try Mock Exam",
-      badge: "Over 50,000 Active Students",
-      accent: "#4CAF4F"
-    },
-    {
-      titlePrefix: "100% Offline Study Mode",
-      titleHighlight: "Zero Mobile Data",
-      subtitle:
-        "Save all chapters and video courses directly to your phone. Turn off mobile data and study anywhere across Ethiopia without spending Birr on internet packages.",
-      ctaPrimary: "Download App",
-      ctaSecondary: "See How It Works",
-      badge: "Built for Low Bandwidth",
-      accent: "#4CAF4F"
-    },
-  ];
-
-  // Auto rotate slides every 7 seconds
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % slides.length);
-    }, 7000);
-    return () => clearInterval(timer);
-  }, [slides.length]);
-
-  const current = slides[activeSlide];
-
   return (
-    <section id="hero" className="bg-[#F5F7FA] pt-32 pb-20 md:pt-40 md:pb-28 relative overflow-hidden transition-colors duration-500">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="hero" className="relative pt-32 pb-20 md:pt-44 md:pb-28 overflow-hidden bg-white">
+      {/* Soft Ambient Radial Background Mesh (from Dribbble video) */}
+      <div className="absolute top-0 right-0 w-[650px] h-[650px] bg-gradient-to-br from-[#00B894]/8 via-[#00B894]/2 to-transparent rounded-full blur-3xl pointer-events-none -mr-40 -mt-20" />
+      <div className="absolute top-1/4 left-0 w-[550px] h-[550px] bg-gradient-to-tr from-[#1E2B58]/6 via-transparent to-transparent rounded-full blur-3xl pointer-events-none -ml-40" />
+
+      {/* Floating Confetti / Gem Dots (Signature Dribbble Video detail) */}
+      <div className="absolute top-36 left-1/2 w-2 h-2 rounded-full bg-[#00B894] opacity-75 animate-ping hidden sm:block" />
+      <div className="absolute top-48 right-1/4 w-2.5 h-2.5 rounded-sm bg-[#1E2B58] opacity-60 rotate-45 hidden sm:block" />
+      <div className="absolute bottom-28 left-1/4 w-3 h-3 rounded-full bg-[#00B894]/30 hidden sm:block" />
+      <div className="absolute bottom-40 right-10 w-2 h-2 rounded-sm bg-[#00B894] rotate-12 hidden sm:block" />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center min-h-[460px]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center min-h-[500px]">
           
-          {/* Left Column: Typography & CTAs */}
-          <div className="lg:col-span-7 flex flex-col items-start space-y-6">
+          {/* Left Column: Typography & Action Buttons */}
+          <div className="lg:col-span-6 flex flex-col items-start space-y-7">
             
-            {/* Top Minimal Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-[#E8ECF2] shadow-xs text-xs font-semibold text-[#4D4D4D]">
-              <span className="w-2 h-2 rounded-full bg-[#4CAF4F] animate-pulse"></span>
-              <span>{current.badge}</span>
+            {/* Top Pill Tag */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#E8F8F5] border border-[#00B894]/20 text-xs font-bold text-[#1E2B58]">
+              <span className="w-2 h-2 rounded-full bg-[#00B894] animate-pulse"></span>
+              <span>2017 E.C. Ministry Matric Syllabus Aligned</span>
             </div>
 
-            {/* Main Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#4D4D4D] leading-[1.15]">
-              {current.titlePrefix} <br />
-              <span className="text-[#4CAF4F]">{current.titleHighlight}</span>
+            {/* Main Two-Tone Headline (Exact Dribbble Style) */}
+            <h1 className="text-4xl sm:text-6xl lg:text-[68px] font-extrabold tracking-tight text-[#1E2B58] leading-[1.12]">
+              Study smart <br />
+              Score <span className="text-[#00B894]">higher</span>
             </h1>
 
             {/* Subtitle */}
-            <p className="text-base sm:text-lg text-[#717171] max-w-xl leading-relaxed">
-              {current.subtitle}
-            </p>
+            <div className="space-y-2">
+              <h2 className="text-2xl sm:text-3xl font-bold text-[#1E2B58]/90 tracking-tight">
+                Steering students to <br className="hidden sm:inline" />
+                achieve university admission
+              </h2>
+              <p className="text-base sm:text-lg text-[#64748B] max-w-lg leading-relaxed pt-1">
+                Master Ethiopia's Grade 12 National Entrance Exam with senior examiner video masterclasses, 10,000+ solved past matric questions, and 100% offline study.
+              </p>
+            </div>
 
-            {/* Action Buttons */}
+            {/* Action Buttons Matching Video: Deep Navy Pill Button */}
             <div className="flex flex-wrap items-center gap-4 pt-2">
               <a
                 href="https://play.google.com/store/apps/details?id=et.mirkuz.mobile"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-md bg-[#4CAF4F] hover:bg-[#388E3C] text-white font-medium text-base shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all"
+                className="inline-flex items-center justify-center gap-2.5 px-8 py-4 rounded-xl bg-[#1E2B58] hover:bg-[#162145] text-white font-bold text-sm sm:text-base shadow-xl shadow-[#1E2B58]/25 hover:shadow-2xl hover:-translate-y-0.5 active:translate-y-0 transition-all"
               >
-                <span>{current.ctaPrimary}</span>
+                <Smartphone className="w-4 h-4 text-[#00B894]" />
+                <span>Download App Free</span>
                 <ArrowRight className="w-4 h-4" />
               </a>
 
               <a
-                href="#curriculum"
-                className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-md bg-white hover:bg-neutral-50 text-[#4D4D4D] border border-[#D5E0D5] font-medium text-base shadow-2xs hover:border-[#4CAF4F] transition-all"
+                href="https://t.me/mirkuz_exam"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-white hover:bg-[#F8FAFC] text-[#1E2B58] border border-[#E2E8F0] font-bold text-sm sm:text-base shadow-sm hover:border-[#00B894] transition-all"
               >
-                <span>{current.ctaSecondary}</span>
+                <Send className="w-4 h-4 text-[#00B894]" />
+                <span>Join Telegram</span>
               </a>
             </div>
 
             {/* Trust points */}
-            <div className="flex flex-wrap items-center gap-6 pt-4 text-xs text-[#717171]">
+            <div className="flex flex-wrap items-center gap-6 pt-3 text-xs font-semibold text-[#64748B]">
               <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-[#4CAF4F]" />
+                <CheckCircle2 className="w-4 h-4 text-[#00B894]" />
                 <span>Free Starter Access</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-[#4CAF4F]" />
+                <CheckCircle2 className="w-4 h-4 text-[#00B894]" />
                 <span>Natural & Social Streams</span>
               </div>
               <div className="flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-[#4CAF4F]" />
-                <span>Telebirr & Chapa Ready</span>
+                <CheckCircle2 className="w-4 h-4 text-[#00B894]" />
+                <span>Telebirr & CBE Ready</span>
               </div>
             </div>
 
           </div>
 
-          {/* Right Column: Clean Vector Hero Illustration */}
-          <div className="lg:col-span-5 relative flex items-center justify-center">
+          {/* Right Column: Dynamic Vector Illustration (Stylistically matched to video frame 002) */}
+          <div className="lg:col-span-6 relative flex items-center justify-center">
             
-            {/* Minimal Vector Illustration Canvas */}
-            <div className="relative w-full max-w-[440px] aspect-4/3 flex items-center justify-center">
+            <div className="relative w-full max-w-[520px] aspect-4/3 flex items-center justify-center">
               
-              {/* Modern Vector Computer & Study Setup */}
-              <svg viewBox="0 0 500 400" className="w-full h-auto drop-shadow-md">
+              {/* Soft Background Blob */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-[#E8F8F5] via-white to-[#F1F5F9] rounded-[40px] shadow-dribbble -rotate-1 border border-[#E2E8F0]/60" />
+
+              {/* Vector Composition */}
+              <svg viewBox="0 0 520 420" className="w-full h-auto drop-shadow-md relative z-10">
                 <defs>
-                  <linearGradient id="screenGrad" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#4CAF4F" stopOpacity="0.15" />
-                    <stop offset="100%" stopColor="#E8F5E9" stopOpacity="0.8" />
+                  <linearGradient id="bulbGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#00B894" />
+                    <stop offset="100%" stopColor="#00A381" />
                   </linearGradient>
-                  <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#4CAF4F" />
-                    <stop offset="100%" stopColor="#388E3C" />
+                  <linearGradient id="rocketGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#1E2B58" />
+                    <stop offset="100%" stopColor="#2A3B72" />
+                  </linearGradient>
+                  <linearGradient id="tableGrad" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stopColor="#E2E8F0" />
+                    <stop offset="100%" stopColor="#CBD5E1" />
                   </linearGradient>
                 </defs>
 
-                {/* Desk Surface Shadow */}
-                <ellipse cx="250" cy="365" rx="190" ry="14" fill="#E8ECF2" />
+                {/* Desk Surface */}
+                <ellipse cx="260" cy="385" rx="200" ry="12" fill="#E2E8F0" />
+                <rect x="120" y="270" width="280" height="10" rx="5" fill="url(#tableGrad)" />
+                <line x1="160" y1="280" x2="145" y2="380" stroke="#94A3B8" strokeWidth="6" strokeLinecap="round" />
+                <line x1="360" y1="280" x2="375" y2="380" stroke="#94A3B8" strokeWidth="6" strokeLinecap="round" />
 
-                {/* Monitor Stand */}
-                <rect x="235" y="270" width="30" height="60" rx="4" fill="#89939E" />
-                <path d="M190 330 L310 330 L320 345 L180 345 Z" fill="#717171" />
+                {/* Collaborative Students Group (Matching the team illustration in Dribbble Video) */}
+                {/* Student 1 (Left - Green Shirt with Laptop) */}
+                <circle cx="160" cy="210" r="16" fill="#F8CBA6" />
+                <path d="M148 205 C148 190, 172 190, 172 205 Z" fill="#1E2B58" />
+                <path d="M140 255 C140 230, 180 230, 180 255 L180 320 L140 320 Z" fill="#00B894" />
+                <path d="M165 245 L200 270 L195 275 L160 250 Z" fill="#00A381" />
 
-                {/* Monitor Frame */}
-                <rect x="90" y="70" width="320" height="210" rx="12" fill="#263238" />
-                {/* Screen Bezel / Display */}
-                <rect x="100" y="80" width="300" height="185" rx="6" fill="url(#screenGrad)" />
+                {/* Laptop on desk */}
+                <rect x="180" y="245" width="40" height="25" rx="3" fill="#1E2B58" />
+                <rect x="175" y="268" width="50" height="4" rx="2" fill="#CBD5E1" />
+                <circle cx="200" cy="257" r="4" fill="#00B894" />
 
-                {/* Screen Top Bar */}
-                <rect x="100" y="80" width="300" height="24" rx="4" fill="#FFFFFF" />
-                <circle cx="115" cy="92" r="4" fill="#E53835" />
-                <circle cx="127" cy="92" r="4" fill="#FBC02D" />
-                <circle cx="139" cy="92" r="4" fill="#4CAF4F" />
-                <rect x="155" y="87" width="120" height="10" rx="5" fill="#F5F7FA" />
+                {/* Student 2 (Center - Pointing up to Idea Bulb) */}
+                <circle cx="260" cy="180" r="18" fill="#F8CBA6" />
+                <path d="M246 175 C246 160, 274 160, 274 175 Z" fill="#1E2B58" />
+                <path d="M240 225 C240 205, 280 205, 280 225 L285 300 L235 300 Z" fill="#1E2B58" />
+                {/* Pointing Arm pointing toward puzzle bulb */}
+                <line x1="275" y1="215" x2="310" y2="155" stroke="#F8CBA6" strokeWidth="8" strokeLinecap="round" />
 
-                {/* Screen Content: Charts & Analytics */}
-                {/* Left Mini Sidebar */}
-                <rect x="110" y="114" width="50" height="140" rx="4" fill="#FFFFFF" />
-                <rect x="116" y="122" width="38" height="6" rx="3" fill="#4CAF4F" />
-                <rect x="116" y="134" width="30" height="4" rx="2" fill="#ABBED1" />
-                <rect x="116" y="144" width="34" height="4" rx="2" fill="#ABBED1" />
-                <rect x="116" y="154" width="28" height="4" rx="2" fill="#ABBED1" />
-                <rect x="116" y="164" width="32" height="4" rx="2" fill="#ABBED1" />
+                {/* Giant Glowing Puzzle Idea Bulb (Centerpiece of the Dribbble video) */}
+                <g className="animate-pulse" style={{ animationDuration: "3s" }}>
+                  <circle cx="330" cy="120" r="38" fill="url(#bulbGrad)" filter="drop-shadow(0 8px 16px rgba(0,184,148,0.3))" />
+                  <rect x="320" y="155" width="20" height="12" rx="3" fill="#1E2B58" />
+                  <line x1="324" y1="162" x2="336" y2="162" stroke="#CBD5E1" strokeWidth="2" />
+                  <line x1="324" y1="165" x2="336" y2="165" stroke="#CBD5E1" strokeWidth="2" />
+                  {/* Puzzle outline pattern inside bulb */}
+                  <path d="M320 105 Q330 95, 340 105 Q345 115, 335 125 Q325 135, 330 140" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.8" />
+                  <circle cx="330" cy="120" r="8" fill="#FFFFFF" opacity="0.9" />
+                </g>
 
-                {/* Main Graph Area */}
-                <rect x="170" y="114" width="220" height="85" rx="6" fill="#FFFFFF" />
-                <text x="180" y="132" fill="#4D4D4D" fontSize="10" fontWeight="bold">Exam Score Progression</text>
-                {/* Bar chart lines */}
-                <line x1="180" y1="185" x2="375" y2="185" stroke="#E8ECF2" strokeWidth="1" />
-                <rect x="195" y="155" width="18" height="30" rx="2" fill="#ABBED1" />
-                <rect x="225" y="145" width="18" height="40" rx="2" fill="#ABBED1" />
-                <rect x="255" y="135" width="18" height="50" rx="2" fill="#4CAF4F" />
-                <rect x="285" y="125" width="18" height="60" rx="2" fill="url(#barGrad)" />
-                <rect x="315" y="118" width="18" height="67" rx="2" fill="#4CAF4F" />
-                <rect x="345" y="112" width="18" height="73" rx="2" fill="#2E7D32" />
+                {/* Student 3 (Right - Mentor / Educator Standing) */}
+                <circle cx="370" cy="195" r="17" fill="#F8CBA6" />
+                <path d="M356 190 C356 175, 384 175, 384 190 Z" fill="#1E2B58" />
+                <path d="M350 240 C350 215, 390 215, 390 240 L395 340 L345 340 Z" fill="#2A3B72" />
+                <line x1="355" y1="230" x2="330" y2="260" stroke="#F8CBA6" strokeWidth="7" strokeLinecap="round" />
 
-                {/* Screen Cards Bottom Row */}
-                <rect x="170" y="208" width="105" height="46" rx="4" fill="#FFFFFF" />
-                <circle cx="185" cy="225" r="8" fill="#E8F5E9" />
-                <path d="M182 225 L184 227 L189 222" stroke="#4CAF4F" strokeWidth="2" fill="none" />
-                <rect x="200" y="220" width="60" height="5" rx="2.5" fill="#4D4D4D" />
-                <rect x="200" y="228" width="40" height="4" rx="2" fill="#89939E" />
+                {/* Floating Rocket Launch Graphic (from Dribbble video) */}
+                <g className="animate-bounce" style={{ animationDuration: "4s" }}>
+                  <path d="M410 90 L435 65 Q450 75, 445 95 L420 120 Z" fill="url(#rocketGrad)" />
+                  <circle cx="430" cy="85" r="5" fill="#00B894" />
+                  <path d="M422 118 L415 130 L425 125 Z" fill="#EF4444" />
+                  <path d="M428 114 L432 128 L438 122 Z" fill="#F59E0B" />
+                  <circle cx="425" cy="135" r="3" fill="#E2E8F0" opacity="0.6" />
+                  <circle cx="430" cy="145" r="4" fill="#E2E8F0" opacity="0.4" />
+                </g>
 
-                <rect x="285" y="208" width="105" height="46" rx="4" fill="#FFFFFF" />
-                <circle cx="300" cy="225" r="8" fill="#E8F5E9" />
-                <text x="296" y="229" fill="#4CAF4F" fontSize="10" fontWeight="bold">★</text>
-                <rect x="315" y="220" width="60" height="5" rx="2.5" fill="#4D4D4D" />
-                <rect x="315" y="228" width="45" height="4" rx="2" fill="#89939E" />
+                {/* Floating Analytics Progress Card (Left Top) */}
+                <g>
+                  <rect x="60" y="110" width="95" height="55" rx="10" fill="#FFFFFF" filter="drop-shadow(0 8px 16px rgba(30,43,88,0.08))" />
+                  <rect x="72" y="122" width="40" height="5" rx="2.5" fill="#1E2B58" />
+                  <rect x="72" y="132" width="60" height="4" rx="2" fill="#94A3B8" />
+                  <rect x="72" y="148" width="10" height="10" rx="2" fill="#E8F8F5" />
+                  <text x="88" y="156" fill="#00B894" fontSize="9" fontWeight="bold">94% Pass</text>
+                </g>
 
-                {/* Student Character on the Right */}
-                {/* Body / Torso */}
-                <path d="M380 260 C380 230, 420 230, 420 260 L425 350 L375 350 Z" fill="#4CAF4F" />
-                {/* Arms */}
-                <path d="M380 250 L350 220 L360 215 L390 240 Z" fill="#388E3C" />
-                <circle cx="348" cy="216" r="6" fill="#F8CBA6" />
-                {/* Head */}
-                <circle cx="400" cy="210" r="18" fill="#F8CBA6" />
-                {/* Hair */}
-                <path d="M384 205 C384 190, 416 190, 416 205 C416 195, 384 195, 384 205 Z" fill="#263238" />
-                {/* Glasses / Face detail */}
-                <rect x="390" y="208" width="9" height="5" rx="1" fill="#263238" />
-                <rect x="403" y="208" width="9" height="5" rx="1" fill="#263238" />
-                {/* Pants */}
-                <rect x="382" y="340" width="16" height="40" fill="#263238" />
-                <rect x="402" y="340" width="16" height="40" fill="#263238" />
-                {/* Shoes */}
-                <rect x="375" y="375" width="23" height="8" rx="4" fill="#717171" />
-                <rect x="402" y="375" width="23" height="8" rx="4" fill="#717171" />
-
-                {/* Floating Elements / Success Indicator */}
-                <g className="animate-bounce" style={{ animationDuration: "3s" }}>
-                  <rect x="40" y="140" width="90" height="34" rx="6" fill="#FFFFFF" filter="drop-shadow(0 4px 6px rgba(0,0,0,0.08))" />
-                  <circle cx="56" cy="157" r="7" fill="#E8F5E9" />
-                  <path d="M53 157 L55 159 L60 154" stroke="#4CAF4F" strokeWidth="1.5" fill="none" />
-                  <text x="68" y="154" fill="#4D4D4D" fontSize="9" fontWeight="bold">+18.5% Score</text>
-                  <text x="68" y="164" fill="#717171" fontSize="7">AAU Medical Cutoff</text>
+                {/* Floating Score Rank Pill (Right Bottom) */}
+                <g>
+                  <rect x="360" y="270" width="130" height="42" rx="12" fill="#FFFFFF" filter="drop-shadow(0 8px 20px rgba(30,43,88,0.1))" />
+                  <circle cx="380" cy="291" r="10" fill="#E8F8F5" />
+                  <text x="376" y="295" fill="#00B894" fontSize="12" fontWeight="bold">★</text>
+                  <text x="398" y="287" fill="#1E2B58" fontSize="10" fontWeight="bold">642 / 700 Score</text>
+                  <text x="398" y="298" fill="#64748B" fontSize="8">AAU Medicine Cutoff</text>
                 </g>
               </svg>
 
@@ -231,22 +197,6 @@ export function HeroSection() {
 
           </div>
 
-        </div>
-
-        {/* Carousel Pagination Dots */}
-        <div className="flex items-center justify-center gap-2 pt-10">
-          {slides.map((_, idx) => (
-            <button
-              key={idx}
-              onClick={() => setActiveSlide(idx)}
-              className={`transition-all rounded-full ${
-                activeSlide === idx
-                  ? "w-8 h-2.5 bg-[#4CAF4F]"
-                  : "w-2.5 h-2.5 bg-[#ABBED1] hover:bg-[#717171]"
-              }`}
-              aria-label={`Go to slide ${idx + 1}`}
-            />
-          ))}
         </div>
 
       </div>

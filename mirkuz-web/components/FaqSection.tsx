@@ -30,19 +30,19 @@ export function FaqSection() {
   ];
 
   return (
-    <section id="faq" className="bg-white py-20 md:py-28 border-b border-[#E8ECF2]">
+    <section id="faq" className="bg-[#F8FAFC] py-20 md:py-28 border-b border-[#E2E8F0]">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
         <div className="text-center space-y-3 mb-14">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F5E9] text-[#4CAF4F] text-xs font-semibold">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#E8F8F5] text-[#00B894] text-xs font-semibold">
             <HelpCircle className="w-3.5 h-3.5" />
             <span>Got Questions?</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold text-[#4D4D4D] tracking-tight">
-            Frequently Asked Questions
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1E2B58] tracking-tight">
+            Frequently Asked <span className="title-underline-center text-[#1E2B58]">Questions</span>
           </h2>
-          <p className="text-sm sm:text-base text-[#717171]">
+          <p className="text-sm sm:text-base text-[#64748B] pt-1">
             Everything you need to know about the Mirkuz exam prep platform
           </p>
         </div>
@@ -54,22 +54,30 @@ export function FaqSection() {
             return (
               <div
                 key={idx}
-                className="rounded-lg border border-[#E8ECF2] bg-white overflow-hidden transition-all shadow-[0_2px_4px_rgba(171,190,209,0.15)]"
+                className={`rounded-2xl border bg-white overflow-hidden transition-all shadow-xs ${
+                  isOpen
+                    ? "border-[#00B894]/40 shadow-dribbble"
+                    : "border-[#E2E8F0] hover:border-[#CBD5E1]"
+                }`}
               >
                 <button
                   onClick={() => setOpenIdx(isOpen ? null : idx)}
-                  className="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 font-semibold text-base sm:text-lg text-[#4D4D4D] hover:text-[#4CAF4F] transition-colors"
+                  className="w-full p-5 sm:p-6 text-left flex items-center justify-between gap-4 font-bold text-base sm:text-lg text-[#1E2B58] hover:text-[#00B894] transition-colors cursor-pointer"
                 >
                   <span>{faq.q}</span>
-                  <ChevronDown
-                    className={`w-5 h-5 text-[#89939E] shrink-0 transition-transform duration-200 ${
-                      isOpen ? "rotate-180 text-[#4CAF4F]" : ""
-                    }`}
-                  />
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                    isOpen ? "bg-[#E8F8F5] text-[#00B894]" : "bg-[#F1F5F9] text-[#94A3B8]"
+                  }`}>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        isOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </div>
                 </button>
 
                 {isOpen && (
-                  <div className="px-5 pb-6 sm:px-6 text-sm text-[#717171] leading-relaxed border-t border-[#F5F7FA] pt-4 animate-in fade-in duration-200">
+                  <div className="px-5 pb-6 sm:px-6 text-sm text-[#64748B] leading-relaxed border-t border-[#F1F5F9] pt-4 animate-in fade-in duration-200">
                     {faq.a}
                   </div>
                 )}

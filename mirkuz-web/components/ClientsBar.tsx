@@ -24,31 +24,33 @@ export function ClientsBar() {
   ];
 
   return (
-    <section className="bg-white py-14 border-b border-[#E8ECF2]">
+    <section className="bg-white py-14 border-y border-[#F1F5F9]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         
-        {/* Section Headers */}
-        <h2 className="text-2xl sm:text-3xl font-bold text-[#4D4D4D] tracking-tight">
+        {/* Section Headers with Dribbble Accent Underline */}
+        <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1E2B58] tracking-tight">
           Admissions & Partner Institutions
         </h2>
-        <p className="text-sm sm:text-base text-[#717171] mt-2 max-w-xl mx-auto">
+        <div className="title-underline-center" />
+
+        <p className="text-xs sm:text-sm text-[#64748B] mt-3 max-w-xl mx-auto">
           Preparing students for competitive placement into Ethiopia's top public universities and technology institutes
         </p>
 
-        {/* Logos Row */}
-        <div className="mt-10 flex flex-wrap items-center justify-center gap-8 sm:gap-12 md:gap-16">
+        {/* Logos Row with Dribbble Elevated Chips */}
+        <div className="mt-9 flex flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8">
           {clients.map((c, i) => {
             const Icon = c.icon;
             return (
               <div
                 key={i}
-                className="group flex items-center gap-2 text-[#89939E] hover:text-[#4CAF4F] transition-colors cursor-pointer py-2"
+                className="group flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-white border border-[#E2E8F0] shadow-sm hover:border-[#00B894] hover:shadow-dribbble transition-all cursor-pointer hover:-translate-y-0.5"
                 title={c.name}
               >
-                <div className="w-9 h-9 rounded-lg bg-[#F5F7FA] group-hover:bg-[#E8F5E9] flex items-center justify-center transition-colors">
-                  <Icon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <div className="w-8 h-8 rounded-xl bg-[#E8F8F5] group-hover:bg-[#00B894] flex items-center justify-center text-[#00B894] group-hover:text-white transition-colors">
+                  <Icon className="w-4 h-4 transition-transform group-hover:scale-110" />
                 </div>
-                <span className="font-semibold text-sm tracking-tight text-[#717171] group-hover:text-[#263238] transition-colors">
+                <span className="font-bold text-xs tracking-tight text-[#1E2B58] group-hover:text-[#00B894] transition-colors">
                   {c.code}
                 </span>
               </div>

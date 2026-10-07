@@ -100,37 +100,37 @@ export function InteractiveExamDemo() {
   };
 
   return (
-    <section id="exam-demo" className="bg-[#F5F7FA] py-20 border-b border-[#E8ECF2]">
+    <section id="exam-demo" className="bg-white py-20 md:py-28 border-b border-[#E2E8F0]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="text-center max-w-3xl mx-auto space-y-2 mb-12">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F5E9] text-[#4CAF4F] text-xs font-semibold">
+        <div className="text-center max-w-3xl mx-auto space-y-3 mb-14">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#E8F8F5] text-[#00B894] text-xs font-semibold">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Interactive Question Simulator</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold text-[#4D4D4D] tracking-tight">
-            Try a Real National Entrance Exam Question
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1E2B58] tracking-tight">
+            Try a Real National <span className="title-underline-center text-[#1E2B58]">Entrance Exam Question</span>
           </h2>
-          <p className="text-sm sm:text-base text-[#717171]">
+          <p className="text-sm sm:text-base text-[#64748B] pt-1">
             Experience instant step-by-step video solutions, formulas, and timing just like the official Ministry of Education exam.
           </p>
         </div>
 
         {/* Interactive Box */}
-        <div className="max-w-4xl mx-auto bg-white rounded-xl border border-[#E8ECF2] shadow-[0_4px_12px_rgba(171,190,209,0.25)] overflow-hidden">
+        <div className="max-w-4xl mx-auto bg-white rounded-3xl border border-[#E2E8F0] shadow-dribbble-lg overflow-hidden">
           
           {/* Top Bar / Question Selector */}
-          <div className="bg-[#F5F7FA] border-b border-[#E8ECF2] p-4 sm:px-6 flex flex-wrap items-center justify-between gap-4">
+          <div className="bg-[#F8FAFC] border-b border-[#E2E8F0] p-4 sm:px-6 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2 overflow-x-auto">
               {sampleQuestions.map((q, idx) => (
                 <button
                   key={q.id}
                   onClick={() => handleReset(idx)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all shrink-0 ${
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shrink-0 ${
                     selectedQuestionIdx === idx
-                      ? "bg-[#4CAF4F] text-white shadow-xs"
-                      : "bg-white text-[#717171] border border-[#E8ECF2] hover:text-[#4D4D4D]"
+                      ? "bg-[#1E2B58] text-white shadow-xs"
+                      : "bg-white text-[#64748B] border border-[#E2E8F0] hover:text-[#1E2B58]"
                   }`}
                 >
                   Q{q.id}: {q.subject.split(" ")[0]}
@@ -138,12 +138,12 @@ export function InteractiveExamDemo() {
               ))}
             </div>
 
-            <div className="flex items-center gap-3 text-xs text-[#717171]">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-white border border-[#E8ECF2]">
-                <Clock className="w-3.5 h-3.5 text-[#4CAF4F]" />
-                <span className="font-mono font-bold text-[#4D4D4D]">01:45</span>
+            <div className="flex items-center gap-3 text-xs text-[#64748B]">
+              <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F8F5] border border-[#00B894]/20">
+                <Clock className="w-3.5 h-3.5 text-[#00B894]" />
+                <span className="font-mono font-bold text-[#1E2B58]">01:45</span>
               </div>
-              <span className="text-[11px] font-medium text-[#4CAF4F] bg-[#E8F5E9] px-2 py-0.5 rounded">
+              <span className="text-[11px] font-semibold text-[#1E2B58] bg-[#1E2B58]/10 px-2.5 py-1 rounded-full">
                 {currentQ.year}
               </span>
             </div>
@@ -154,17 +154,17 @@ export function InteractiveExamDemo() {
             
             {/* Subject & Concept tag */}
             <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-[#4D4D4D]">{currentQ.subject}</span>
-              <span className="text-[#89939E] italic">{currentQ.conceptTag}</span>
+              <span className="font-bold text-[#1E2B58]">{currentQ.subject}</span>
+              <span className="text-[#94A3B8] italic">{currentQ.conceptTag}</span>
             </div>
 
             {/* Prompt */}
             <div className="space-y-3">
-              <p className="text-base sm:text-lg font-medium text-[#263238] leading-relaxed">
+              <p className="text-base sm:text-lg font-semibold text-[#1E2B58] leading-relaxed">
                 {currentQ.prompt}
               </p>
               {currentQ.formula && (
-                <div className="p-3 rounded-lg bg-[#F5F7FA] font-mono text-sm text-[#4CAF4F] border border-[#E8ECF2] inline-block font-semibold">
+                <div className="p-3 rounded-xl bg-[#F8FAFC] font-mono text-sm text-[#00B894] border border-[#E2E8F0] inline-block font-bold">
                   {currentQ.formula}
                 </div>
               )}
@@ -175,15 +175,15 @@ export function InteractiveExamDemo() {
               {currentQ.options.map((opt) => {
                 const isSelected = selectedAnswer === opt.label;
                 const isCorrect = opt.label === currentQ.correctAnswer;
-                let btnStyle = "border-[#E8ECF2] bg-white hover:border-[#4CAF4F] text-[#4D4D4D]";
+                let btnStyle = "border-[#E2E8F0] bg-white hover:border-[#00B894] text-[#1E2B58] hover:bg-[#F8FAFC]";
 
                 if (showExplanation) {
                   if (isCorrect) {
-                    btnStyle = "border-[#4CAF4F] bg-[#E8F5E9] text-[#2E7D32] font-semibold";
+                    btnStyle = "border-[#00B894] bg-[#E8F8F5] text-[#065F46] font-semibold";
                   } else if (isSelected && !isCorrect) {
-                    btnStyle = "border-red-400 bg-red-50 text-red-700";
+                    btnStyle = "border-rose-400 bg-rose-50 text-rose-700";
                   } else {
-                    btnStyle = "border-[#E8ECF2] bg-white text-[#89939E] opacity-60";
+                    btnStyle = "border-[#E2E8F0] bg-white text-[#94A3B8] opacity-60";
                   }
                 }
 
@@ -192,17 +192,17 @@ export function InteractiveExamDemo() {
                     key={opt.label}
                     onClick={() => handleSelectAnswer(opt.label)}
                     disabled={showExplanation}
-                    className={`flex items-start gap-3 p-4 rounded-lg border text-left text-sm transition-all ${btnStyle}`}
+                    className={`flex items-start gap-3 p-4 rounded-xl border text-left text-sm transition-all cursor-pointer ${btnStyle}`}
                   >
-                    <span className="w-6 h-6 rounded-full bg-[#F5F7FA] border border-[#E8ECF2] flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                    <span className="w-6 h-6 rounded-full bg-[#F1F5F9] border border-[#E2E8F0] flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 text-[#1E2B58]">
                       {opt.label}
                     </span>
                     <span className="flex-1 leading-snug">{opt.text}</span>
                     {showExplanation && isCorrect && (
-                      <CheckCircle2 className="w-5 h-5 text-[#4CAF4F] shrink-0" />
+                      <CheckCircle2 className="w-5 h-5 text-[#00B894] shrink-0" />
                     )}
                     {showExplanation && isSelected && !isCorrect && (
-                      <XCircle className="w-5 h-5 text-red-500 shrink-0" />
+                      <XCircle className="w-5 h-5 text-rose-500 shrink-0" />
                     )}
                   </button>
                 );
@@ -211,12 +211,12 @@ export function InteractiveExamDemo() {
 
             {/* Explanation box */}
             {showExplanation && (
-              <div className="p-5 rounded-lg bg-[#E8F5E9] border border-[#C8E6C9] space-y-2 animate-in fade-in duration-300">
-                <div className="flex items-center gap-2 text-[#2E7D32] font-bold text-sm">
-                  <Lightbulb className="w-4 h-4" />
+              <div className="p-5 rounded-2xl bg-[#E8F8F5] border border-[#00B894]/30 space-y-2 animate-in fade-in duration-300">
+                <div className="flex items-center gap-2 text-[#065F46] font-bold text-sm">
+                  <Lightbulb className="w-4 h-4 text-[#00B894]" />
                   <span>Official Step-by-Step Solution:</span>
                 </div>
-                <p className="text-xs sm:text-sm text-[#1B5E20] leading-relaxed">
+                <p className="text-xs sm:text-sm text-[#065F46] leading-relaxed">
                   {currentQ.explanation}
                 </p>
               </div>
@@ -226,7 +226,7 @@ export function InteractiveExamDemo() {
             <div className="flex items-center justify-between pt-2">
               <button
                 onClick={() => handleReset(selectedQuestionIdx)}
-                className="inline-flex items-center gap-1.5 text-xs text-[#717171] hover:text-[#4D4D4D] transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs text-[#64748B] hover:text-[#1E2B58] transition-colors cursor-pointer"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Reset Question</span>
@@ -234,7 +234,7 @@ export function InteractiveExamDemo() {
 
               <button
                 onClick={() => handleReset((selectedQuestionIdx + 1) % sampleQuestions.length)}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-md bg-[#4CAF4F] hover:bg-[#388E3C] text-white text-xs font-semibold shadow-xs transition-all"
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-[#00B894] hover:bg-[#009874] text-white text-xs font-bold shadow-xs transition-all cursor-pointer"
               >
                 <span>Next Question</span>
                 <ArrowRight className="w-3.5 h-3.5" />

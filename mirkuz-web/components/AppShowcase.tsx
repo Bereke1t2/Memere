@@ -116,30 +116,31 @@ export function AppShowcase() {
   const current = screens[activeTab];
 
   return (
-    <section id="app-tour" className="py-24 bg-[#060608] relative overflow-hidden border-t border-[#1a1a22]">
+    <section id="app-tour" className="py-24 bg-[#101730] relative overflow-hidden border-t border-[#1E2B58]">
       {/* Background Ambient Glows */}
-      <div className="absolute top-1/3 left-1/4 -translate-x-1/2 w-[600px] h-[600px] bg-[#10b981]/10 rounded-full blur-[160px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-[#38bdf8]/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-1/3 left-1/4 -translate-x-1/2 w-[600px] h-[600px] bg-[#00B894]/12 rounded-full blur-[160px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-[#2A3B72]/20 rounded-full blur-[140px] pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         
-        {/* Section Header */}
+        {/* Section Header with Underline */}
         <div className="text-center max-w-3xl mx-auto mb-14 space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#10b981]/15 text-[#10b981] border border-[#10b981]/30 text-xs font-bold shadow-inner">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#00B894]/15 text-[#00B894] border border-[#00B894]/30 text-xs font-bold">
             <Smartphone className="w-3.5 h-3.5" />
-            <span>Real App Screenshots & Experience</span>
+            <span>Interactive Mobile Experience</span>
           </div>
 
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight">
             See the Actual{" "}
-            <span className="bg-gradient-to-r from-[#10b981] via-[#34d399] to-[#38bdf8] bg-clip-text text-transparent">
+            <span className="text-[#00B894]">
               Mirkuz Mobile App
             </span>{" "}
             in Action
           </h2>
+          <div className="title-underline-center" />
 
-          <p className="text-sm sm:text-base text-[#94a3b8] leading-relaxed">
-            Designed specifically for Ethiopian Grade 9–12 students. Fast, responsive, dark-mode native, and packed with national exam preparation tools.
+          <p className="text-sm sm:text-base text-[#94A3B8] leading-relaxed pt-2">
+            Designed specifically for Ethiopian Grade 9–12 students. Fast, responsive, dark-mode native, and packed with national matric tools.
           </p>
         </div>
 
@@ -152,13 +153,13 @@ export function AppShowcase() {
               <button
                 key={screen.id}
                 onClick={() => setActiveTab(idx)}
-                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-semibold whitespace-nowrap transition-all border shrink-0 ${
+                className={`flex items-center gap-2.5 px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold whitespace-nowrap transition-all border shrink-0 ${
                   isSelected
-                    ? "bg-gradient-to-r from-[#10b981]/20 to-[#059669]/20 text-white border-[#10b981] shadow-lg shadow-[#10b981]/15"
-                    : "bg-[#111116] text-[#94a3b8] hover:text-white hover:bg-[#181820] border-[#22222b]"
+                    ? "bg-[#00B894] text-white border-[#00B894] shadow-lg shadow-[#00B894]/25"
+                    : "bg-[#162145] text-[#94A3B8] hover:text-white hover:bg-[#1E2B58] border-[#2A3B72]/60"
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isSelected ? "text-[#10b981]" : "text-[#71717a]"}`} />
+                <Icon className={`w-4 h-4 ${isSelected ? "text-white" : "text-[#00B894]"}`} />
                 <span>{screen.title}</span>
               </button>
             );
@@ -170,7 +171,7 @@ export function AppShowcase() {
           
           {/* Left Column: Screen Details & Highlights */}
           <div className="lg:col-span-6 space-y-6 order-2 lg:order-1">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181820] border border-[#2a2a35] text-xs font-semibold text-[#10b981]">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#162145] border border-[#2A3B72] text-xs font-bold text-[#00B894]">
               <Sparkles className="w-3.5 h-3.5" />
               <span>{current.badge}</span>
             </div>
@@ -179,7 +180,7 @@ export function AppShowcase() {
               {current.title}
             </h3>
 
-            <p className="text-sm sm:text-base text-[#94a3b8] leading-relaxed">
+            <p className="text-sm sm:text-base text-[#94A3B8] leading-relaxed">
               {current.description}
             </p>
 
@@ -188,12 +189,12 @@ export function AppShowcase() {
               {current.highlights.map((item, i) => (
                 <div
                   key={i}
-                  className="p-3.5 rounded-xl bg-[#111116] border border-[#1f1f28] flex items-start gap-3 hover:border-[#2a2a38] transition-colors"
+                  className="p-3.5 rounded-2xl bg-[#162145]/90 border border-[#2A3B72]/50 flex items-start gap-3 hover:border-[#00B894]/40 transition-colors"
                 >
-                  <div className="w-5 h-5 rounded-full bg-[#10b981]/20 flex items-center justify-center text-[#10b981] shrink-0 mt-0.5">
+                  <div className="w-5 h-5 rounded-full bg-[#00B894]/20 flex items-center justify-center text-[#00B894] shrink-0 mt-0.5">
                     <CheckCircle2 className="w-3.5 h-3.5" />
                   </div>
-                  <span className="text-xs sm:text-sm text-[#e2e8f0] font-medium leading-normal">
+                  <span className="text-xs sm:text-sm text-[#E2E8F0] font-medium leading-normal">
                     {item}
                   </span>
                 </div>
@@ -206,7 +207,7 @@ export function AppShowcase() {
                 href="https://play.google.com/store/apps/details?id=et.mirkuz.mobile"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-[#10b981] to-[#059669] text-white font-bold text-xs sm:text-sm shadow-xl shadow-[#10b981]/25 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[#00B894] hover:bg-[#00A381] text-white font-bold text-xs sm:text-sm shadow-xl shadow-[#00B894]/25 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all"
               >
                 <Download className="w-4 h-4" />
                 <span>Get Mirkuz on Google Play</span>
@@ -216,10 +217,10 @@ export function AppShowcase() {
                 href="https://t.me/mirkuz_exam"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-[#16161c] text-[#cbd5e1] hover:text-white border border-[#2a2a35] font-semibold text-xs sm:text-sm transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-[#162145] text-[#CBD5E1] hover:text-white border border-[#2A3B72] font-semibold text-xs sm:text-sm transition-colors"
               >
-                <span>Ask Questions on Telegram</span>
-                <ArrowRight className="w-4 h-4 text-[#38bdf8]" />
+                <span>Ask on Telegram</span>
+                <ArrowRight className="w-4 h-4 text-[#00B894]" />
               </a>
             </div>
           </div>
@@ -229,10 +230,10 @@ export function AppShowcase() {
             <div className="relative">
               
               {/* Outer Glow Halo */}
-              <div className="absolute -inset-4 bg-gradient-to-tr from-[#10b981]/30 via-[#38bdf8]/20 to-transparent rounded-[52px] blur-2xl opacity-75 pointer-events-none" />
+              <div className="absolute -inset-4 bg-gradient-to-tr from-[#00B894]/25 via-[#2A3B72]/20 to-transparent rounded-[52px] blur-2xl opacity-75 pointer-events-none" />
 
               {/* Realistic Modern Phone Frame */}
-              <div className="relative w-[290px] sm:w-[330px] rounded-[48px] p-3 bg-gradient-to-b from-[#3a3a46] via-[#1c1c24] to-[#121217] shadow-2xl shadow-black/90 border border-[#484858]">
+              <div className="relative w-[290px] sm:w-[330px] rounded-[48px] p-3 bg-gradient-to-b from-[#2A3B72] via-[#162145] to-[#101730] shadow-2xl shadow-black/90 border border-[#3A4D8C]">
                 
                 {/* Screen Housing */}
                 <div className="relative rounded-[38px] overflow-hidden bg-[#050505] border border-[#181820] shadow-inner aspect-[9/18.5]">
@@ -256,13 +257,13 @@ export function AppShowcase() {
               </div>
 
               {/* Floating Live Feature Tag */}
-              <div className="absolute -bottom-4 -left-4 sm:-left-6 bg-[#14141a]/95 backdrop-blur-md p-3 rounded-2xl border border-[#2c2c3a] shadow-2xl flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-[#10b981]/20 flex items-center justify-center text-[#10b981]">
+              <div className="absolute -bottom-4 -left-4 sm:-left-6 bg-[#162145]/95 backdrop-blur-md p-3 rounded-2xl border border-[#2A3B72] shadow-2xl flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-[#00B894]/20 flex items-center justify-center text-[#00B894]">
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <div>
                   <div className="text-[11px] font-bold text-white">Ethiopian Curriculum Aligned</div>
-                  <div className="text-[9.5px] text-[#94a3b8]">Updated for 2017/2018 E.C.</div>
+                  <div className="text-[9.5px] text-[#94A3B8]">Updated for 2017/2018 E.C.</div>
                 </div>
               </div>
 

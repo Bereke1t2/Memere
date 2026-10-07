@@ -91,36 +91,40 @@ export function StreamCurriculum() {
   const currentList = activeStream === "natural" ? naturalCourses : socialCourses;
 
   return (
-    <section id="curriculum" className="bg-white py-20 border-b border-[#E8ECF2]">
+    <section id="curriculum" className="bg-[#F8FAFC] py-20 md:py-28 border-b border-[#E2E8F0]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
-        <div className="text-center max-w-2xl mx-auto space-y-3 mb-10">
-          <h2 className="text-3xl sm:text-4xl font-bold text-[#4D4D4D] tracking-tight">
-            Comprehensive Stream Curriculum
+        <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#E8F8F5] text-[#00B894] text-xs font-semibold">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Ministry Guidelines</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#1E2B58] tracking-tight">
+            Comprehensive <span className="title-underline-center text-[#1E2B58]">Stream Curriculum</span>
           </h2>
-          <p className="text-sm sm:text-base text-[#717171]">
-            Aligned 100% with the Ethiopian Ministry of Education matrix exam guidelines
+          <p className="text-sm sm:text-base text-[#64748B] pt-1">
+            Aligned 100% with the Ethiopian Ministry of Education matric exam syllabus
           </p>
 
           {/* Stream Switcher Tab Buttons */}
-          <div className="inline-flex p-1 rounded-lg bg-[#F5F7FA] border border-[#E8ECF2] shadow-2xs mt-4">
+          <div className="inline-flex p-1.5 rounded-full bg-white border border-[#E2E8F0] shadow-xs mt-6">
             <button
               onClick={() => setActiveStream("natural")}
-              className={`px-6 py-2.5 rounded-md text-xs sm:text-sm font-bold transition-all ${
+              className={`px-7 py-2 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 activeStream === "natural"
-                  ? "bg-[#4CAF4F] text-white shadow-xs"
-                  : "text-[#717171] hover:text-[#4D4D4D]"
+                  ? "bg-[#1E2B58] text-white shadow-xs"
+                  : "text-[#64748B] hover:text-[#1E2B58]"
               }`}
             >
               🌿 Natural Science
             </button>
             <button
               onClick={() => setActiveStream("social")}
-              className={`px-6 py-2.5 rounded-md text-xs sm:text-sm font-bold transition-all ${
+              className={`px-7 py-2 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                 activeStream === "social"
-                  ? "bg-[#4CAF4F] text-white shadow-xs"
-                  : "text-[#717171] hover:text-[#4D4D4D]"
+                  ? "bg-[#1E2B58] text-white shadow-xs"
+                  : "text-[#64748B] hover:text-[#1E2B58]"
               }`}
             >
               🏛️ Social Science
@@ -135,41 +139,41 @@ export function StreamCurriculum() {
             return (
               <div
                 key={idx}
-                className="bg-white rounded-lg p-6 border border-[#E8ECF2] shadow-[0_2px_4px_rgba(171,190,209,0.2)] hover:shadow-[0_8px_16px_rgba(171,190,209,0.3)] hover:-translate-y-1 transition-all flex flex-col justify-between"
+                className="bg-white rounded-2xl p-6 border border-[#E2E8F0] shadow-dribbble hover:shadow-dribbble-lg hover:-translate-y-1 transition-all flex flex-col justify-between group"
               >
                 <div>
-                  <div className="w-12 h-12 rounded-xl bg-[#E8F5E9] flex items-center justify-center text-[#4CAF4F] mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-[#E8F8F5] flex items-center justify-center text-[#00B894] group-hover:scale-110 transition-transform mb-4">
                     <Icon className="w-6 h-6" />
                   </div>
 
-                  <h3 className="text-lg font-bold text-[#4D4D4D] mb-2">
+                  <h3 className="text-lg font-bold text-[#1E2B58] mb-2 group-hover:text-[#00B894] transition-colors">
                     {course.title}
                   </h3>
 
-                  <div className="text-xs text-[#717171] space-y-1 mb-4 pb-3 border-b border-[#F5F7FA]">
-                    <div className="font-semibold text-[#4CAF4F]">{course.units} • {course.videos}</div>
-                    <div className="text-[#89939E]">{course.exams}</div>
+                  <div className="text-xs text-[#64748B] space-y-1 mb-4 pb-3 border-b border-[#F1F5F9]">
+                    <div className="font-semibold text-[#00B894]">{course.units} • {course.videos}</div>
+                    <div className="text-[#94A3B8]">{course.exams}</div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <div className="text-[11px] font-bold uppercase tracking-wider text-[#89939E]">
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-bold uppercase tracking-wider text-[#94A3B8]">
                       Key Chapters:
                     </div>
                     {course.topics.map((t, i) => (
-                      <div key={i} className="flex items-center gap-1.5 text-xs text-[#717171]">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-[#4CAF4F] shrink-0" />
+                      <div key={i} className="flex items-center gap-2 text-xs text-[#64748B]">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-[#00B894] shrink-0" />
                         <span className="truncate">{t}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-[#F5F7FA]">
+                <div className="mt-6 pt-4 border-t border-[#F1F5F9]">
                   <a
-                    href="https://play.google.com/store/apps"
+                    href="https://play.google.com/store/apps/details?id=et.mirkuz.mobile"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#4CAF4F] hover:text-[#388E3C] transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs font-bold text-[#00B894] hover:text-[#009874] hover:gap-2.5 transition-all"
                   >
                     <span>Start Studying</span>
                     <ArrowRight className="w-3.5 h-3.5" />

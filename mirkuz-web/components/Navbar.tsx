@@ -5,70 +5,96 @@ import Link from "next/link";
 import { 
   Menu, 
   X, 
-  ArrowRight,
+  ArrowRight, 
+  Smartphone, 
+  GraduationCap,
   Sparkles,
-  Smartphone,
-  GraduationCap
+  Send
 } from "lucide-react";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("hero");
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 15);
+      setIsScrolled(window.scrollY > 20);
+
+      const sections = ["hero", "curriculum", "how-it-works", "features", "mock-exams", "testimonials", "faq"];
+      const current = sections.find((sec) => {
+        const el = document.getElementById(sec);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          return rect.top <= 120 && rect.bottom >= 120;
+        }
+        return false;
+      });
+      if (current) setActiveSection(current);
     };
+
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const navLinks = [
-    { label: "Home", href: "#hero" },
-    { label: "Curriculum", href: "#curriculum" },
-    { label: "Features", href: "#features" },
-    { label: "Mock Exams", href: "#mock-exams" },
-    { label: "Success Stories", href: "#testimonial" },
-    { label: "Study Guides", href: "#study-guides" },
+    { label: "Home", href: "#hero", id: "hero" },
+    { label: "What we do", href: "#curriculum", id: "curriculum" },
+    { label: "Our Approach", href: "#how-it-works", id: "how-it-works" },
+    { label: "Mock Exams", href: "#mock-exams", id: "mock-exams" },
+    { label: "Testimonials", href: "#testimonials", id: "testimonials" },
+    { label: "FAQ", href: "#faq", id: "faq" },
   ];
 
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         isScrolled
-          ? "bg-white/95 backdrop-blur-md shadow-[0_2px_10px_rgba(0,0,0,0.06)] py-3.5 border-b border-[#E8ECF2]"
-          : "bg-[#F5F7FA] py-5"
+          ? "bg-white/95 backdrop-blur-md shadow-[0_4px_20px_rgba(30,43,88,0.06)] py-3.5 border-b border-[#F1F5F9]"
+          : "bg-transparent py-5"
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
           
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-8 h-8 rounded-lg bg-[#4CAF4F] flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
-              <GraduationCap className="w-5 h-5" />
+          {/* Logo with Dual-Tone Mark */}
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#1E2B58] to-[#162145] flex items-center justify-center text-white shadow-md shadow-[#1E2B58]/20 group-hover:scale-105 transition-transform">
+              <div className="relative">
+                <GraduationCap className="w-5 h-5 text-white" />
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#00B894] ring-2 ring-white animate-pulse" />
+              </div>
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-bold tracking-tight text-[#263238]">
+              <span className="text-2xl font-extrabold tracking-tight text-[#1E2B58]">
                 Mirkuz
               </span>
-              <span className="text-xs font-semibold text-[#4CAF4F] hidden sm:inline bg-[#E8F5E9] px-2 py-0.5 rounded-full">
+              <span className="text-[11px] font-bold text-[#00B894] bg-[#E8F8F5] px-2 py-0.5 rounded-full uppercase tracking-wider">
                 ምርኩዝ
               </span>
             </div>
           </Link>
 
-          {/* Desktop Nav Items */}
-          <nav className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <a
-                key={link.label}
-                href={link.href}
-                className="text-sm font-medium text-[#4D4D4D] hover:text-[#4CAF4F] transition-colors"
-              >
-                {link.label}
-              </a>
-            ))}
+          {/* Desktop Nav Items with Active Teal Dot */}
+          <nav className="hidden md:flex items-center gap-9">
+            {navLinks.map((link) => {
+              const isActive = activeSection === link.id;
+              return (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  className={`text-sm font-semibold transition-colors relative py-1 ${
+                    isActive ? "text-[#1E2B58]" : "text-[#64748B] hover:text-[#1E2B58]"
+                  }`}
+                >
+                  <span>{link.label}</span>
+                  {/* Active Teal Indicator Dot (as in video) */}
+                  {isActive && (
+                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#00B894]" />
+                  )}
+                </a>
+              );
+            })}
           </nav>
 
           {/* Right Action CTAs */}
@@ -77,26 +103,29 @@ export function Navbar() {
               href="https://t.me/mirkuz_exam"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-[#4CAF4F] hover:text-[#388E3C] px-3 py-2 transition-colors flex items-center gap-1.5"
+              className="text-xs font-bold text-[#1E2B58] hover:text-[#00B894] px-3 py-2 transition-colors flex items-center gap-1.5"
             >
-              <span>Telegram</span>
+              <Send className="w-3.5 h-3.5 text-[#00B894]" />
+              <span>Community</span>
             </a>
+            
+            {/* Deep Navy Button with Teal hover accent (Matching video Frame 002) */}
             <a
               href="https://play.google.com/store/apps/details?id=et.mirkuz.mobile"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-[#4CAF4F] text-white text-sm font-medium hover:bg-[#388E3C] shadow-sm transition-all hover:shadow hover:-translate-y-0.5 active:translate-y-0"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#1E2B58] hover:bg-[#162145] text-white text-xs sm:text-sm font-bold shadow-md shadow-[#1E2B58]/20 transition-all hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
             >
-              <Smartphone className="w-4 h-4" />
-              <span>Get the App</span>
-              <ArrowRight className="w-4 h-4" />
+              <Smartphone className="w-4 h-4 text-[#00B894]" />
+              <span>Get started</span>
+              <ArrowRight className="w-3.5 h-3.5 text-white/80" />
             </a>
           </div>
 
           {/* Mobile Menu Hamburger Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-[#4D4D4D] hover:bg-black/5 transition-colors"
+            className="md:hidden p-2 rounded-xl text-[#1E2B58] hover:bg-slate-100 transition-colors"
             aria-label="Toggle navigation menu"
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -107,37 +136,39 @@ export function Navbar() {
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-b border-[#E8ECF2] shadow-xl px-6 py-6 space-y-4 animate-in slide-in-from-top-2 duration-200">
+        <div className="md:hidden bg-white/98 backdrop-blur-xl border-b border-[#F1F5F9] shadow-2xl px-6 py-6 space-y-4 animate-in slide-in-from-top-2 duration-200">
           <nav className="flex flex-col space-y-3">
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
                 onClick={() => setMobileMenuOpen(false)}
-                className="text-base font-medium text-[#4D4D4D] hover:text-[#4CAF4F] py-1 transition-colors"
+                className="text-base font-semibold text-[#1E2B58] hover:text-[#00B894] py-1.5 transition-colors flex items-center justify-between"
               >
-                {link.label}
+                <span>{link.label}</span>
+                <ArrowRight className="w-4 h-4 text-[#94A3B8]" />
               </a>
             ))}
           </nav>
           
-          <div className="pt-4 border-t border-[#E8ECF2] flex flex-col gap-3">
+          <div className="pt-4 border-t border-[#F1F5F9] flex flex-col gap-3">
             <a
               href="https://t.me/mirkuz_exam"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full text-center py-2.5 text-sm font-medium text-[#4CAF4F] border border-[#4CAF4F] rounded-md hover:bg-[#4CAF4F]/5 transition-colors"
+              className="w-full text-center py-2.5 text-xs font-bold text-[#1E2B58] border border-[#CBD5E1] rounded-xl hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
             >
-              Join Telegram Community
+              <Send className="w-3.5 h-3.5 text-[#00B894]" />
+              <span>Join Telegram Channel</span>
             </a>
             <a
               href="https://play.google.com/store/apps/details?id=et.mirkuz.mobile"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full text-center py-2.5 text-sm font-medium text-white bg-[#4CAF4F] hover:bg-[#388E3C] rounded-md shadow-sm transition-all flex items-center justify-center gap-2"
+              className="w-full text-center py-3 text-xs font-bold text-white bg-[#1E2B58] hover:bg-[#162145] rounded-xl shadow-md shadow-[#1E2B58]/20 transition-all flex items-center justify-center gap-2"
             >
-              <Smartphone className="w-4 h-4" />
-              <span>Download on Google Play</span>
+              <Smartphone className="w-4 h-4 text-[#00B894]" />
+              <span>Download App on Google Play</span>
             </a>
           </div>
         </div>
