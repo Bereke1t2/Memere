@@ -25,11 +25,11 @@ export function Navbar() {
 
   const navLinks = [
     { label: "Home", href: "#hero" },
-    { label: "Service", href: "#services" },
-    { label: "Feature", href: "#features" },
-    { label: "Product", href: "#product" },
-    { label: "Testimonial", href: "#testimonial" },
-    { label: "FAQ", href: "#faq" },
+    { label: "Curriculum", href: "#curriculum" },
+    { label: "Features", href: "#features" },
+    { label: "Mock Exams", href: "#mock-exams" },
+    { label: "Success Stories", href: "#testimonial" },
+    { label: "Study Guides", href: "#study-guides" },
   ];
 
   return (
@@ -46,16 +46,14 @@ export function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="w-8 h-8 rounded-lg bg-[#4CAF4F] flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
-              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                <path d="M12 2L2 7l10 5 10-5-10-5zm0 9.2L4.5 7.4 12 3.6l7.5 3.8L12 11.2zm0 2.8L2 9v6l10 5 10-5V9l-10 5zm0 2.2l-7.5-3.8V11l7.5 3.8 7.5-3.8v2.6L12 16.2z"/>
-              </svg>
+              <GraduationCap className="w-5 h-5" />
             </div>
-            <div className="flex items-baseline gap-1">
+            <div className="flex items-baseline gap-1.5">
               <span className="text-2xl font-bold tracking-tight text-[#263238]">
                 Mirkuz
               </span>
-              <span className="text-xs font-semibold text-[#4CAF4F] hidden sm:inline">
-                Nexcent
+              <span className="text-xs font-semibold text-[#4CAF4F] hidden sm:inline bg-[#E8F5E9] px-2 py-0.5 rounded-full">
+                ምርኩዝ
               </span>
             </div>
           </Link>
@@ -76,20 +74,21 @@ export function Navbar() {
           {/* Right Action CTAs */}
           <div className="hidden md:flex items-center gap-4">
             <a
-              href="https://play.google.com/store/apps"
+              href="https://t.me/mirkuz_exam"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-medium text-[#4CAF4F] hover:text-[#388E3C] px-3 py-2 transition-colors"
+              className="text-sm font-medium text-[#4CAF4F] hover:text-[#388E3C] px-3 py-2 transition-colors flex items-center gap-1.5"
             >
-              Login
+              <span>Telegram</span>
             </a>
             <a
-              href="https://play.google.com/store/apps"
+              href="https://play.google.com/store/apps/details?id=et.mirkuz.mobile"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-[#4CAF4F] text-white text-sm font-medium hover:bg-[#388E3C] shadow-sm transition-all hover:shadow hover:-translate-y-0.5 active:translate-y-0"
             >
-              <span>Sign up</span>
+              <Smartphone className="w-4 h-4" />
+              <span>Get the App</span>
               <ArrowRight className="w-4 h-4" />
             </a>
           </div>
@@ -124,20 +123,21 @@ export function Navbar() {
           
           <div className="pt-4 border-t border-[#E8ECF2] flex flex-col gap-3">
             <a
-              href="https://play.google.com/store/apps"
+              href="https://t.me/mirkuz_exam"
               target="_blank"
               rel="noopener noreferrer"
               className="w-full text-center py-2.5 text-sm font-medium text-[#4CAF4F] border border-[#4CAF4F] rounded-md hover:bg-[#4CAF4F]/5 transition-colors"
             >
-              Login
+              Join Telegram Community
             </a>
             <a
-              href="https://play.google.com/store/apps"
+              href="https://play.google.com/store/apps/details?id=et.mirkuz.mobile"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full text-center py-2.5 text-sm font-medium text-white bg-[#4CAF4F] hover:bg-[#388E3C] rounded-md shadow-sm transition-all"
+              className="w-full text-center py-2.5 text-sm font-medium text-white bg-[#4CAF4F] hover:bg-[#388E3C] rounded-md shadow-sm transition-all flex items-center justify-center gap-2"
             >
-              Sign up / Get App
+              <Smartphone className="w-4 h-4" />
+              <span>Download on Google Play</span>
             </a>
           </div>
         </div>

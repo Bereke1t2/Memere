@@ -20,13 +20,13 @@ export function HeroSection() {
 
   const slides = [
     {
-      titlePrefix: "Lessons and insights",
-      titleHighlight: "from 8 years",
+      titlePrefix: "Master Ethiopia's Grade 12",
+      titleHighlight: "National Entrance Exam",
       subtitle:
-        "Where to grow your academic potential: master the Ethiopian Grade 12 University Entrance Exam with senior examiner video lessons, timed national mock tests, and offline PDF notes.",
-      ctaPrimary: "Register",
-      ctaSecondary: "Explore Courses",
-      badge: "National Matric Exam Curriculum",
+        "Where top scores begin: excel in your matric exam with senior examiner video lessons, 10,000+ past entrance questions, and 100% data-free offline study.",
+      ctaPrimary: "Download App",
+      ctaSecondary: "Explore Curriculum",
+      badge: "2017 E.C. Ministry Curriculum Aligned",
       accent: "#4CAF4F"
     },
     {
@@ -44,7 +44,7 @@ export function HeroSection() {
       titleHighlight: "Zero Mobile Data",
       subtitle:
         "Save all chapters and video courses directly to your phone. Turn off mobile data and study anywhere across Ethiopia without spending Birr on internet packages.",
-      ctaPrimary: "Get Free Access",
+      ctaPrimary: "Download App",
       ctaSecondary: "See How It Works",
       badge: "Built for Low Bandwidth",
       accent: "#4CAF4F"
@@ -90,7 +90,7 @@ export function HeroSection() {
             {/* Action Buttons */}
             <div className="flex flex-wrap items-center gap-4 pt-2">
               <a
-                href="https://play.google.com/store/apps"
+                href="https://play.google.com/store/apps/details?id=et.mirkuz.mobile"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-md bg-[#4CAF4F] hover:bg-[#388E3C] text-white font-medium text-base shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all"
@@ -100,7 +100,7 @@ export function HeroSection() {
               </a>
 
               <a
-                href="#services"
+                href="#curriculum"
                 className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-md bg-white hover:bg-neutral-50 text-[#4D4D4D] border border-[#D5E0D5] font-medium text-base shadow-2xs hover:border-[#4CAF4F] transition-all"
               >
                 <span>{current.ctaSecondary}</span>
@@ -197,7 +197,7 @@ export function HeroSection() {
                 <rect x="315" y="220" width="60" height="5" rx="2.5" fill="#4D4D4D" />
                 <rect x="315" y="228" width="45" height="4" rx="2" fill="#89939E" />
 
-                {/* Person / Character on the Right (Nexcent Style) */}
+                {/* Student Character on the Right */}
                 {/* Body / Torso */}
                 <path d="M380 260 C380 230, 420 230, 420 260 L425 350 L375 350 Z" fill="#4CAF4F" />
                 {/* Arms */}

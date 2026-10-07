@@ -14,12 +14,13 @@ import {
 export function ClientsBar() {
   const clients = [
     { name: "Addis Ababa University", code: "AAU", icon: GraduationCap },
-    { name: "ASTU University", code: "ASTU", icon: Award },
-    { name: "Telebirr Ethio Telecom", code: "telebirr", icon: ShieldCheck },
-    { name: "Hawassa University", code: "HU", icon: Building2 },
-    { name: "Chapa Payment Gateway", code: "chapa", icon: Sparkles },
-    { name: "Bahir Dar University", code: "BDU", icon: Globe2 },
+    { name: "Addis Ababa Science & Tech University", code: "AASTU", icon: Award },
+    { name: "Adama Science & Tech University", code: "ASTU", icon: Building2 },
     { name: "Jimma University", code: "JU", icon: BookOpen },
+    { name: "Hawassa University", code: "HU", icon: Globe2 },
+    { name: "Bahir Dar University", code: "BDU", icon: GraduationCap },
+    { name: "Telebirr Mobile Money", code: "Telebirr", icon: ShieldCheck },
+    { name: "Chapa Payment Gateway", code: "Chapa", icon: Sparkles },
   ];
 
   return (
@@ -28,10 +29,10 @@ export function ClientsBar() {
         
         {/* Section Headers */}
         <h2 className="text-2xl sm:text-3xl font-bold text-[#4D4D4D] tracking-tight">
-          Our Clients
+          Admissions & Partner Institutions
         </h2>
         <p className="text-sm sm:text-base text-[#717171] mt-2 max-w-xl mx-auto">
-          We have been working with some Fortune 500+ clients & top educational institutions
+          Preparing students for competitive placement into Ethiopia's top public universities and technology institutes
         </p>
 
         {/* Logos Row */}

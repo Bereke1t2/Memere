@@ -30,7 +30,7 @@ export function PricingSection() {
         "Community Telegram study access",
       ],
       ctaText: "Get Started Free",
-      ctaLink: "https://play.google.com/store/apps",
+      ctaLink: "https://play.google.com/store/apps/details?id=et.mirkuz.mobile",
     },
     {
       name: "All-Access Entrance Pass",
@@ -49,7 +49,7 @@ export function PricingSection() {
         "Direct Telebirr & CBE Birr Instant Activation",
       ],
       ctaText: "Unlock All-Access Pass",
-      ctaLink: "https://play.google.com/store/apps",
+      ctaLink: "https://play.google.com/store/apps/details?id=et.mirkuz.mobile",
     },
     {
       name: "School & Group Pass",

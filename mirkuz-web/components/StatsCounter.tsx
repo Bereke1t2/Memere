@@ -15,28 +15,28 @@ import {
 export function StatsCounter() {
   const stats = [
     {
-      icon: Users,
-      value: "2,245,341",
-      label: "Members",
-      sub: "Active Grade 12 Students",
+      icon: BookOpen,
+      value: "10,000+",
+      label: "Past Questions Solved",
+      sub: "2008 – 2016 E.C. Entrance Exams",
     },
     {
-      icon: Building2,
-      value: "46,328",
-      label: "Clubs",
-      sub: "High Schools & Study Groups",
+      icon: GraduationCap,
+      value: "50+",
+      label: "Video Masterclasses",
+      sub: "Senior Ethiopian Educators",
     },
     {
-      icon: MousePointerClick,
-      value: "828,867",
-      label: "Event Bookings",
-      sub: "Mock Exam Tests Taken",
+      icon: CheckCircle2,
+      value: "100%",
+      label: "Offline Study Mode",
+      sub: "Zero Mobile Data / No WiFi Needed",
     },
     {
-      icon: CreditCard,
-      value: "1,926,436",
-      label: "Payments",
-      sub: "Telebirr & Local Gateways",
+      icon: Award,
+      value: "94%",
+      label: "University Placement Rate",
+      sub: "Students Meeting Target Cutoffs",
     },
   ];
 
@@ -48,11 +48,11 @@ export function StatsCounter() {
           {/* Left Column: Heading */}
           <div className="lg:col-span-5 space-y-3">
             <h2 className="text-3xl sm:text-4xl font-bold text-[#4D4D4D] tracking-tight leading-tight">
-              Helping a local <br />
-              <span className="text-[#4CAF4F]">business reinvent itself</span>
+              Empowering Students <br />
+              <span className="text-[#4CAF4F]">to Reach Top Universities</span>
             </h2>
             <p className="text-sm sm:text-base text-[#717171]">
-              We reached here with our hard work and dedication
+              A proven matric preparation system built specifically for the Ethiopian national curriculum
             </p>
           </div>
 

@@ -6,7 +6,7 @@ import { ArrowRight, CheckCircle2, Calendar, FileText, WifiOff, Zap } from "luci
 
 export function FeatureSplitTwo() {
   return (
-    <section id="product" className="bg-white py-20 md:py-28 border-b border-[#E8ECF2] overflow-hidden">
+    <section id="mock-exams" className="bg-white py-20 md:py-28 border-b border-[#E8ECF2] overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
           
@@ -15,8 +15,8 @@ export function FeatureSplitTwo() {
             
             <div className="space-y-3">
               <h2 className="text-3xl sm:text-4xl font-bold text-[#4D4D4D] tracking-tight leading-tight">
-                How to design your site footer <br className="hidden sm:inline" />
-                like we did
+                Timed Mock Entrance Simulator <br className="hidden sm:inline" />
+                With Instant Analytics
               </h2>
 
               <div className="inline-block px-3 py-1 rounded-md bg-[#E8F5E9] text-[#4CAF4F] text-xs font-semibold">
@@ -25,7 +25,7 @@ export function FeatureSplitTwo() {
             </div>
 
             <p className="text-sm sm:text-base text-[#717171] leading-relaxed max-w-xl">
-              Donec tempus, odio eget scelerisque luctus, feugiat sem neque pellentesque ipsum, a porta nisi odio ac purus. Fusce feugiat dui lorem, a vestibulum magna finibus sed. Donec tempus, odio eget scelerisque luctus, feugiat sem neque pellentesque ipsum, a porta nisi odio ac purus. Fusce feugiat dui lorem, a vestibulum magna finibus sed.
+              Experience authentic national matric test conditions before exam day. Mirkuz simulates the Ministry of Education's 2-hour examination environment with authentic question pacing, flag-for-review bookmarks, formula hints, and detailed post-exam diagnostic reports pinpointing your exact weak units.
             </p>
 
             {/* Pillar list */}
@@ -46,10 +46,12 @@ export function FeatureSplitTwo() {
 
             {/* Learn More Button */}
             <a
-              href="#exam-demo"
+              href="https://play.google.com/store/apps/details?id=et.mirkuz.mobile"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-8 py-3 rounded-md bg-[#4CAF4F] hover:bg-[#388E3C] text-white font-medium text-sm sm:text-base shadow-sm hover:shadow transition-all hover:-translate-y-0.5 active:translate-y-0"
             >
-              <span>Learn More</span>
+              <span>Practice Mock Exams</span>
               <ArrowRight className="w-4 h-4" />
             </a>
 

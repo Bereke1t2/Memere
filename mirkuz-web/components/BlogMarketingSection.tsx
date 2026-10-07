@@ -7,45 +7,45 @@ import { ArrowRight, BookOpen, Clock, Sparkles } from "lucide-react";
 export function BlogMarketingSection() {
   const blogs = [
     {
-      title: "Creating Streamlined Safeguarding Processes with OneRen",
-      sub: "Top 10 High-Yield Topics in Grade 12 Physics & Calculus for 2017 E.C.",
+      title: "Top 10 High-Yield Topics in Grade 12 Physics & Calculus for 2017 E.C.",
       tag: "Exam Strategy",
       readTime: "5 min read",
       accentColor: "#4CAF4F",
       bgGradient: "from-emerald-500/20 to-green-600/10",
-      svgPattern: "physics"
+      svgPattern: "physics",
+      link: "https://t.me/mirkuz_exam"
     },
     {
-      title: "What are your safeguarding responsibilities and how can you manage them?",
-      sub: "How to Solve Timed Entrance Aptitude & Logic Questions in Under 45 Seconds",
+      title: "How to Solve Timed Entrance Aptitude & Logic Questions in Under 45 Seconds",
       tag: "Speed & Accuracy",
       readTime: "4 min read",
       accentColor: "#2684FF",
       bgGradient: "from-blue-500/20 to-sky-600/10",
-      svgPattern: "aptitude"
+      svgPattern: "aptitude",
+      link: "https://t.me/mirkuz_exam"
     },
     {
-      title: "Revamping the Membership Model with Triathlon Australia",
-      sub: "From Hawassa to AAU Medicine: How Kalkidan Scored 642 Using Offline Prep",
-      tag: "Success Case Study",
+      title: "From Regional High School to AAU Medicine: How Kalkidan Scored 642",
+      tag: "Success Story",
       readTime: "6 min read",
       accentColor: "#FBC02D",
       bgGradient: "from-amber-500/20 to-yellow-600/10",
-      svgPattern: "success"
+      svgPattern: "success",
+      link: "https://t.me/mirkuz_exam"
     },
   ];
 
   return (
-    <section className="bg-white py-20 md:py-28 border-b border-[#E8ECF2]">
+    <section id="study-guides" className="bg-white py-20 md:py-28 border-b border-[#E8ECF2]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Heading */}
         <div className="text-center max-w-2xl mx-auto space-y-3 mb-16">
           <h2 className="text-3xl sm:text-4xl font-bold text-[#4D4D4D] tracking-tight">
-            Caring is the new marketing
+            National Exam Insights & Study Guides
           </h2>
           <p className="text-sm sm:text-base text-[#717171] leading-relaxed">
-            The Nextcent blog is the best place to read about the latest membership insights, trends and more. See who’s joining the community, read about how our community are increasing their membership income and lot’s more.
+            Proven strategies, question patterns, and examiner breakdowns to help you conquer the 2017 E.C. matric exam with confidence.
           </p>
         </div>
 
@@ -97,7 +97,7 @@ export function BlogMarketingSection() {
                 </span>
               </div>
 
-              {/* Floating Overlapping White Card (Signature Nexcent Element) */}
+              {/* Floating Overlapping White Card */}
               <div className="w-[88%] -mt-12 bg-white rounded-lg p-5 sm:p-6 shadow-[0_8px_16px_rgba(171,190,209,0.4)] border border-[#E8ECF2] relative z-10 flex flex-col justify-between group-hover:-translate-y-1 transition-transform">
                 
                 <h3 className="text-base sm:text-lg font-bold text-[#4D4D4D] leading-snug line-clamp-2 mb-4">
@@ -106,10 +106,12 @@ export function BlogMarketingSection() {
 
                 <div className="flex items-center justify-between pt-2">
                   <a
-                    href="#blog"
+                    href={b.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 text-sm font-bold text-[#4CAF4F] hover:text-[#388E3C] hover:gap-2.5 transition-all"
                   >
-                    <span>Readmore</span>
+                    <span>Read on Telegram</span>
                     <ArrowRight className="w-4 h-4" />
                   </a>
 

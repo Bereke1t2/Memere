@@ -203,7 +203,7 @@ export function AppShowcase() {
             {/* Direct CTA */}
             <div className="pt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <a
-                href="https://play.google.com/store/apps"
+                href="https://play.google.com/store/apps/details?id=et.mirkuz.mobile"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-gradient-to-r from-[#10b981] to-[#059669] text-white font-bold text-xs sm:text-sm shadow-xl shadow-[#10b981]/25 hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all"

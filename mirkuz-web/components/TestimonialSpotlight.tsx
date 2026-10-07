@@ -16,11 +16,11 @@ import {
 export function TestimonialSpotlight() {
   const partnerIcons = [
     { code: "AAU", icon: GraduationCap },
-    { code: "ASTU", icon: Award },
-    { code: "telebirr", icon: ShieldCheck },
-    { code: "HU", icon: Building2 },
-    { code: "chapa", icon: Sparkles },
-    { code: "BDU", icon: Globe2 },
+    { code: "AASTU", icon: Award },
+    { code: "ASTU", icon: Building2 },
+    { code: "JU", icon: BookOpen },
+    { code: "Telebirr", icon: ShieldCheck },
+    { code: "Chapa", icon: Sparkles },
   ];
 
   return (
@@ -36,7 +36,7 @@ export function TestimonialSpotlight() {
               </div>
               <h4 className="text-lg font-bold text-[#4D4D4D]">Kalkidan Bekele</h4>
               <p className="text-xs font-semibold text-[#4CAF4F] mt-0.5">Scored 642 / 700 (2016 E.C.)</p>
-              <p className="text-xs text-[#717171] mt-1">Addis Ababa University — Medicine</p>
+              <p className="text-xs text-[#717171] mt-1">Addis Ababa University — School of Medicine</p>
             </div>
           </div>
 
@@ -44,19 +44,19 @@ export function TestimonialSpotlight() {
           <div className="lg:col-span-8 flex flex-col space-y-5">
             
             <p className="text-base sm:text-lg text-[#717171] leading-relaxed italic">
-              “Maecenas dignissim justo eget nulla rutrum molestie. Maecenas lobortis sem dui, vel rutrum risus tincidunt ullamcorper. Proin eu enim metus. Vivamus sed libero ornare, tristique quam in, gravida enim. Nullam ut molestie arcu, at hendrerit elit. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Morbi eu quam non.”
+              “Mirkuz was the single biggest reason I scored 642 in the national matric exam. The video solutions for past Physics and Calculus exams uncovered shortcuts my regular classes never taught. Best of all, having all video masterclasses available offline meant I could study late at night without worrying about weak mobile internet or data costs.”
             </p>
 
             <div>
               <div className="text-lg font-bold text-[#4CAF4F]">
-                Tim Smith
+                Kalkidan Bekele
               </div>
               <div className="text-sm text-[#89939E]">
-                British Dragon Boat Racing Club / AAU Medical Faculty
+                Addis Ababa University School of Medicine Candidate • Former Nazareth School
               </div>
             </div>
 
-            {/* Bottom Row: Client Logos + "Meet all customers ->" Link */}
+            {/* Bottom Row: Client Logos + "Download the app ->" Link */}
             <div className="pt-4 flex flex-wrap items-center justify-between gap-6 border-t border-[#E8ECF2]/60">
               
               {/* Partner Icons */}
@@ -72,12 +72,14 @@ export function TestimonialSpotlight() {
                 })}
               </div>
 
-              {/* Meet all customers link */}
+              {/* Start learning link */}
               <a
-                href="#testimonials"
+                href="https://play.google.com/store/apps/details?id=et.mirkuz.mobile"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 text-sm sm:text-base font-bold text-[#4CAF4F] hover:text-[#388E3C] hover:gap-3 transition-all"
               >
-                <span>Meet all customers</span>
+                <span>Join Top Scorers</span>
                 <ArrowRight className="w-4 h-4" />
               </a>
 

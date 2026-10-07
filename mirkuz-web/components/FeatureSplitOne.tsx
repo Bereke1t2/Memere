@@ -78,8 +78,8 @@ export function FeatureSplitOne() {
             
             <div className="space-y-3">
               <h2 className="text-3xl sm:text-4xl font-bold text-[#4D4D4D] tracking-tight leading-tight">
-                The unseen of spending three <br className="hidden sm:inline" />
-                years at Pixelgrade
+                High-Yield Video Lessons <br className="hidden sm:inline" />
+                by Senior Ethiopian Educators
               </h2>
               
               <div className="inline-block px-3 py-1 rounded-md bg-[#E8F5E9] text-[#4CAF4F] text-xs font-semibold">
@@ -88,7 +88,7 @@ export function FeatureSplitOne() {
             </div>
 
             <p className="text-sm sm:text-base text-[#717171] leading-relaxed max-w-xl">
-              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sit amet justo ipsum. Sed accumsan quam vitae est varius fringilla. Pellentesque placerat vestibulum lorem sed porta. Nullam mattis tristique iaculis. Nullam pulvinar sit amet risus pretium auctor. Etiam quis massa pulvinar, aliquam quam vitae, tempus sem. Donec elementum pulvinar odio.
+              Preparing for the national matric exam shouldn't mean guessing which topics will appear. Mirkuz breaks down every Grade 11 and 12 subject unit by unit, delivering laser-focused video breakdowns of recurring entrance question patterns, common exam traps, and time-saving shortcuts taught by top subject examiners.
             </p>
 
             {/* Benefit Highlights */}
@@ -113,12 +113,12 @@ export function FeatureSplitOne() {
 
             {/* Green Action CTA */}
             <a
-              href="https://play.google.com/store/apps"
+              href="https://play.google.com/store/apps/details?id=et.mirkuz.mobile"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-8 py-3 rounded-md bg-[#4CAF4F] hover:bg-[#388E3C] text-white font-medium text-sm sm:text-base shadow-sm hover:shadow transition-all hover:-translate-y-0.5 active:translate-y-0"
             >
-              <span>Learn More</span>
+              <span>Download Free App</span>
               <ArrowRight className="w-4 h-4" />
             </a>
 

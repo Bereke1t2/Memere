@@ -15,43 +15,43 @@ import {
 export function CommunitySection() {
   const cards = [
     {
-      title: "Membership Organisations",
-      stream: "Natural Science Stream",
+      title: "Natural Science Stream",
+      stream: "Math, Physics, Chemistry, Biology",
       description:
-        "Our membership management software provides full automation of membership renewals and payments with complete Physics, Chemistry, Biology & Math courses.",
-      icon: Users,
+        "In-depth concept mastery, step-by-step calculus proofs, mechanics problem solving, and over 6,000 past national exam questions with full explanations.",
+      icon: GraduationCap,
       badge: "Grade 12 Natural",
     },
     {
-      title: "National Associations",
-      stream: "Social Science Stream",
+      title: "Social Science Stream",
+      stream: "History, Geography, Economics, Aptitude",
       description:
-        "Our membership management software provides full automation of membership renewals and payments with in-depth Geography, History, Economics & Aptitude.",
-      icon: Building2,
+        "Structured regional & global history summaries, analytical economics models, and dedicated general scholastic aptitude speed-drills designed for top university cutoffs.",
+      icon: BookOpen,
       badge: "Grade 12 Social",
     },
     {
-      title: "Clubs And Groups",
-      stream: "100% Offline Learning",
+      title: "100% Offline Study Mode",
+      stream: "Zero Mobile Data Required",
       description:
-        "Our membership management software provides full automation of membership renewals and payments with encrypted offline downloads and zero data usage.",
-      icon: Layers,
-      badge: "Zero Data",
+        "Download video masterclasses, formula sheets, and mock exams directly to your storage. Study interruption-free anywhere in Ethiopia without consuming internet packages.",
+      icon: WifiOff,
+      badge: "Zero Data Mode",
     },
   ];
 
   return (
-    <section id="services" className="bg-white py-20 border-b border-[#E8ECF2]">
+    <section id="curriculum" className="bg-white py-20 border-b border-[#E8ECF2]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto space-y-2 mb-14">
           <h2 className="text-3xl sm:text-4xl font-bold text-[#4D4D4D] tracking-tight">
-            Manage your entire community <br className="hidden sm:inline" />
-            in a single system
+            Tailored Study Streams <br className="hidden sm:inline" />
+            for Every Ethiopian Student
           </h2>
           <p className="text-sm sm:text-base text-[#717171]">
-            Who is Nextcent suitable for?
+            Comprehensive coverage aligned with the revised 2017 E.C. Ministry of Education national syllabus
           </p>
         </div>
 
@@ -91,10 +91,10 @@ export function CommunitySection() {
                 {/* Subtle Learn More Link */}
                 <div className="mt-6 pt-4 border-t border-[#F5F7FA]">
                   <a
-                    href="#curriculum"
+                    href="#features"
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#4CAF4F] hover:text-[#388E3C] transition-colors"
                   >
-                    <span>View Curriculum</span>
+                    <span>Explore Features</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </a>
                 </div>

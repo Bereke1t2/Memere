@@ -6,6 +6,7 @@ import { CommunitySection } from "@/components/CommunitySection";
 import { FeatureSplitOne } from "@/components/FeatureSplitOne";
 import { StatsCounter } from "@/components/StatsCounter";
 import { FeatureSplitTwo } from "@/components/FeatureSplitTwo";
+import { AppShowcase } from "@/components/AppShowcase";
 import { TestimonialSpotlight } from "@/components/TestimonialSpotlight";
 import { BlogMarketingSection } from "@/components/BlogMarketingSection";
 import { InteractiveExamDemo } from "@/components/InteractiveExamDemo";
@@ -23,47 +24,50 @@ export default function LandingPage() {
 
       {/* Main Page Flow matching Figma Minimal Landing Page */}
       <main>
-        {/* 2. Hero Section: Lessons and insights from 8 years */}
+        {/* 2. Hero Section: Grade 12 National University Entrance Exam */}
         <HeroSection />
 
-        {/* 3. Our Clients: Trust & Institution Logos */}
+        {/* 3. Partner Universities & Payment Gateways */}
         <ClientsBar />
 
-        {/* 4. Manage your entire community in a single system: 3-Card Grid */}
+        {/* 4. Stream Streams: Natural, Social, Offline Mode */}
         <CommunitySection />
 
-        {/* 5. Feature Split 1: The unseen of spending three years at Pixelgrade */}
+        {/* 5. Feature Split 1: High-Yield Video Lessons by Senior Educators */}
         <FeatureSplitOne />
 
-        {/* 6. Stats & Achievements: Helping a local business reinvent itself */}
+        {/* 6. Stats & Achievements: Empowering Students to Reach Top Universities */}
         <StatsCounter />
 
-        {/* 7. Feature Split 2: How to design your site footer like we did */}
+        {/* 7. Feature Split 2: Timed Mock Entrance Simulator */}
         <FeatureSplitTwo />
 
-        {/* 8. Customer Spotlight: Tim Smith / Kalkidan Bekele Case Study */}
+        {/* 8. Real App Screenshots & Interactive Showcase */}
+        <AppShowcase />
+
+        {/* 9. Top Scorer Spotlight: Kalkidan Bekele (642/700 - AAU Medicine) */}
         <TestimonialSpotlight />
 
-        {/* 9. Blog & Insights: Caring is the new marketing */}
+        {/* 10. National Exam Insights & Study Guides */}
         <BlogMarketingSection />
 
-        {/* 10. Interactive Exam Simulator Micro-Experience */}
+        {/* 11. Interactive Exam Simulator Micro-Experience */}
         <InteractiveExamDemo />
 
-        {/* 11. Stream & Curriculum Breakdown */}
+        {/* 12. Stream & Curriculum Breakdown */}
         <StreamCurriculum />
 
-        {/* 12. Transparent ETB Pricing & Local Gateways */}
+        {/* 13. Transparent ETB Pricing & Local Gateways */}
         <PricingSection />
 
-        {/* 13. Frequently Asked Questions */}
+        {/* 14. Frequently Asked Questions */}
         <FaqSection />
 
-        {/* 14. Bottom High-Impact CTA: Pellentesque suscipit fringilla libero eu. */}
+        {/* 15. Bottom High-Impact CTA: Ready to Secure Your University Placement? */}
         <CtaBanner />
       </main>
 
-      {/* 15. Minimal Dark Footer */}
+      {/* 16. Minimal Dark Footer */}
       <Footer />
     </div>
   );
