@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { GraduationCap, ArrowLeft, Trash2, CheckCircle2, AlertTriangle } from "lucide-react";
+import Image from "next/image";
+import { ArrowLeft, Trash2, CheckCircle2, AlertTriangle } from "lucide-react";
 
 export default function DeleteAccountPage() {
   const [email, setEmail] = useState("");
@@ -44,9 +45,13 @@ export default function DeleteAccountPage() {
       <header className="border-b border-[#E2E8F0] bg-white/95 backdrop-blur sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-[#00B894] flex items-center justify-center text-white font-bold shadow-xs">
-              <GraduationCap className="w-5 h-5" />
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Mirkuz Logo"
+              width={36}
+              height={36}
+              className="w-9 h-9 rounded-xl shadow-xs object-contain"
+            />
             <div>
               <span className="text-xl font-black tracking-tight text-[#1E2B58]">Mirkuz</span>
               <span className="ml-2 px-2 py-0.5 text-[10px] font-bold bg-[#E8F8F5] text-[#00B894] rounded-full border border-[#00B894]/20">
