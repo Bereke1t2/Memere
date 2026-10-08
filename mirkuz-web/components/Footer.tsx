@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Send, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 
 export function Footer() {
@@ -59,11 +60,13 @@ export function Footer() {
             {/* Logo */}
             <div className="space-y-4">
               <Link href="/" className="flex items-center gap-2.5 group">
-                <div className="w-8 h-8 rounded-lg bg-[#00B894] flex items-center justify-center text-white shadow-sm">
-                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                    <path d="M12 2L2 7l10 5 10-5-10-5zm0 9.2L4.5 7.4 12 3.6l7.5 3.8L12 11.2zm0 2.8L2 9v6l10 5 10-5V9l-10 5zm0 2.2l-7.5-3.8V11l7.5 3.8 7.5-3.8v2.6L12 16.2z"/>
-                  </svg>
-                </div>
+                <Image
+                  src="/logo.png"
+                  alt="Mirkuz Logo"
+                  width={34}
+                  height={34}
+                  className="w-8 h-8 rounded-lg shadow-sm group-hover:scale-105 transition-transform object-contain"
+                />
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-2xl font-black tracking-tight text-white">
                     Mirkuz
