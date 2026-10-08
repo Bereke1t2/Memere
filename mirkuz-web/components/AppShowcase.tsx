@@ -258,9 +258,13 @@ export function AppShowcase() {
 
               {/* Floating Live Feature Tag */}
               <div className="absolute -bottom-4 -left-4 sm:-left-6 bg-[#162145]/95 backdrop-blur-md p-3 rounded-2xl border border-[#2A3B72] shadow-2xl flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-[#00B894]/20 flex items-center justify-center text-[#00B894]">
-                  <ShieldCheck className="w-4 h-4" />
-                </div>
+                <Image
+                  src="/logo.png"
+                  alt="Mirkuz App Icon"
+                  width={32}
+                  height={32}
+                  className="w-8 h-8 rounded-xl object-contain shadow-sm"
+                />
                 <div>
                   <div className="text-[11px] font-bold text-white">Ethiopian Curriculum Aligned</div>
                   <div className="text-[9.5px] text-[#94A3B8]">Updated for 2017/2018 E.C.</div>
