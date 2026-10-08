@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { 
   Menu, 
   X, 
   ArrowRight, 
   Smartphone, 
-  GraduationCap,
-  Sparkles,
-  Send
+  Sparkles, 
+  Send 
 } from "lucide-react";
 
 export function Navbar() {
@@ -57,14 +57,16 @@ export function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
           
-          {/* Logo with Dual-Tone Mark */}
+          {/* Logo with Brand Icon */}
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#1E2B58] to-[#162145] flex items-center justify-center text-white shadow-md shadow-[#1E2B58]/20 group-hover:scale-105 transition-transform">
-              <div className="relative">
-                <GraduationCap className="w-5 h-5 text-white" />
-                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-[#00B894] ring-2 ring-white animate-pulse" />
-              </div>
-            </div>
+            <Image
+              src="/logo.png"
+              alt="Mirkuz Logo"
+              width={38}
+              height={38}
+              priority
+              className="w-9 h-9 rounded-xl shadow-md shadow-[#1E2B58]/15 group-hover:scale-105 transition-transform object-contain"
+            />
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl font-extrabold tracking-tight text-[#1E2B58]">
                 Mirkuz
