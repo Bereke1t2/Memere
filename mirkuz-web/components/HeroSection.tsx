@@ -32,11 +32,6 @@ export function HeroSection() {
           {/* Left Column: Typography & Action Buttons */}
           <div className="lg:col-span-6 flex flex-col items-start space-y-7">
             
-            {/* Top Pill Tag */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#E8F8F5] border border-[#00B894]/20 text-xs font-bold text-[#1E2B58]">
-              <span className="w-2 h-2 rounded-full bg-[#00B894] animate-pulse"></span>
-              <span>2017 E.C. Ministry Matric Syllabus Aligned</span>
-            </div>
 
             {/* Main Two-Tone Headline (Exact Dribbble Style) */}
             <h1 className="text-4xl sm:text-6xl lg:text-[68px] font-extrabold tracking-tight text-[#1E2B58] leading-[1.12]">
