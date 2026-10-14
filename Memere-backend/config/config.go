@@ -332,8 +332,8 @@ type FCMConfig struct {
 
 type ResendConfig struct {
 	APIKey    string `envconfig:"RESEND_API_KEY" default:""`
-	FromEmail string `envconfig:"RESEND_FROM_EMAIL" default:"noreply@memere.app"`
-	FromName  string `envconfig:"RESEND_FROM_NAME" default:"Memere"`
+	FromEmail string `envconfig:"RESEND_FROM_EMAIL" default:"noreply@mirkuz.app"`
+	FromName  string `envconfig:"RESEND_FROM_NAME" default:"Mirkuz"`
 }
 
 type BrevoConfig struct {

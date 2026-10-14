@@ -374,12 +374,16 @@ func buildApp(ctx context.Context, cfg *config.Config, pool *pgxpool.Pool, redis
 	pushSender := notification.NewFCMSender(cfg.FCM.ServerKey)
 	var emailSender service.EmailSender
 	if cfg.Resend.APIKey != "" {
+		slog.Info("email sender configured", "provider", "resend", "from", cfg.Resend.FromEmail)
 		emailSender = notification.NewResendSender(cfg.Resend.APIKey, cfg.Resend.FromEmail, cfg.Resend.FromName)
 	} else if cfg.Brevo.APIKey != "" {
+		slog.Info("email sender configured", "provider", "brevo", "from", cfg.Brevo.FromEmail)
 		emailSender = notification.NewBrevoSender(cfg.Brevo.APIKey, cfg.Brevo.FromEmail, cfg.Brevo.FromName)
 	} else if cfg.SendGrid.APIKey != "" {
+		slog.Info("email sender configured", "provider", "sendgrid", "from", cfg.SendGrid.FromEmail)
 		emailSender = notification.NewSendGridSender(cfg.SendGrid.APIKey, cfg.SendGrid.FromEmail)
 	} else {
+		slog.Warn("no email provider API key configured; using LogEmailSender fallback")
 		emailSender = notification.NewResendSender("", cfg.Resend.FromEmail, cfg.Resend.FromName)
 	}
 	notifDispatcher := notificationuc.NewDispatcher(notifRepo, queue)
