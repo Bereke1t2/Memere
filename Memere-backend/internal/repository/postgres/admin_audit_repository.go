@@ -2,8 +2,6 @@ package postgres
 
 import (
 	"context"
-	"encoding/json"
-	"log"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -26,11 +24,7 @@ func NewAdminAuditRepo(pool *pgxpool.Pool) *AdminAuditRepo {
 }
 
 func (r *AdminAuditRepo) Insert(ctx context.Context, l *entity.AdminAuditLog) error {
-	details, err := json.Marshal(l.Details)
-	if err != nil {
-		log.Printf("admin_audit: marshal details: %v", err)
-		details = []byte("{}")
-	}
+	details := toJSONB(l.Details)
 	var pgTargetID pgtype.UUID
 	if l.TargetID != nil {
 		pgTargetID = toPgUUID(*l.TargetID)

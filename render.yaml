@@ -10,7 +10,7 @@ services:
       - key: APP_ENV
         value: production
       - key: APP_PUBLIC_URL
-        sync: false
+        value: "https://memere.onrender.com"
       - key: RESEND_API_KEY
         sync: false
       - key: RESEND_FROM_EMAIL
@@ -47,3 +47,5 @@ services:
         value: "75"
       - key: TRANSCODE_CONCURRENCY
         value: "1"
+      - key: TRANSCODE_WORKER_ENABLED
+        value: "true"

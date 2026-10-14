@@ -48,8 +48,8 @@ func CORS(allowedOrigins []string, isProduction bool) gin.HandlerFunc {
 		}
 
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-ID")
-		c.Writer.Header().Set("Access-Control-Expose-Headers", "X-Request-ID")
+		c.Writer.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-ID, Idempotency-Key, Range")
+		c.Writer.Header().Set("Access-Control-Expose-Headers", "X-Request-ID, Content-Range, Content-Length, Accept-Ranges")
 		c.Writer.Header().Set("Access-Control-Max-Age", "600") // 10 minutes
 
 		if c.Request.Method == http.MethodOptions {

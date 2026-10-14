@@ -134,3 +134,25 @@ func TestCORS_WildcardInDev_AllowsAny(t *testing.T) {
 		t.Errorf("expected '*', got %q", got)
 	}
 }
+
+func TestCORS_PreflightIncludesIdempotencyAndRangeHeaders(t *testing.T) {
+	r := gin.New()
+	r.Use(middleware.CORS([]string{"https://app.memere.et"}, false))
+	r.OPTIONS("/api/v1/payments", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodOptions, "/api/v1/payments", nil)
+	req.Header.Set("Origin", "https://app.memere.et")
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("expected 204, got %d", w.Code)
+	}
+	allowHeaders := w.Header().Get("Access-Control-Allow-Headers")
+	for _, h := range []string{"Idempotency-Key", "Range", "Authorization", "Content-Type"} {
+		if !bytes.Contains([]byte(allowHeaders), []byte(h)) {
+			t.Errorf("expected header %q in Access-Control-Allow-Headers, got %q", h, allowHeaders)
+		}
+	}
+}
+
