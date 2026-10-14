@@ -491,7 +491,7 @@ func TestRegister_SendsVerificationEmail(t *testing.T) {
 	sessions := newFakeSessionRepo()
 	emailSender := &fakeEmailSender{}
 	mgr := jwt.NewManager("test-secret", 15*time.Minute, 720*time.Hour, "memere-test")
-	svc := NewService(users, tokens, sessions, mgr, emailSender)
+	svc := NewService(users, tokens, sessions, mgr, emailSender).WithSyncEmail()
 
 	u, err := svc.Register(context.Background(), validRegisterInput())
 	if err != nil {
@@ -564,7 +564,7 @@ func TestResendVerificationEmail(t *testing.T) {
 	sessions := newFakeSessionRepo()
 	emailSender := &fakeEmailSender{}
 	mgr := jwt.NewManager("test-secret", 15*time.Minute, 720*time.Hour, "memere-test")
-	svc := NewService(users, tokens, sessions, mgr, emailSender)
+	svc := NewService(users, tokens, sessions, mgr, emailSender).WithSyncEmail()
 	ctx := context.Background()
 
 	_, err := svc.Register(ctx, validRegisterInput())

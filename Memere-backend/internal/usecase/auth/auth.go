@@ -84,6 +84,8 @@ type Service struct {
 	lockout   LockoutConfig
 	// now is injectable for tests; defaults to time.Now.
 	now func() time.Time
+	// syncEmail sends verification emails synchronously when true (used in unit tests).
+	syncEmail bool
 }
 
 // NewService wires the auth usecase with its dependencies.
@@ -112,6 +114,12 @@ func NewService(
 // WithEmailSender attaches an email sender to the service.
 func (s *Service) WithEmailSender(es service.EmailSender) *Service {
 	s.email = es
+	return s
+}
+
+// WithSyncEmail sets email dispatch to synchronous mode (useful for unit tests).
+func (s *Service) WithSyncEmail() *Service {
+	s.syncEmail = true
 	return s
 }
 
@@ -342,7 +350,7 @@ func (s *Service) ResendVerificationEmail(ctx context.Context, email string) err
 	return nil
 }
 
-func (s *Service) sendVerificationEmail(ctx context.Context, u *entity.User, token string) {
+func (s *Service) sendVerificationEmail(_ context.Context, u *entity.User, token string) {
 	if s.email == nil {
 		return
 	}
@@ -351,9 +359,23 @@ func (s *Service) sendVerificationEmail(ctx context.Context, u *entity.User, tok
 		`<h2>Welcome to Mirkuz, %s!</h2><p>Please use this verification code to verify your email address:</p><p style="font-size: 24px; font-weight: bold; letter-spacing: 2px;">%s</p><p>If you did not register this account, please disregard this email.</p>`,
 		u.FirstName, token,
 	)
-	if err := s.email.Send(ctx, u.Email, subject, body); err != nil {
-		slog.Error("failed to send email verification", "err", err, "email", u.Email)
+	if s.syncEmail {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := s.email.Send(ctx, u.Email, subject, body); err != nil {
+			slog.Error("failed to send email verification", "err", err, "email", u.Email)
+		}
+		return
 	}
+	// Fire-and-forget with a detached context so the email send is not
+	// cancelled when the HTTP client disconnects (e.g. mobile timeout).
+	go func() {
+		emailCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := s.email.Send(emailCtx, u.Email, subject, body); err != nil {
+			slog.Error("failed to send email verification", "err", err, "email", u.Email)
+		}
+	}()
 }
 
 // RevokeAccessToken adds the token's JTI to the denylist so it is rejected by
