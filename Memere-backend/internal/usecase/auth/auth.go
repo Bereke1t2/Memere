@@ -357,7 +357,7 @@ func (s *Service) sendVerificationEmail(_ context.Context, u *entity.User, token
 	}
 	subject := "Verify your Mirkuz account email"
 	body := fmt.Sprintf(
-		`<h2>Welcome to Mirkuz, %s!</h2><p>Please use this verification code to verify your email address:</p><p style="font-size: 24px; font-weight: bold; letter-spacing: 2px;">%s</p><p>If you did not register this account, please disregard this email.</p>`,
+		`<h2>Welcome to Mirkuz, %s!</h2><p>Please use this verification code to verify your email address:</p><p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #10b981;">%s</p><p>If you did not register this account, please disregard this email.</p>`,
 		u.FirstName, token,
 	)
 	if s.syncEmail {
