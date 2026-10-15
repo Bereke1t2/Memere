@@ -341,7 +341,7 @@ func (s *Service) ResendVerificationEmail(ctx context.Context, email string) err
 		return nil
 	}
 
-	token := randomToken()
+	token := randomVerificationCode()
 	u.EmailVerificationToken = &token
 	if err := s.users.Update(ctx, u); err != nil {
 		return err
