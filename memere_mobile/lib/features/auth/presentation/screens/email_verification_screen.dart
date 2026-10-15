@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -97,8 +98,10 @@ class _EmailVerificationScreenState
       _errorMessage = null;
     });
 
-    final result =
-        await ref.read(authStateProvider.notifier).verifyEmail(trimmed);
+    final email = _emailCtrl.text.trim();
+    final result = await ref
+        .read(authStateProvider.notifier)
+        .verifyEmail(trimmed, email: email.isNotEmpty ? email : null);
 
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -342,7 +345,18 @@ class _EmailVerificationScreenState
                           labelText: 'Verification Token',
                           hintText: 'Paste token from verification email',
                           prefixIcon: Icons.vpn_key_outlined,
+                          keyboardType: TextInputType.number,
+                          maxLength: 6,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(6),
+                          ],
                           textInputAction: TextInputAction.done,
+                          onChanged: (val) {
+                            if (val.trim().length == 6) {
+                              _verifyToken(val);
+                            }
+                          },
                           onFieldSubmitted: (v) => _verifyToken(v),
                         ),
                         const SizedBox(height: AppSizes.lg),
