@@ -196,6 +196,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (isLoggedIn) {
+        // If an authenticated user's email is unverified and they are on splash (e.g. cold launch after registration),
+        // guide them back to verification rather than jumping straight to home.
+        if (user != null && !user.isEmailVerified && onSplash) {
+          return AppRoutes.verifyEmailPath(email: user.email);
+        }
         // Signed-in users never sit on the splash/onboarding/login pages.
         if (onAuthPage) return AppRoutes.home;
         return null;
