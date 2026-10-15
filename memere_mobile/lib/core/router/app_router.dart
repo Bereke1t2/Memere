@@ -167,16 +167,26 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final location = state.matchedLocation;
       final authState = ref.read(authStateProvider);
       final isLoggedIn = authState.valueOrNull?.isAuthenticated ?? false;
+      final user = authState.valueOrNull?.user;
       final hasSeenOnboarding =
           authState.valueOrNull?.hasSeenOnboarding ?? false;
       final onSplash = location == AppRoutes.splash;
       final onOnboarding = location == AppRoutes.onboarding;
       final onLogin = location == AppRoutes.login;
       final onRegister = location == AppRoutes.register;
+      final onVerifyEmail = location == AppRoutes.verifyEmail;
       final onAuthPage = onLogin || onRegister || onOnboarding || onSplash;
 
       // Hold on the splash while the persisted auth state hydrates.
       if (authState.isLoading && onSplash) {
+        return null;
+      }
+
+      // If user is currently on email verification screen, stay there unless already verified
+      if (onVerifyEmail) {
+        if (isLoggedIn && (user?.isEmailVerified ?? false)) {
+          return AppRoutes.home;
+        }
         return null;
       }
 
