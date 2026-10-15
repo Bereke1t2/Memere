@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"net/http"
 	"net/mail"
 	"strings"
@@ -170,7 +171,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (*entity.User,
 	if err != nil {
 		return nil, apperror.Internal(err)
 	}
-	verifyToken := randomToken()
+	verifyToken := randomVerificationCode()
 
 	approvalStatus := entity.ApprovalStatusPending
 	if role != entity.RoleStudent {
@@ -291,18 +292,35 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*AuthTokens, *entit
 }
 
 // VerifyEmail validates the token and marks the user's email verified.
-func (s *Service) VerifyEmail(ctx context.Context, token string) (*entity.User, error) {
+// If an email is supplied, the verification is scoped to that email for collision safety.
+func (s *Service) VerifyEmail(ctx context.Context, token string, email ...string) (*entity.User, error) {
 	token = strings.TrimSpace(token)
 	if token == "" {
 		return nil, apperror.BadRequest("verification token is required", nil)
 	}
 
-	u, err := s.users.FindByEmailVerificationToken(ctx, token)
-	if err != nil {
-		if apperror.IsNotFound(err) {
+	var u *entity.User
+	var err error
+	if len(email) > 0 && strings.TrimSpace(email[0]) != "" {
+		normalized := normalizeEmail(email[0])
+		u, err = s.users.FindByEmail(ctx, normalized)
+		if err != nil {
+			if apperror.IsNotFound(err) {
+				return nil, apperror.New(http.StatusBadRequest, "INVALID_VERIFICATION_TOKEN", "invalid or expired email verification token", nil)
+			}
+			return nil, err
+		}
+		if u.EmailVerificationToken == nil || *u.EmailVerificationToken != token {
 			return nil, apperror.New(http.StatusBadRequest, "INVALID_VERIFICATION_TOKEN", "invalid or expired email verification token", nil)
 		}
-		return nil, err
+	} else {
+		u, err = s.users.FindByEmailVerificationToken(ctx, token)
+		if err != nil {
+			if apperror.IsNotFound(err) {
+				return nil, apperror.New(http.StatusBadRequest, "INVALID_VERIFICATION_TOKEN", "invalid or expired email verification token", nil)
+			}
+			return nil, err
+		}
 	}
 
 	if u.IsEmailVerified {
@@ -340,7 +358,7 @@ func (s *Service) ResendVerificationEmail(ctx context.Context, email string) err
 		return nil
 	}
 
-	token := randomToken()
+	token := randomVerificationCode()
 	u.EmailVerificationToken = &token
 	if err := s.users.Update(ctx, u); err != nil {
 		return err
@@ -356,7 +374,7 @@ func (s *Service) sendVerificationEmail(_ context.Context, u *entity.User, token
 	}
 	subject := "Verify your Mirkuz account email"
 	body := fmt.Sprintf(
-		`<h2>Welcome to Mirkuz, %s!</h2><p>Please use this verification code to verify your email address:</p><p style="font-size: 24px; font-weight: bold; letter-spacing: 2px;">%s</p><p>If you did not register this account, please disregard this email.</p>`,
+		`<h2>Welcome to Mirkuz, %s!</h2><p>Please use this verification code to verify your email address:</p><p style="font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #10b981;">%s</p><p>If you did not register this account, please disregard this email.</p>`,
 		u.FirstName, token,
 	)
 	if s.syncEmail {
@@ -550,4 +568,16 @@ func randomToken() string {
 	b := make([]byte, 32)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// randomVerificationCode returns a cryptographically secure 6-digit numeric OTP ("000000"-"999999").
+func randomVerificationCode() string {
+	n, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	if err != nil {
+		b := make([]byte, 4)
+		_, _ = rand.Read(b)
+		val := (uint32(b[0])<<24 | uint32(b[1])<<16 | uint32(b[2])<<8 | uint32(b[3])) % 1000000
+		return fmt.Sprintf("%06d", val)
+	}
+	return fmt.Sprintf("%06d", n.Int64())
 }

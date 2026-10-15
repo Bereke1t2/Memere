@@ -64,7 +64,7 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> verifyEmail(String token) async {
+  Future<Either<Failure, void>> verifyEmail(String token, {String? email}) async {
     verifyEmailCalls++;
     if (token == 'invalid-token') {
       return const Left(ServerFailure('Invalid or expired token', code: 'INVALID_VERIFICATION_TOKEN', statusCode: 400));

@@ -15,7 +15,7 @@ abstract class AuthRemoteDataSource {
     required String lastName,
     String? phone,
   });
-  Future<void> verifyEmail(String token);
+  Future<void> verifyEmail(String token, {String? email});
   Future<void> resendVerificationEmail(String email);
   Future<UserModel> getCurrentUser();
   Future<void> logout(String refreshToken);
@@ -69,9 +69,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   }
 
   @override
-  Future<void> verifyEmail(String token) async {
+  Future<void> verifyEmail(String token, {String? email}) async {
     await _client.post<Map<String, dynamic>>('/auth/verify-email', data: {
       'token': token,
+      if (email != null && email.isNotEmpty) 'email': email,
     });
   }
 

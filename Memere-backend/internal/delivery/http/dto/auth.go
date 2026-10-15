@@ -32,6 +32,7 @@ type LoginRequest struct {
 
 // VerifyEmailRequest is the body of POST /auth/verify-email.
 type VerifyEmailRequest struct {
+	Email string `json:"email"`
 	Token string `json:"token" binding:"required"`
 }
 

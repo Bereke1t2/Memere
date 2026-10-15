@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_motion.dart';
 import '../../core/constants/app_shadows.dart';
@@ -23,6 +24,8 @@ class AppTextField extends StatefulWidget {
     this.enabled = true,
     this.maxLines = 1,
     this.focusNode,
+    this.inputFormatters,
+    this.maxLength,
   });
 
   final TextEditingController controller;
@@ -40,6 +43,8 @@ class AppTextField extends StatefulWidget {
   final bool enabled;
   final int maxLines;
   final FocusNode? focusNode;
+  final List<TextInputFormatter>? inputFormatters;
+  final int? maxLength;
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -109,9 +114,12 @@ class _AppTextFieldState extends State<AppTextField> {
             onFieldSubmitted: widget.onFieldSubmitted,
             autofillHints: widget.autofillHints,
             enabled: widget.enabled,
+            inputFormatters: widget.inputFormatters,
+            maxLength: widget.maxLength,
             maxLines: widget.isPassword ? 1 : widget.maxLines,
             style: AppTextStyles.bodyMedium,
             decoration: InputDecoration(
+              counterText: widget.maxLength != null ? '' : null,
               hintText: widget.hintText,
               prefixIcon: widget.prefixIcon != null
                   ? Icon(

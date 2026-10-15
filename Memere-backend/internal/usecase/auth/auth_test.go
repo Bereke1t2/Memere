@@ -523,8 +523,11 @@ func TestVerifyEmail_Success(t *testing.T) {
 		t.Fatalf("failed to find stored user or verification token: %v", err)
 	}
 	token := *stored.EmailVerificationToken
+	if len(token) != 6 {
+		t.Errorf("expected 6-digit verification code, got %q (len %d)", token, len(token))
+	}
 
-	verified, err := svc.VerifyEmail(ctx, token)
+	verified, err := svc.VerifyEmail(ctx, token, "student@example.com")
 	if err != nil {
 		t.Fatalf("VerifyEmail failed: %v", err)
 	}

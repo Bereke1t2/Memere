@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
@@ -147,24 +148,45 @@ abstract class AppRoutes {
   }
 }
 
+class _RouterRefreshNotifier extends ChangeNotifier {
+  void trigger() => notifyListeners();
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+  final refreshNotifier = _RouterRefreshNotifier();
+  ref.onDispose(refreshNotifier.dispose);
+
+  ref.listen(authStateProvider, (_, __) {
+    refreshNotifier.trigger();
+  });
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
+    refreshListenable: refreshNotifier,
     redirect: (context, state) {
       final location = state.matchedLocation;
+      final authState = ref.read(authStateProvider);
       final isLoggedIn = authState.valueOrNull?.isAuthenticated ?? false;
+      final user = authState.valueOrNull?.user;
       final hasSeenOnboarding =
           authState.valueOrNull?.hasSeenOnboarding ?? false;
       final onSplash = location == AppRoutes.splash;
       final onOnboarding = location == AppRoutes.onboarding;
       final onLogin = location == AppRoutes.login;
       final onRegister = location == AppRoutes.register;
+      final onVerifyEmail = location == AppRoutes.verifyEmail;
       final onAuthPage = onLogin || onRegister || onOnboarding || onSplash;
 
       // Hold on the splash while the persisted auth state hydrates.
       if (authState.isLoading && onSplash) {
+        return null;
+      }
+
+      // If user is currently on email verification screen, stay there unless already verified
+      if (onVerifyEmail) {
+        if (isLoggedIn && (user?.isEmailVerified ?? false)) {
+          return AppRoutes.home;
+        }
         return null;
       }
 
@@ -174,6 +196,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (isLoggedIn) {
+        // If an authenticated user's email is unverified and they are on splash (e.g. cold launch after registration),
+        // guide them back to verification rather than jumping straight to home.
+        if (user != null && !user.isEmailVerified && onSplash) {
+          return AppRoutes.verifyEmailPath(email: user.email);
+        }
         // Signed-in users never sit on the splash/onboarding/login pages.
         if (onAuthPage) return AppRoutes.home;
         return null;
