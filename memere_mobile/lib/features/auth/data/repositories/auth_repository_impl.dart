@@ -98,9 +98,9 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<Either<Failure, void>> verifyEmail(String token) async {
+  Future<Either<Failure, void>> verifyEmail(String token, {String? email}) async {
     try {
-      await _remote.verifyEmail(token);
+      await _remote.verifyEmail(token, email: email);
       // Refresh current user in cache if logged in
       final currentUserResult = await getCurrentUser();
       currentUserResult.fold((_) {}, (_) {});
