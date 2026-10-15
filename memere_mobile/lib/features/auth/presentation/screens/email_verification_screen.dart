@@ -89,7 +89,7 @@ class _EmailVerificationScreenState
   Future<void> _verifyToken(String token) async {
     final trimmed = token.trim();
     if (trimmed.isEmpty) {
-      setState(() => _errorMessage = 'Please enter or paste your verification token');
+      setState(() => _errorMessage = 'Please enter your verification code');
       return;
     }
 
@@ -114,7 +114,7 @@ class _EmailVerificationScreenState
                   failure.message.toLowerCase().contains('invalid') ||
                   failure.message.toLowerCase().contains('expired'))) {
             _errorMessage =
-                'Verification link or token has expired or is invalid. Please request a new verification email below.';
+                'Verification code has expired or is invalid. Please request a new verification code below.';
           } else {
             _errorMessage = failure.message;
           }
@@ -264,7 +264,7 @@ class _EmailVerificationScreenState
                 Text(
                   _isVerifiedSuccess
                       ? 'Your email is verified. You now have full access to study materials, lessons, and mock exams.'
-                      : 'We sent a verification token to your email address. Please enter the token or tap the link in the email to activate your student account.',
+                      : 'We sent a 6-digit verification code to your email address. Please enter the code below to activate your student account.',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.bodyMedium.copyWith(
                     color: AppColors.textSecondary,
@@ -342,9 +342,9 @@ class _EmailVerificationScreenState
                         const SizedBox(height: AppSizes.md),
                         AppTextField(
                           controller: _tokenCtrl,
-                          labelText: 'Verification Token',
-                          hintText: 'Paste token from verification email',
-                          prefixIcon: Icons.vpn_key_outlined,
+                          labelText: 'Verification Code',
+                          hintText: 'Enter 6-digit code',
+                          prefixIcon: Icons.pin_outlined,
                           keyboardType: TextInputType.number,
                           maxLength: 6,
                           inputFormatters: [
@@ -361,7 +361,7 @@ class _EmailVerificationScreenState
                         ),
                         const SizedBox(height: AppSizes.lg),
                         AppButton(
-                          label: 'Verify Email',
+                          label: 'Verify Code',
                           isLoading: _isLoading,
                           onPressed: _isLoading
                               ? null
