@@ -200,9 +200,9 @@ class AuthStateNotifier extends AsyncNotifier<AuthState> {
     );
   }
 
-  Future<Either<Failure, void>> verifyEmail(String token) async {
+  Future<Either<Failure, void>> verifyEmail(String token, {String? email}) async {
     final repo = ref.read(authRepositoryProvider);
-    final result = await repo.verifyEmail(token);
+    final result = await repo.verifyEmail(token, email: email);
     return result.fold(
       (failure) => Left(failure),
       (_) async {
