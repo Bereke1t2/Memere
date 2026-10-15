@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -545,6 +546,81 @@ func TestVerifyEmail_Success(t *testing.T) {
 	verifiedAgain, err := svc.VerifyEmail(ctx, token)
 	if err == nil && !verifiedAgain.IsEmailVerified {
 		t.Errorf("expected idempotent verified user")
+	}
+}
+
+func TestVerifyEmail_SendsWelcomeEmail(t *testing.T) {
+	users := newFakeUserRepo()
+	tokens := newFakeTokenRepo()
+	sessions := newFakeSessionRepo()
+	emailSender := &fakeEmailSender{}
+	mgr := jwt.NewManager("test-secret", 15*time.Minute, 720*time.Hour, "memere-test")
+	svc := NewService(users, tokens, sessions, mgr, emailSender).
+		WithSyncEmail().
+		WithPublicURL("https://mirkuz.app")
+	ctx := context.Background()
+
+	_, err := svc.Register(ctx, validRegisterInput())
+	if err != nil {
+		t.Fatalf("Register error: %v", err)
+	}
+
+	stored, err := users.FindByEmail(ctx, "student@example.com")
+	if err != nil || stored.EmailVerificationToken == nil {
+		t.Fatalf("failed to find stored user or verification token: %v", err)
+	}
+	token := *stored.EmailVerificationToken
+
+	// Register sent 1 verification email
+	if len(emailSender.sent) != 1 {
+		t.Fatalf("expected 1 email after register, got %d", len(emailSender.sent))
+	}
+
+	// Verify email -> should trigger welcome email
+	verified, err := svc.VerifyEmail(ctx, token, "student@example.com")
+	if err != nil {
+		t.Fatalf("VerifyEmail error: %v", err)
+	}
+	if !verified.IsEmailVerified {
+		t.Fatal("expected user to be verified")
+	}
+
+	if len(emailSender.sent) != 2 {
+		t.Fatalf("expected 2 emails sent (verification + welcome), got %d", len(emailSender.sent))
+	}
+
+	welcome := emailSender.lastSent()
+	if welcome.To != "student@example.com" {
+		t.Errorf("expected welcome email to student@example.com, got %q", welcome.To)
+	}
+	if welcome.Subject != "Welcome to Mirkuz — Your Account is Verified! 🎓" {
+		t.Errorf("unexpected subject: %q", welcome.Subject)
+	}
+
+	// Ensure personalized name and core capabilities are present
+	expectedSnippets := []string{
+		"Welcome aboard, Abel! 🚀",
+		"Curated Video Courses",
+		"Realistic Mock Exams",
+		"Summaries & Offline Notes",
+		"Track Progress & Daily Streaks",
+		"Start Learning Now",
+		"https://mirkuz.app",
+		"support@mirkuz.app",
+	}
+	for _, s := range expectedSnippets {
+		if !strings.Contains(welcome.Body, s) {
+			t.Errorf("expected welcome email body to contain %q", s)
+		}
+	}
+
+	// Idempotent verification call must not resend welcome email
+	_, err = svc.VerifyEmail(ctx, token, "student@example.com")
+	if err != nil {
+		t.Fatalf("second VerifyEmail error: %v", err)
+	}
+	if len(emailSender.sent) != 2 {
+		t.Errorf("expected still 2 emails after idempotent verify, got %d", len(emailSender.sent))
 	}
 }
 

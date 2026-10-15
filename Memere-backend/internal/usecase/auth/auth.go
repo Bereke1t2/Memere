@@ -310,6 +310,10 @@ func (s *Service) VerifyEmail(ctx context.Context, token string, email ...string
 			}
 			return nil, err
 		}
+		if u.IsEmailVerified {
+			sanitized := u.Sanitized()
+			return &sanitized, nil
+		}
 		if u.EmailVerificationToken == nil || *u.EmailVerificationToken != token {
 			return nil, apperror.New(http.StatusBadRequest, "INVALID_VERIFICATION_TOKEN", "invalid or expired email verification token", nil)
 		}
@@ -321,11 +325,10 @@ func (s *Service) VerifyEmail(ctx context.Context, token string, email ...string
 			}
 			return nil, err
 		}
-	}
-
-	if u.IsEmailVerified {
-		sanitized := u.Sanitized()
-		return &sanitized, nil
+		if u.IsEmailVerified {
+			sanitized := u.Sanitized()
+			return &sanitized, nil
+		}
 	}
 
 	u.IsEmailVerified = true
@@ -333,6 +336,8 @@ func (s *Service) VerifyEmail(ctx context.Context, token string, email ...string
 	if err := s.users.Update(ctx, u); err != nil {
 		return nil, err
 	}
+
+	s.sendWelcomeEmail(ctx, u)
 
 	sanitized := u.Sanitized()
 	return &sanitized, nil
@@ -394,6 +399,209 @@ func (s *Service) sendVerificationEmail(_ context.Context, u *entity.User, token
 			slog.Error("failed to send email verification", "err", err, "email", u.Email)
 		}
 	}()
+}
+
+func (s *Service) sendWelcomeEmail(_ context.Context, u *entity.User) {
+	if s.email == nil {
+		return
+	}
+	subject := "Welcome to Mirkuz — Your Account is Verified! 🎓"
+	body := s.buildWelcomeEmailHTML(u)
+	if s.syncEmail {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := s.email.Send(ctx, u.Email, subject, body); err != nil {
+			slog.Error("failed to send welcome email", "err", err, "email", u.Email)
+		}
+		return
+	}
+	// Fire-and-forget with a detached context so the email send is not
+	// cancelled when the HTTP client disconnects (e.g. mobile timeout).
+	go func() {
+		emailCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := s.email.Send(emailCtx, u.Email, subject, body); err != nil {
+			slog.Error("failed to send welcome email", "err", err, "email", u.Email)
+		}
+	}()
+}
+
+func (s *Service) buildWelcomeEmailHTML(u *entity.User) string {
+	name := u.FirstName
+	if name == "" {
+		name = "there"
+	}
+
+	appURL := s.publicURL
+	if appURL == "" {
+		appURL = "https://mirkuz.app"
+	}
+
+	return fmt.Sprintf(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Mirkuz</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%%" style="background-color: #f1f5f9; padding: 32px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card Container -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%%" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0;">
+          
+          <!-- Brand Header -->
+          <tr>
+            <td style="background-color: #0f172a; padding: 32px 40px; text-align: center;">
+              <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: 1.5px; color: #ffffff;">
+                🎓 MIRKUZ
+              </h1>
+              <p style="margin: 6px 0 0 0; font-size: 13px; color: #94a3b8; font-weight: 400; letter-spacing: 0.5px;">
+                Your Academic Success Partner
+              </p>
+            </td>
+          </tr>
+
+          <!-- Hero Section -->
+          <tr>
+            <td style="padding: 40px 40px 24px 40px; text-align: center;">
+              <!-- Verification Success Badge -->
+              <div style="display: inline-block; background-color: #dcfce7; border: 1px solid #86efac; border-radius: 9999px; padding: 6px 16px; margin-bottom: 20px;">
+                <span style="color: #166534; font-size: 13px; font-weight: 700; letter-spacing: 0.3px;">
+                  ✓ Email Verified Successfully
+                </span>
+              </div>
+              
+              <h2 style="margin: 0 0 12px 0; color: #0f172a; font-size: 24px; font-weight: 700; line-height: 1.3;">
+                Welcome aboard, %s! 🚀
+              </h2>
+              <p style="margin: 0; color: #475569; font-size: 15px; line-height: 1.6;">
+                Your account is officially active. You have joined a dedicated community of students preparing for academic excellence and exam mastery.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Value / Features Section -->
+          <tr>
+            <td style="padding: 0 40px 24px 40px;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%%" style="border-top: 1px solid #f1f5f9; padding-top: 24px;">
+                <tr>
+                  <td style="padding-bottom: 16px;">
+                    <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #0f172a;">
+                      Here is what you can do right now:
+                    </h3>
+                  </td>
+                </tr>
+
+                <!-- Feature 1: Video Courses -->
+                <tr>
+                  <td style="padding-bottom: 16px;">
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px;">
+                      <tr>
+                        <td width="42" valign="top" style="font-size: 26px; line-height: 1;">📚</td>
+                        <td style="padding-left: 12px;">
+                          <div style="font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px;">Curated Video Courses</div>
+                          <div style="font-size: 13px; color: #64748b; line-height: 1.5;">Master difficult subjects chapter-by-chapter with high-yield video lessons taught by top educators.</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Feature 2: Timed Mock Exams -->
+                <tr>
+                  <td style="padding-bottom: 16px;">
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px;">
+                      <tr>
+                        <td width="42" valign="top" style="font-size: 26px; line-height: 1;">📝</td>
+                        <td style="padding-left: 12px;">
+                          <div style="font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px;">Realistic Mock Exams</div>
+                          <div style="font-size: 13px; color: #64748b; line-height: 1.5;">Practice under realistic exam conditions with timed question sets and instant step-by-step explanations.</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Feature 3: Offline Study Materials -->
+                <tr>
+                  <td style="padding-bottom: 16px;">
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px;">
+                      <tr>
+                        <td width="42" valign="top" style="font-size: 26px; line-height: 1;">📖</td>
+                        <td style="padding-left: 12px;">
+                          <div style="font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px;">Summaries & Offline Notes</div>
+                          <div style="font-size: 13px; color: #64748b; line-height: 1.5;">Download essential formulas, key concepts, and chapter notes to study anywhere, anytime.</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+                <!-- Feature 4: Analytics & Streaks -->
+                <tr>
+                  <td style="padding-bottom: 8px;">
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px;">
+                      <tr>
+                        <td width="42" valign="top" style="font-size: 26px; line-height: 1;">📊</td>
+                        <td style="padding-left: 12px;">
+                          <div style="font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 4px;">Track Progress & Daily Streaks</div>
+                          <div style="font-size: 13px; color: #64748b; line-height: 1.5;">See your strengths, target your weak areas, and build a lasting daily study habit that pays off.</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+
+          <!-- CTA Button -->
+          <tr>
+            <td style="padding: 12px 40px 32px 40px; text-align: center;">
+              <a href="%s" target="_blank" style="display: inline-block; background-color: #10b981; color: #ffffff; font-size: 16px; font-weight: 700; text-decoration: none; padding: 14px 36px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);">
+                Start Learning Now &rarr;
+              </a>
+            </td>
+          </tr>
+
+          <!-- Pro Tip Callout -->
+          <tr>
+            <td style="padding: 0 40px 36px 40px;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%%" style="background-color: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 4px 8px 8px 4px; padding: 16px 20px;">
+                <tr>
+                  <td>
+                    <div style="font-size: 13px; color: #1e40af; line-height: 1.5;">
+                      <strong>💡 Quick Tip:</strong> Studying just 25 minutes a day with active recall and practice tests improves exam retention by over 80%%. Open the app today and complete your first quiz!
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 28px 40px; text-align: center;">
+              <p style="margin: 0 0 8px 0; font-size: 13px; color: #64748b;">
+                Need help or have questions? Contact us anytime at <a href="mailto:support@mirkuz.app" style="color: #10b981; text-decoration: none; font-weight: 600;">support@mirkuz.app</a>
+              </p>
+              <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                &copy; %d Mirkuz Inc. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+		name, appURL, time.Now().Year(),
+	)
 }
 
 // RevokeAccessToken adds the token's JTI to the denylist so it is rejected by
