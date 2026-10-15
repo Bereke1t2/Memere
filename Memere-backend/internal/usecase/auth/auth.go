@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"net/http"
 	"net/mail"
 	"strings"
@@ -550,4 +551,16 @@ func randomToken() string {
 	b := make([]byte, 32)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// randomVerificationCode returns a cryptographically secure 6-digit numeric OTP ("000000"-"999999").
+func randomVerificationCode() string {
+	n, err := rand.Int(rand.Reader, big.NewInt(1000000))
+	if err != nil {
+		b := make([]byte, 4)
+		_, _ = rand.Read(b)
+		val := (uint32(b[0])<<24 | uint32(b[1])<<16 | uint32(b[2])<<8 | uint32(b[3])) % 1000000
+		return fmt.Sprintf("%06d", val)
+	}
+	return fmt.Sprintf("%06d", n.Int64())
 }
