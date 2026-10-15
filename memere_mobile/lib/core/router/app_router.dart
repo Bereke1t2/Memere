@@ -153,12 +153,19 @@ class _RouterRefreshNotifier extends ChangeNotifier {
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateProvider);
+  final refreshNotifier = _RouterRefreshNotifier();
+  ref.onDispose(refreshNotifier.dispose);
+
+  ref.listen(authStateProvider, (_, __) {
+    refreshNotifier.trigger();
+  });
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
+    refreshListenable: refreshNotifier,
     redirect: (context, state) {
       final location = state.matchedLocation;
+      final authState = ref.read(authStateProvider);
       final isLoggedIn = authState.valueOrNull?.isAuthenticated ?? false;
       final hasSeenOnboarding =
           authState.valueOrNull?.hasSeenOnboarding ?? false;
