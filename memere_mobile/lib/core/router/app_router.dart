@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/auth/presentation/screens/splash_screen.dart';
@@ -145,6 +146,10 @@ abstract class AppRoutes {
       queryParameters: {'courseId': courseId},
     ).toString();
   }
+}
+
+class _RouterRefreshNotifier extends ChangeNotifier {
+  void trigger() => notifyListeners();
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
