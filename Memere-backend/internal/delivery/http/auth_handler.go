@@ -79,7 +79,7 @@ func (h *AuthHandler) VerifyEmail(c *gin.Context) {
 		return
 	}
 
-	user, err := h.svc.VerifyEmail(c.Request.Context(), req.Token)
+	user, err := h.svc.VerifyEmail(c.Request.Context(), req.Token, req.Email)
 	if err != nil {
 		respondError(c, err)
 		return
