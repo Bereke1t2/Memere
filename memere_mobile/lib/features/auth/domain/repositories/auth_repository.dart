@@ -24,7 +24,7 @@ abstract class AuthRepository {
     String? phone,
   });
 
-  Future<Either<Failure, void>> verifyEmail(String token);
+  Future<Either<Failure, void>> verifyEmail(String token, {String? email});
 
   Future<Either<Failure, void>> resendVerificationEmail(String email);
 
