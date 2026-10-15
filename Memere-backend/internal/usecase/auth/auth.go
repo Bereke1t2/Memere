@@ -292,18 +292,35 @@ func (s *Service) Login(ctx context.Context, in LoginInput) (*AuthTokens, *entit
 }
 
 // VerifyEmail validates the token and marks the user's email verified.
-func (s *Service) VerifyEmail(ctx context.Context, token string) (*entity.User, error) {
+// If an email is supplied, the verification is scoped to that email for collision safety.
+func (s *Service) VerifyEmail(ctx context.Context, token string, email ...string) (*entity.User, error) {
 	token = strings.TrimSpace(token)
 	if token == "" {
 		return nil, apperror.BadRequest("verification token is required", nil)
 	}
 
-	u, err := s.users.FindByEmailVerificationToken(ctx, token)
-	if err != nil {
-		if apperror.IsNotFound(err) {
+	var u *entity.User
+	var err error
+	if len(email) > 0 && strings.TrimSpace(email[0]) != "" {
+		normalized := normalizeEmail(email[0])
+		u, err = s.users.FindByEmail(ctx, normalized)
+		if err != nil {
+			if apperror.IsNotFound(err) {
+				return nil, apperror.New(http.StatusBadRequest, "INVALID_VERIFICATION_TOKEN", "invalid or expired email verification token", nil)
+			}
+			return nil, err
+		}
+		if u.EmailVerificationToken == nil || *u.EmailVerificationToken != token {
 			return nil, apperror.New(http.StatusBadRequest, "INVALID_VERIFICATION_TOKEN", "invalid or expired email verification token", nil)
 		}
-		return nil, err
+	} else {
+		u, err = s.users.FindByEmailVerificationToken(ctx, token)
+		if err != nil {
+			if apperror.IsNotFound(err) {
+				return nil, apperror.New(http.StatusBadRequest, "INVALID_VERIFICATION_TOKEN", "invalid or expired email verification token", nil)
+			}
+			return nil, err
+		}
 	}
 
 	if u.IsEmailVerified {
