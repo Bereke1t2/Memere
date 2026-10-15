@@ -527,7 +527,7 @@ func TestVerifyEmail_Success(t *testing.T) {
 		t.Errorf("expected 6-digit verification code, got %q (len %d)", token, len(token))
 	}
 
-	verified, err := svc.VerifyEmail(ctx, token)
+	verified, err := svc.VerifyEmail(ctx, token, "student@example.com")
 	if err != nil {
 		t.Fatalf("VerifyEmail failed: %v", err)
 	}
