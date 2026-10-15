@@ -171,7 +171,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (*entity.User,
 	if err != nil {
 		return nil, apperror.Internal(err)
 	}
-	verifyToken := randomToken()
+	verifyToken := randomVerificationCode()
 
 	approvalStatus := entity.ApprovalStatusPending
 	if role != entity.RoleStudent {
