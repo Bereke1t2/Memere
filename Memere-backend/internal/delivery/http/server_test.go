@@ -45,4 +45,7 @@ func TestSystemStatsHandler(t *testing.T) {
 	if _, ok := runtimeInfo["sys_mb"]; !ok {
 		t.Errorf("expected sys_mb in runtime info")
 	}
+	if _, ok := runtimeInfo["cpu_percent"]; !ok {
+		t.Errorf("expected cpu_percent in runtime info")
+	}
 }
