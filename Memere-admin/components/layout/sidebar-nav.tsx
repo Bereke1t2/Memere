@@ -11,6 +11,7 @@ import {
   Megaphone,
   DollarSign,
   KeyRound,
+  Activity,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -23,6 +24,7 @@ const ADMIN_NAV = [
   { href: "/payments",        label: "Payments",        icon: CreditCard },
   { href: "/revenue",         label: "Revenue",         icon: TrendingUp },
   { href: "/announcements",   label: "Announcements",   icon: Megaphone },
+  { href: "/system-health",   label: "System Health",   icon: Activity },
 ];
 
 const TEACHER_NAV = [
