@@ -23,6 +23,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/payments": "Payments",
   "/revenue": "Revenue",
   "/announcements": "Announcements",
+  "/system-health": "System Health",
 };
 
 function initials(user: User): string {
