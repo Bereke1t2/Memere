@@ -34,6 +34,7 @@ export interface SystemHealthData {
   uptime: string;
   runtime: {
     cpus: number;
+    cpu_percent: number;
     goroutines: number;
     alloc_mb: number;
     total_alloc_mb: number;
@@ -59,6 +60,7 @@ export interface SystemHealthData {
 
 interface HistoryPoint {
   time: string;
+  cpu_percent: number;
   alloc_mb: number;
   sys_mb: number;
   goroutines: number;
@@ -100,6 +102,7 @@ export function SystemHealthDashboard() {
       setHistory((prev) => {
         const point: HistoryPoint = {
           time: timeStr,
+          cpu_percent: json.runtime.cpu_percent ?? 0,
           alloc_mb: parseFloat(json.runtime.alloc_mb.toFixed(2)),
           sys_mb: parseFloat(json.runtime.sys_mb.toFixed(2)),
           goroutines: json.runtime.goroutines,
@@ -224,7 +227,50 @@ export function SystemHealthDashboard() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {/* CPU Usage Card */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              CPU Usage
+            </CardTitle>
+            <Cpu className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold tracking-tight">
+              {data ? `${(data.runtime.cpu_percent ?? 0).toFixed(1)}%` : "..."}
+            </div>
+            <div className="mt-2">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                <span>Core Load</span>
+                <span>{data ? `${data.runtime.cpus} cores` : ""}</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ${
+                    (data?.runtime.cpu_percent ?? 0) > 80
+                      ? "bg-destructive"
+                      : (data?.runtime.cpu_percent ?? 0) > 50
+                      ? "bg-amber-500"
+                      : "bg-emerald-500"
+                  }`}
+                  style={{ width: `${Math.min(data?.runtime.cpu_percent ?? 0, 100)}%` }}
+                />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground border-t pt-2">
+              <span>Process CPU</span>
+              <span>
+                {(data?.runtime.cpu_percent ?? 0) > 80
+                  ? "Saturated"
+                  : (data?.runtime.cpu_percent ?? 0) > 40
+                  ? "Moderate"
+                  : "Normal"}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Memory Card */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
@@ -258,18 +304,18 @@ export function SystemHealthDashboard() {
           </CardContent>
         </Card>
 
-        {/* Goroutines & CPU */}
+        {/* Goroutines & Concurrency */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-              Goroutines & CPU
+              Concurrency
             </CardTitle>
-            <Cpu className="h-4 w-4 text-blue-500" />
+            <Activity className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold tracking-tight flex items-baseline gap-2">
               <span>{data ? data.runtime.goroutines : "..."}</span>
-              <span className="text-xs font-normal text-muted-foreground">active tasks</span>
+              <span className="text-xs font-normal text-muted-foreground">goroutines</span>
             </div>
             <div className="mt-2 flex items-center gap-2">
               <Badge
@@ -288,11 +334,8 @@ export function SystemHealthDashboard() {
                   ? "Elevated"
                   : "Healthy"}
               </Badge>
-              <span className="text-xs text-muted-foreground">
-                {data ? `${data.runtime.cpus} CPU cores` : ""}
-              </span>
             </div>
-            <div className="mt-3 text-xs text-muted-foreground border-t pt-2">
+            <div className="mt-3 text-xs text-muted-foreground border-t pt-2 truncate">
               Lightweight Go scheduler threads
             </div>
           </CardContent>
@@ -358,7 +401,72 @@ export function SystemHealthDashboard() {
       </div>
 
       {/* Real-time Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* CPU Usage Timeline Chart */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-semibold">CPU Usage Over Time (%)</CardTitle>
+                <CardDescription className="text-xs">
+                  Process CPU utilization across cores
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="text-xs font-mono">
+                {data ? `${(data.runtime.cpu_percent ?? 0).toFixed(1)}%` : "0%"}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {history.length < 2 ? (
+              <div className="flex h-56 items-center justify-center text-xs text-muted-foreground">
+                Collecting metrics stream...
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart data={history} margin={{ top: 8, right: 12, left: -16, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="cpuGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis
+                    dataKey="time"
+                    tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                    axisLine={false}
+                    tickLine={false}
+                    unit="%"
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      borderColor: "hsl(var(--border))",
+                      borderRadius: "8px",
+                      fontSize: "12px",
+                    }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="cpu_percent"
+                    name="CPU Usage (%)"
+                    stroke="#f59e0b"
+                    fill="url(#cpuGrad)"
+                    strokeWidth={2}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Memory Timeline Chart */}
         <Card>
           <CardHeader className="pb-2">

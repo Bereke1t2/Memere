@@ -1,8 +1,11 @@
 package http
 
 import (
+	"math"
 	"net/http"
 	"runtime"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -12,7 +15,58 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/internal/version"
 )
 
-var startTime = time.Now()
+var (
+	startTime      = time.Now()
+	lastSampleTime = time.Now()
+	lastCPUTime    = cpuDuration()
+	cpuPercent     float64
+	cpuMu          sync.RWMutex
+)
+
+func cpuDuration() time.Duration {
+	var r syscall.Rusage
+	if err := syscall.Getrusage(syscall.RUSAGE_SELF, &r); err != nil {
+		return 0
+	}
+	return time.Duration(r.Utime.Sec+r.Stime.Sec)*time.Second +
+		time.Duration(r.Utime.Usec+r.Stime.Usec)*time.Microsecond
+}
+
+func init() {
+	go func() {
+		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
+		for now := range ticker.C {
+			curCPUTime := cpuDuration()
+			cpuMu.Lock()
+			deltaWall := now.Sub(lastSampleTime).Seconds()
+			deltaCPU := (curCPUTime - lastCPUTime).Seconds()
+			if deltaWall > 0 {
+				numCPU := float64(runtime.NumCPU())
+				if numCPU < 1 {
+					numCPU = 1
+				}
+				pct := (deltaCPU / (deltaWall * numCPU)) * 100
+				if pct < 0 {
+					pct = 0
+				}
+				if pct > 100 {
+					pct = 100
+				}
+				cpuPercent = math.Round(pct*10) / 10
+			}
+			lastSampleTime = now
+			lastCPUTime = curCPUTime
+			cpuMu.Unlock()
+		}
+	}()
+}
+
+func getCPUPercent() float64 {
+	cpuMu.RLock()
+	defer cpuMu.RUnlock()
+	return cpuPercent
+}
 
 // healthHandler is the liveness probe (/healthz). Returns 200 if the process
 // is alive regardless of dependency state. Kubernetes restarts the pod only
@@ -57,6 +111,7 @@ func systemStatsHandler(db *pgxpool.Pool, cache *redis.Client) gin.HandlerFunc {
 			"runtime": gin.H{
 				"goroutines":     runtime.NumGoroutine(),
 				"cpus":           runtime.NumCPU(),
+				"cpu_percent":    getCPUPercent(),
 				"alloc_mb":       float64(m.Alloc) / (1024 * 1024),
 				"total_alloc_mb": float64(m.TotalAlloc) / (1024 * 1024),
 				"sys_mb":         float64(m.Sys) / (1024 * 1024),
