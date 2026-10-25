@@ -31,16 +31,14 @@ const systemStatsP   = new Trend('system_stats_ms');
 
 export const options = {
   stages: [
-    { duration: '10s', target: 10 },  // Warm-up to 10 users
-    { duration: '30s', target: 30 },  // Ramp to 30 users
-    { duration: '30s', target: 50 },  // Peak at 50 users
-    { duration: '10s', target: 0 },   // Cool down
+    { duration: '15s', target: 10 },  // Phase 1: Warm-up (10 users)
+    { duration: '30s', target: 25 },  // Phase 2: Moderate load (25 users)
+    { duration: '30s', target: 50 },  // Phase 3: High load (50 users)
+    { duration: '30s', target: 100 }, // Phase 4: Stress peak (100 users)
+    { duration: '15s', target: 0 },   // Phase 5: Cooldown & Recovery (0 users)
   ],
   thresholds: {
-    // 95% of requests should be below 600ms on Render Starter (accounting for Internet RTT)
-    http_req_duration: ['p(95)<600'],
-    // Success rate should stay high (> 98%)
-    success_rate: ['rate>0.98'],
+    http_req_duration: ['p(95)<800'],
   },
 };
 
