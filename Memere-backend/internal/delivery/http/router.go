@@ -104,6 +104,7 @@ func NewRouter(deps Deps) *gin.Engine {
 	r.GET("/healthz", healthHandler(deps.DB, deps.Cache))
 	r.GET("/readyz", readyzHandler(deps.DB, deps.Cache))
 	r.GET("/health", healthHandler(deps.DB, deps.Cache)) // legacy alias kept for backwards compat
+	r.GET("/health/system", systemStatsHandler(deps.DB, deps.Cache))
 	r.GET("/version", versionHandler())
 
 	// Internal job endpoints for an external scheduler (Cloud Scheduler) to drive
