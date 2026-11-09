@@ -250,6 +250,12 @@ func (f *fakeExamRepo) AddQuestion(context.Context, *entity.ExamQuestion) error 
 func (f *fakeExamRepo) ListQuestions(context.Context, uuid.UUID) ([]*entity.ExamQuestion, error) {
 	return nil, nil
 }
+func (f *fakeExamRepo) UpdateQuestionLink(context.Context, *entity.ExamQuestion) error {
+	return nil
+}
+func (f *fakeExamRepo) RemoveQuestion(context.Context, uuid.UUID, uuid.UUID) error {
+	return nil
+}
 func (f *fakeExamRepo) GetExamWithQuestions(context.Context, uuid.UUID) (*repository.ExamWithQuestions, error) {
 	return nil, nil
 }

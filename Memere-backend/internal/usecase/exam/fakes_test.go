@@ -172,6 +172,32 @@ func (f *fakeExamRepo) ListQuestions(_ context.Context, examID uuid.UUID) ([]*en
 	return out, nil
 }
 
+func (f *fakeExamRepo) UpdateQuestionLink(_ context.Context, eq *entity.ExamQuestion) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	for _, l := range f.links[eq.ExamID] {
+		if l.QuestionID == eq.QuestionID {
+			l.OrderIndex = eq.OrderIndex
+			l.Marks = eq.Marks
+			return nil
+		}
+	}
+	return apperror.NotFound("question is not part of this exam", nil)
+}
+
+func (f *fakeExamRepo) RemoveQuestion(_ context.Context, examID, questionID uuid.UUID) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	kept := make([]*entity.ExamQuestion, 0, len(f.links[examID]))
+	for _, l := range f.links[examID] {
+		if l.QuestionID != questionID {
+			kept = append(kept, l)
+		}
+	}
+	f.links[examID] = kept
+	return nil
+}
+
 func (f *fakeExamRepo) GetExamWithQuestions(_ context.Context, examID uuid.UUID) (*repository.ExamWithQuestions, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()

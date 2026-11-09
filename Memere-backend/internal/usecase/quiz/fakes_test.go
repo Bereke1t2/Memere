@@ -2,6 +2,7 @@ package quiz
 
 import (
 	"context"
+	"sort"
 	"sync"
 	"time"
 
@@ -90,12 +91,48 @@ func (f *fakeQuizRepo) ListByCourse(_ context.Context, courseID uuid.UUID) ([]*e
 	defer f.mu.Unlock()
 	var out []*entity.Quiz
 	for _, q := range f.quizzes {
-		if q.CourseID == courseID && q.DeletedAt == nil {
+		if q.CourseID != nil && *q.CourseID == courseID && q.DeletedAt == nil {
 			cp := *q
 			out = append(out, &cp)
 		}
 	}
 	return out, nil
+}
+
+// List applies the filter in memory and sorts newest-first to match the SQL
+// ordering. The fake ignores the cursor: the tests exercising it cover filtering
+// and ownership, not pagination boundaries.
+func (f *fakeQuizRepo) List(_ context.Context, filter repository.QuizFilter, _ *pagination.Cursor, limit int) ([]*entity.Quiz, *pagination.Cursor, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []*entity.Quiz
+	for _, q := range f.quizzes {
+		if q.DeletedAt != nil {
+			continue
+		}
+		if filter.CourseID != nil && (q.CourseID == nil || *q.CourseID != *filter.CourseID) {
+			continue
+		}
+		if filter.IsPublished != nil && q.IsPublished != *filter.IsPublished {
+			continue
+		}
+		if filter.Standalone != nil && *filter.Standalone != (q.CourseID == nil) {
+			continue
+		}
+		cp := *q
+		out = append(out, &cp)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].CreatedAt.After(out[j].CreatedAt) })
+	if limit > 0 && len(out) > limit {
+		out = out[:limit]
+	}
+	return out, nil, nil
+}
+
+func (f *fakeQuizRepo) CountQuestions(_ context.Context, quizID uuid.UUID) (int, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.questions[quizID]), nil
 }
 
 func (f *fakeQuizRepo) Update(_ context.Context, q *entity.Quiz) error {
@@ -178,6 +215,8 @@ func (f *fakeQuizRepo) addQuestion(quizID uuid.UUID, q *entity.Question, answers
 
 // ---- fake question repo ------------------------------------------------------
 
+// fakeQuestionRepo reads and writes the question tree held by fakeQuizRepo, so
+// authoring tests observe the same state the attempt tests do.
 type fakeQuestionRepo struct {
 	quizzes *fakeQuizRepo
 }
@@ -186,17 +225,109 @@ func (f *fakeQuestionRepo) Create(_ context.Context, q *entity.Question, answers
 	f.quizzes.addQuestion(q.QuizID, q, answers)
 	return nil
 }
-func (f *fakeQuestionRepo) FindByID(context.Context, uuid.UUID) (*entity.Question, error) {
+
+func (f *fakeQuestionRepo) FindByID(_ context.Context, id uuid.UUID) (*entity.Question, error) {
+	f.quizzes.mu.Lock()
+	defer f.quizzes.mu.Unlock()
+	for _, tree := range f.quizzes.questions {
+		for _, qa := range tree {
+			if qa.Question.ID == id {
+				cp := *qa.Question
+				return &cp, nil
+			}
+		}
+	}
 	return nil, apperror.NotFound("question not found", nil)
 }
-func (f *fakeQuestionRepo) ListByQuiz(context.Context, uuid.UUID) ([]*entity.Question, error) {
+
+func (f *fakeQuestionRepo) ListByQuiz(_ context.Context, quizID uuid.UUID) ([]*entity.Question, error) {
+	f.quizzes.mu.Lock()
+	defer f.quizzes.mu.Unlock()
+	tree := f.quizzes.questions[quizID]
+	out := make([]*entity.Question, len(tree))
+	for i, qa := range tree {
+		cp := *qa.Question
+		out[i] = &cp
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].OrderIndex < out[j].OrderIndex })
+	return out, nil
+}
+
+func (f *fakeQuestionRepo) ListAnswers(_ context.Context, questionID uuid.UUID) ([]*entity.Answer, error) {
+	f.quizzes.mu.Lock()
+	defer f.quizzes.mu.Unlock()
+	for _, tree := range f.quizzes.questions {
+		for _, qa := range tree {
+			if qa.Question.ID != questionID {
+				continue
+			}
+			out := make([]*entity.Answer, len(qa.Answers))
+			for i, a := range qa.Answers {
+				cp := *a
+				out[i] = &cp
+			}
+			return out, nil
+		}
+	}
 	return nil, nil
 }
-func (f *fakeQuestionRepo) ListAnswers(context.Context, uuid.UUID) ([]*entity.Answer, error) {
-	return nil, nil
+
+func (f *fakeQuestionRepo) Update(_ context.Context, q *entity.Question) error {
+	f.quizzes.mu.Lock()
+	defer f.quizzes.mu.Unlock()
+	for _, tree := range f.quizzes.questions {
+		for _, qa := range tree {
+			if qa.Question.ID == q.ID {
+				cp := *q
+				*qa.Question = cp
+				return nil
+			}
+		}
+	}
+	return apperror.NotFound("question not found", nil)
 }
-func (f *fakeQuestionRepo) Update(context.Context, *entity.Question) error { return nil }
-func (f *fakeQuestionRepo) Delete(context.Context, uuid.UUID) error        { return nil }
+
+func (f *fakeQuestionRepo) UpdateWithAnswers(_ context.Context, q *entity.Question, answers []*entity.Answer) error {
+	f.quizzes.mu.Lock()
+	defer f.quizzes.mu.Unlock()
+	for _, tree := range f.quizzes.questions {
+		for i := range tree {
+			if tree[i].Question.ID != q.ID {
+				continue
+			}
+			cp := *q
+			*tree[i].Question = cp
+			// Mirror the repository contract: the option set is replaced wholesale,
+			// so no stale option can survive carrying is_correct.
+			replaced := make([]*entity.Answer, len(answers))
+			for j, a := range answers {
+				if a.ID == uuid.Nil {
+					a.ID = uuid.New()
+				}
+				a.QuestionID = q.ID
+				replaced[j] = a
+			}
+			tree[i].Answers = replaced
+			return nil
+		}
+	}
+	return apperror.NotFound("question not found", nil)
+}
+
+func (f *fakeQuestionRepo) Delete(_ context.Context, id uuid.UUID) error {
+	f.quizzes.mu.Lock()
+	defer f.quizzes.mu.Unlock()
+	for quizID, tree := range f.quizzes.questions {
+		kept := make([]repository.QuestionWithAnswers, 0, len(tree))
+		for _, qa := range tree {
+			if qa.Question.ID != id {
+				kept = append(kept, qa)
+			}
+		}
+		f.quizzes.questions[quizID] = kept
+	}
+	return nil
+}
 
 // ---- fake quiz attempt repo --------------------------------------------------
 
