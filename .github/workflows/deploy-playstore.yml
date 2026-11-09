@@ -143,6 +143,73 @@ jobs:
             exit 1
           fi
 
+      # Proves the service account can actually open a Play edit BEFORE anything
+      # is built. The first real run spent 8m40s building and then failed on a
+      # Cloud setting that takes twenty seconds to check — every Play-side
+      # misconfiguration now surfaces here instead, with the cause named.
+      #
+      # Uses only jq, openssl and curl, all present on the runner, so it adds no
+      # install step of its own.
+      - name: Preflight Google Play API access
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          PACKAGE_NAME: et.mirkuz.mobile
+        run: |
+          work=$(mktemp -d); trap 'rm -rf "$work"' EXIT
+          printf '%s' "$PLAY_SERVICE_ACCOUNT_JSON" > "$work/sa.json"
+
+          if ! jq -e . "$work/sa.json" >/dev/null 2>&1; then
+            echo "::error::PLAY_SERVICE_ACCOUNT_JSON is not valid JSON."
+            exit 1
+          fi
+
+          client_email=$(jq -r '.client_email // empty' "$work/sa.json")
+          token_uri=$(jq -r '.token_uri // "https://oauth2.googleapis.com/token"' "$work/sa.json")
+          jq -r '.private_key // empty' "$work/sa.json" > "$work/key.pem"
+          if [ -z "$client_email" ] || [ ! -s "$work/key.pem" ]; then
+            echo "::error::PLAY_SERVICE_ACCOUNT_JSON is missing client_email or private_key."
+            exit 1
+          fi
+
+          b64url() { base64 -w0 | tr '+/' '-_' | tr -d '='; }
+          now=$(date +%s)
+          header=$(printf '{"alg":"RS256","typ":"JWT"}' | b64url)
+          claims=$(printf '{"iss":"%s","scope":"https://www.googleapis.com/auth/androidpublisher","aud":"%s","iat":%d,"exp":%d}' \
+            "$client_email" "$token_uri" "$now" "$((now+3600))" | b64url)
+          sig=$(printf '%s.%s' "$header" "$claims" | openssl dgst -sha256 -sign "$work/key.pem" -binary | b64url)
+
+          token=$(curl -s --max-time 30 -X POST "$token_uri" \
+            -d grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer \
+            --data-urlencode "assertion=${header}.${claims}.${sig}" | jq -r '.access_token // empty')
+          if [ -z "$token" ]; then
+            echo "::error::Could not obtain a Google access token — the service account key was rejected."
+            exit 1
+          fi
+          echo "Service account authenticated: $client_email"
+
+          code=$(curl -s --max-time 30 -o "$work/resp.json" -w '%{http_code}' -X POST \
+            "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/edits" \
+            -H "Authorization: Bearer $token" -H "Content-Type: application/json" -d '{}')
+
+          if [ "$code" = "200" ]; then
+            echo "Play API reachable and the service account can edit $PACKAGE_NAME."
+            exit 0
+          fi
+
+          msg=$(jq -r '.error.message // empty' "$work/resp.json" 2>/dev/null || true)
+          echo "::error::Play API preflight failed (HTTP $code): ${msg:-see response}"
+          case "$msg" in
+            *"has not been used in project"*|*"is disabled"*)
+              echo "::error::Enable the Android Publisher API for this Cloud project, wait a few minutes, then retry." ;;
+            *)
+              if [ "$code" = "404" ]; then
+                echo "::error::Play Console has no app with package $PACKAGE_NAME, or it has never had a manual first upload — the API cannot create a new listing."
+              elif [ "$code" = "401" ] || [ "$code" = "403" ]; then
+                echo "::error::Grant $client_email release permission in Play Console > Users and permissions."
+              fi ;;
+          esac
+          exit 1
+
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
@@ -255,7 +322,7 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: et.mirkuz.mobile
           releaseFiles: memere_mobile/build/app/outputs/bundle/release/app-release.aab
-          track: ${{ github.event.inputs.track || 'internal' }}
+          tracks: ${{ github.event.inputs.track || 'internal' }}
           status: ${{ github.event.inputs.status || 'completed' }}
           mappingFile: memere_mobile/build/app/outputs/mapping/release/mapping.txt
           changesNotSentForReview: false
