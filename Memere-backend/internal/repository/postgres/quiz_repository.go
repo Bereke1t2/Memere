@@ -12,6 +12,7 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/repository"
 	"github.com/Bereke1t2/Memere/memere-backend/internal/repository/postgres/sqlcgen"
 	"github.com/Bereke1t2/Memere/memere-backend/pkg/apperror"
+	"github.com/Bereke1t2/Memere/memere-backend/pkg/pagination"
 )
 
 // QuizRepo is the sqlc-backed implementation of repository.QuizRepository.
@@ -29,12 +30,13 @@ func NewQuizRepo(pool *pgxpool.Pool) *QuizRepo {
 func (r *QuizRepo) Create(ctx context.Context, q *entity.Quiz) error {
 	row, err := queriesFor(ctx, r.q).CreateQuiz(ctx, sqlcgen.CreateQuizParams{
 		LessonID:           toPgUUIDPtr(q.LessonID),
-		CourseID:           toPgUUID(q.CourseID),
+		CourseID:           toPgUUIDPtr(q.CourseID),
 		Title:              q.Title,
 		TimeLimitSeconds:   toPgInt4Ptr(q.TimeLimitSeconds),
 		PassPercentage:     toPgNumeric(q.PassPercentage),
 		RandomizeQuestions: q.RandomizeQuestions,
 		MaxAttempts:        toPgInt4Ptr(q.MaxAttempts),
+		IsPublished:        q.IsPublished,
 	})
 	if err != nil {
 		return apperror.Internal(err)
@@ -63,6 +65,53 @@ func (r *QuizRepo) ListByCourse(ctx context.Context, courseID uuid.UUID) ([]*ent
 	return quizzes, nil
 }
 
+// List returns up to limit quizzes matching filter, newest first, using keyset
+// pagination on (created_at, id). The returned cursor is non-nil only when more
+// rows may exist (one extra row is fetched to detect that).
+func (r *QuizRepo) List(ctx context.Context, filter repository.QuizFilter, cursor *pagination.Cursor, limit int) ([]*entity.Quiz, *pagination.Cursor, error) {
+	params := sqlcgen.ListQuizzesParams{
+		CourseID:    toPgUUIDPtr(filter.CourseID),
+		IsPublished: filter.IsPublished,
+		Standalone:  filter.Standalone,
+		// Over-fetch by one so a full page can be distinguished from the last page.
+		RowLimit: int32(limit + 1),
+	}
+	if cursor != nil {
+		params.AfterCreatedAt = pgTimestamptzValue(cursor.CreatedAt)
+		params.AfterID = toPgUUID(cursor.ID)
+	}
+
+	rows, err := queriesFor(ctx, r.q).ListQuizzes(ctx, params)
+	if err != nil {
+		return nil, nil, apperror.Internal(err)
+	}
+
+	var next *pagination.Cursor
+	if len(rows) > limit {
+		rows = rows[:limit]
+		last := rows[len(rows)-1]
+		next = &pagination.Cursor{
+			CreatedAt: fromPgTimestamptzValue(last.CreatedAt),
+			ID:        fromPgUUID(last.ID),
+		}
+	}
+
+	quizzes := make([]*entity.Quiz, len(rows))
+	for i, row := range rows {
+		quizzes[i] = quizFromRow(row)
+	}
+	return quizzes, next, nil
+}
+
+// CountQuestions returns how many questions belong to the quiz.
+func (r *QuizRepo) CountQuestions(ctx context.Context, quizID uuid.UUID) (int, error) {
+	n, err := queriesFor(ctx, r.q).CountQuestionsByQuiz(ctx, toPgUUID(quizID))
+	if err != nil {
+		return 0, apperror.Internal(err)
+	}
+	return int(n), nil
+}
+
 func (r *QuizRepo) Update(ctx context.Context, q *entity.Quiz) error {
 	row, err := queriesFor(ctx, r.q).UpdateQuiz(ctx, sqlcgen.UpdateQuizParams{
 		ID:                 toPgUUID(q.ID),
@@ -71,6 +120,8 @@ func (r *QuizRepo) Update(ctx context.Context, q *entity.Quiz) error {
 		PassPercentage:     toPgNumeric(q.PassPercentage),
 		RandomizeQuestions: q.RandomizeQuestions,
 		MaxAttempts:        toPgInt4Ptr(q.MaxAttempts),
+		LessonID:           toPgUUIDPtr(q.LessonID),
+		IsPublished:        q.IsPublished,
 	})
 	if err != nil {
 		return mapQuizErr(err)
@@ -174,12 +225,13 @@ func quizFromRow(row sqlcgen.CoursesQuiz) *entity.Quiz {
 	return &entity.Quiz{
 		ID:                 fromPgUUID(row.ID),
 		LessonID:           fromPgUUIDPtr(row.LessonID),
-		CourseID:           fromPgUUID(row.CourseID),
+		CourseID:           fromPgUUIDPtr(row.CourseID),
 		Title:              row.Title,
 		TimeLimitSeconds:   fromPgInt4Ptr(row.TimeLimitSeconds),
 		PassPercentage:     fromPgNumeric(row.PassPercentage),
 		RandomizeQuestions: row.RandomizeQuestions,
 		MaxAttempts:        fromPgInt4Ptr(row.MaxAttempts),
+		IsPublished:        row.IsPublished,
 		CreatedAt:          fromPgTimestamptzValue(row.CreatedAt),
 		UpdatedAt:          fromPgTimestamptzValue(row.UpdatedAt),
 		DeletedAt:          fromPgTimestamptz(row.DeletedAt),

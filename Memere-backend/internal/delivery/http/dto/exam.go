@@ -12,12 +12,16 @@ import (
 // CreateExamRequest is the body of POST /courses/:id/exams. The course id comes
 // from the path.
 type CreateExamRequest struct {
-	Title           string  `json:"title"`
-	Subject         string  `json:"subject"`
-	Grade           int     `json:"grade"`
-	DurationMinutes int     `json:"duration_minutes"`
-	PassMarks       int     `json:"pass_marks"`
-	Instructions    *string `json:"instructions"`
+	// CourseID is read on the standalone POST /exams route only; on the nested
+	// POST /courses/:id/exams route the course comes from the path and this is
+	// ignored. A nil value on the standalone route creates a course-less exam.
+	CourseID        *uuid.UUID `json:"course_id"`
+	Title           string     `json:"title"`
+	Subject         string     `json:"subject"`
+	Grade           int        `json:"grade"`
+	DurationMinutes int        `json:"duration_minutes"`
+	PassMarks       int        `json:"pass_marks"`
+	Instructions    *string    `json:"instructions"`
 }
 
 // UpdateExamRequest is the body of PUT /exams/:id.

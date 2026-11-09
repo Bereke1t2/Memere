@@ -54,6 +54,11 @@ type ExamRepository interface {
 	AddQuestion(ctx context.Context, eq *entity.ExamQuestion) error
 	// ListQuestions returns the exam's question links in order.
 	ListQuestions(ctx context.Context, examID uuid.UUID) ([]*entity.ExamQuestion, error)
+	// UpdateQuestionLink re-points an existing link's per-exam order and marks.
+	UpdateQuestionLink(ctx context.Context, eq *entity.ExamQuestion) error
+	// RemoveQuestion detaches a question from an exam. Only the join row is
+	// deleted — the question stays in the bank for reuse by other exams.
+	RemoveQuestion(ctx context.Context, examID, questionID uuid.UUID) error
 	// GetExamWithQuestions loads the exam plus its question set with answer keys,
 	// for the grading core. Never serialize directly to a client.
 	GetExamWithQuestions(ctx context.Context, examID uuid.UUID) (*ExamWithQuestions, error)

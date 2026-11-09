@@ -26,17 +26,23 @@ func (t QuestionType) Valid() bool {
 }
 
 // Quiz is a per-lesson assessment (spec §4.2.5). TimeLimitSeconds and MaxAttempts
-// are nil when unlimited. PassPercentage maps to a DECIMAL column.
+// are nil when unlimited. PassPercentage maps to a DECIMAL column. CourseID is
+// nil for a standalone quiz — one authored on its own rather than under a course
+// (migration 0026), which only an admin may edit.
 type Quiz struct {
 	ID                 uuid.UUID
 	LessonID           *uuid.UUID
-	CourseID           uuid.UUID
+	CourseID           *uuid.UUID
 	Title              string
 	TimeLimitSeconds   *int
 	PassPercentage     float64
 	RandomizeQuestions bool
 	MaxAttempts        *int
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
-	DeletedAt          *time.Time
+	// IsPublished gates STANDALONE quizzes only. A course-attached quiz is gated
+	// by access to its course and ignores this flag; a course-less quiz has no
+	// paywall to inherit, so it stays admin-only until published.
+	IsPublished bool
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	DeletedAt   *time.Time
 }

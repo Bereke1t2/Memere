@@ -121,6 +121,52 @@ func (r *QuestionRepo) Update(ctx context.Context, q *entity.Question) error {
 	return nil
 }
 
+// UpdateWithAnswers rewrites the question row and replaces its answer set,
+// through the same queries handle so a WithinTx caller commits both atomically.
+// The old options are deleted and the new ones re-inserted rather than diffed:
+// an author freely reorders, retypes and adds/removes options, so the set has no
+// stable identity to diff against, and a wholesale replace cannot leave a stale
+// option carrying is_correct behind.
+func (r *QuestionRepo) UpdateWithAnswers(ctx context.Context, q *entity.Question, answers []*entity.Answer) error {
+	queries := queriesFor(ctx, r.q)
+
+	row, err := queries.UpdateQuestion(ctx, sqlcgen.UpdateQuestionParams{
+		ID:          toPgUUID(q.ID),
+		Text:        q.Text,
+		Type:        string(q.Type),
+		Points:      int32(q.Points),
+		Explanation: q.Explanation,
+		OrderIndex:  int32(q.OrderIndex),
+		Subject:     q.Subject,
+		Topic:       q.Topic,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperror.NotFound("question not found", err)
+		}
+		return apperror.Internal(err)
+	}
+	*q = *questionFromRow(row)
+
+	if err := queries.DeleteAnswersByQuestion(ctx, toPgUUID(q.ID)); err != nil {
+		return apperror.Internal(err)
+	}
+	for _, a := range answers {
+		a.QuestionID = q.ID
+		ar, err := queries.CreateAnswer(ctx, sqlcgen.CreateAnswerParams{
+			QuestionID: toPgUUID(a.QuestionID),
+			Text:       a.Text,
+			IsCorrect:  a.IsCorrect,
+			OrderIndex: int32(a.OrderIndex),
+		})
+		if err != nil {
+			return apperror.Internal(err)
+		}
+		*a = *answerFromRow(ar)
+	}
+	return nil
+}
+
 // Delete removes the question; its answers cascade via the FK. Questions are not
 // user-facing content with a tombstone — they are removed with their quiz tree.
 func (r *QuestionRepo) Delete(ctx context.Context, id uuid.UUID) error {

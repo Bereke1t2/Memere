@@ -198,7 +198,18 @@ func NewRouter(deps Deps) *gin.Engine {
 	// ownership enforced in the usecase via the shared GuestUserID (not middleware).
 	quizzes := v1.Group("/quizzes")
 	{
+		// Standalone authoring: create/list a quiz without going through a course.
+		// The listing and the import both return or accept authoring data, so both
+		// are teacher/admin-only; ownership is re-checked in the usecase.
+		quizzes.POST("", requireAuth, teacherOrAdmin, deps.Quizzes.CreateStandaloneQuiz)
+		quizzes.GET("", requireAuth, teacherOrAdmin, deps.Quizzes.ListQuizzes)
+		quizzes.POST("/import", requireAuth, teacherOrAdmin, deps.Quizzes.ImportQuiz)
 		quizzes.POST("/:id/questions", requireAuth, teacherOrAdmin, deps.Quizzes.AddQuestion)
+		// Authoring read: questions WITH answer keys, for the editor. Teacher/admin
+		// only — this is the deliberate counterpart to GET /quizzes/:id, which
+		// serves the student the answer-key-free view (Non-Negotiable #1).
+		quizzes.GET("/:id/questions", requireAuth, teacherOrAdmin, deps.Quizzes.GetQuizForAuthoring)
+		quizzes.PUT("/:id/questions/order", requireAuth, teacherOrAdmin, deps.Quizzes.ReorderQuestions)
 		quizzes.PUT("/:id", requireAuth, teacherOrAdmin, deps.Quizzes.UpdateQuiz)
 		quizzes.DELETE("/:id", requireAuth, teacherOrAdmin, deps.Quizzes.DeleteQuiz)
 		quizzes.GET("/:id", optionalAuth, deps.Quizzes.GetQuiz)
@@ -215,13 +226,35 @@ func NewRouter(deps Deps) *gin.Engine {
 		quizAttempts.GET("/:id/result", optionalAuth, deps.Quizzes.GetResult)
 	}
 
+	// Per-question editing for QUIZ questions. Exam questions are edited through
+	// their exam (PUT/DELETE /exams/:id/questions/:questionId) because a bank
+	// question has no quiz_id to derive ownership from; this group rejects them.
+	questions := v1.Group("/questions")
+	{
+		questions.PUT("/:id", requireAuth, teacherOrAdmin, deps.Quizzes.UpdateQuestion)
+		questions.DELETE("/:id", requireAuth, teacherOrAdmin, deps.Quizzes.DeleteQuestion)
+	}
+
 	// Exam authoring + analytics stats (teacher/admin) and the mock-exam catalog.
 	exams := v1.Group("/exams")
 	{
+		// Standalone authoring: create/list an exam without going through a course.
+		// This listing includes the caller's unpublished drafts, so it is
+		// teacher/admin-only; the public catalog stays on GET /mock-exams.
+		exams.POST("", requireAuth, teacherOrAdmin, deps.Exams.CreateStandaloneExam)
+		exams.GET("", requireAuth, teacherOrAdmin, deps.Exams.ListExamsForAuthoring)
+		exams.POST("/import", requireAuth, teacherOrAdmin, deps.Exams.ImportExam)
 		exams.POST("/:id/questions", requireAuth, teacherOrAdmin, deps.Exams.AddQuestion)
+		// Authoring read: questions WITH answer keys, for the editor. Teacher/admin
+		// only — the student path is GET /mock-exams/:id, which is key-free.
+		exams.GET("/:id/questions", requireAuth, teacherOrAdmin, deps.Exams.GetExamForAuthoring)
+		exams.PUT("/:id/questions/order", requireAuth, teacherOrAdmin, deps.Exams.ReorderExamQuestions)
+		exams.PUT("/:id/questions/:questionId", requireAuth, teacherOrAdmin, deps.Exams.UpdateExamQuestion)
+		exams.DELETE("/:id/questions/:questionId", requireAuth, teacherOrAdmin, deps.Exams.RemoveExamQuestion)
 		exams.PUT("/:id", requireAuth, teacherOrAdmin, deps.Exams.UpdateExam)
 		exams.DELETE("/:id", requireAuth, teacherOrAdmin, deps.Exams.DeleteExam)
 		exams.POST("/:id/publish", requireAuth, teacherOrAdmin, deps.Exams.Publish)
+		exams.POST("/:id/unpublish", requireAuth, teacherOrAdmin, deps.Exams.Unpublish)
 		exams.GET("/:id/stats", requireAuth, teacherOrAdmin, deps.Analytics.ExamStats)
 		// Leaderboard: top-N + caller's own rank. Any authenticated student may view.
 		exams.GET("/:id/leaderboard", requireAuth, deps.Analytics.Leaderboard)

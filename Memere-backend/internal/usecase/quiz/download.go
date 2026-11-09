@@ -14,7 +14,7 @@ import (
 // This is the single sanctioned exception to Non-Negotiable #1 ("correct answers
 // never sent to the client"): keys are served ONLY for content the caller
 // explicitly downloads, and the endpoint is gated by the SAME course-access check
-// as taking the quiz (assertCourseAccess). Re-enabling the paywall
+// as taking the quiz (assertQuizAccess). Re-enabling the paywall
 // (access.DisableEnrollmentCheck=false) therefore auto-restricts downloads too.
 // The normal online-play path (GetQuizForStudent / GetQuestionsForClient) stays
 // answer-free and server-graded, and offline scores are re-graded server-side on
@@ -47,7 +47,7 @@ type DownloadAnswer struct {
 }
 
 // GetQuizForDownload returns the full quiz WITH answer keys for offline use.
-// Access is gated exactly like StartAttempt (assertCourseAccess); the payload is
+// Access is gated exactly like StartAttempt (assertQuizAccess); the payload is
 // built from the server-only GetQuizWithQuestions tree — the one tree that
 // intentionally carries Answer.IsCorrect and Question.Explanation. Everything
 // else in the quiz engine keeps stripping the key.
@@ -56,7 +56,7 @@ func (s *Service) GetQuizForDownload(ctx context.Context, actor *Actor, quizID u
 	if err != nil {
 		return nil, err
 	}
-	if err := s.assertCourseAccess(ctx, actor, quiz.CourseID); err != nil {
+	if err := s.assertQuizAccess(ctx, actor, quiz); err != nil {
 		return nil, err
 	}
 

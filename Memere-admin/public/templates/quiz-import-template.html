@@ -1,0 +1,71 @@
+<!doctype html>
+<!--
+  HTML import template.
+
+  HTML is read structurally and cannot be interpreted with certainty, so the
+  import screen always shows you every resolved answer key for confirmation
+  before anything is saved. If you want an exact, warning-free import, use the
+  JSON format instead — or embed a JSON block in this file:
+
+      <script type="application/json"> { ...the JSON format... } </script>
+
+  When such a block is present it is used verbatim and the markup is ignored.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Cell Biology — Practice Quiz</title>
+  </head>
+
+  <!--
+    Header fields come from data attributes. data-kind is "quiz" or "exam".
+    For an exam, also set data-subject, data-grade, data-duration-minutes and
+    data-pass-marks.
+  -->
+  <body
+    data-assessment
+    data-kind="quiz"
+    data-title="Cell Biology — Practice Quiz"
+    data-pass-percentage="60"
+    data-time-limit-seconds="1200"
+  >
+    <!--
+      Each question is an element with data-question (or class="question").
+      Mark the correct option in any ONE of these ways:
+        data-correct on the <li>, class="correct", <strong>…</strong>, or a leading "*".
+    -->
+    <div class="question" data-marks="2" data-subject="Biology" data-topic="Cell structure">
+      <p class="question-text">Which organelle is the main site of ATP production?</p>
+      <ul>
+        <li>Nucleus</li>
+        <li data-correct>Mitochondrion</li>
+        <li>Ribosome</li>
+        <li>Golgi apparatus</li>
+      </ul>
+      <p class="explanation">
+        Mitochondria carry out oxidative phosphorylation, which produces most of the cell's ATP.
+      </p>
+    </div>
+
+    <!-- Exactly two options reading "True" and "False" are detected as a true_false question. -->
+    <div class="question" data-marks="1" data-subject="Biology" data-topic="Cell structure">
+      <p class="question-text">Ribosomes are enclosed in a membrane.</p>
+      <ul>
+        <li>True</li>
+        <li><strong>False</strong></li>
+      </ul>
+      <p class="explanation">Ribosomes are non-membrane-bound complexes of RNA and protein.</p>
+    </div>
+
+    <!-- The "*" marker is stripped from the stored option text. -->
+    <div class="question" data-marks="2" data-subject="Biology" data-topic="Transport">
+      <p class="question-text">Which process moves water across a membrane?</p>
+      <ul>
+        <li>Active transport</li>
+        <li>* Osmosis</li>
+        <li>Translation</li>
+      </ul>
+      <p class="explanation">Osmosis is the passive diffusion of water down its potential gradient.</p>
+    </div>
+  </body>
+</html>

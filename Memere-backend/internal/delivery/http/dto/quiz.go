@@ -9,9 +9,11 @@ import (
 	"github.com/Bereke1t2/Memere/memere-backend/internal/usecase/quiz"
 )
 
-// CreateQuizRequest is the body of POST /courses/:id/quizzes. The course id comes
-// from the path, not the body.
+// CreateQuizRequest is the body of POST /courses/:id/quizzes and POST /quizzes.
+// On the nested route the course id comes from the path and CourseID is ignored;
+// on the standalone route a nil CourseID creates a course-less quiz (admin only).
 type CreateQuizRequest struct {
+	CourseID           *uuid.UUID `json:"course_id"`
 	LessonID           *uuid.UUID `json:"lesson_id"`
 	Title              string     `json:"title"`
 	TimeLimitSeconds   *int       `json:"time_limit_seconds"`
@@ -22,11 +24,13 @@ type CreateQuizRequest struct {
 
 // UpdateQuizRequest is the body of PUT /quizzes/:id. Nil fields are unchanged.
 type UpdateQuizRequest struct {
-	Title              *string  `json:"title"`
-	TimeLimitSeconds   *int     `json:"time_limit_seconds"`
-	PassPercentage     *float64 `json:"pass_percentage"`
-	RandomizeQuestions *bool    `json:"randomize_questions"`
-	MaxAttempts        *int     `json:"max_attempts"`
+	Title              *string    `json:"title"`
+	TimeLimitSeconds   *int       `json:"time_limit_seconds"`
+	PassPercentage     *float64   `json:"pass_percentage"`
+	RandomizeQuestions *bool      `json:"randomize_questions"`
+	MaxAttempts        *int       `json:"max_attempts"`
+	LessonID           *uuid.UUID `json:"lesson_id"`
+	IsPublished        *bool      `json:"is_published"`
 }
 
 // AddAnswerRequest is one answer option in AddQuestionRequest. is_correct is
@@ -65,15 +69,19 @@ type SubmitAttemptRequest struct {
 // QuizResponse is the authoring-side view of a quiz (returned on create/update).
 type QuizResponse struct {
 	ID                 uuid.UUID  `json:"id"`
-	CourseID           uuid.UUID  `json:"course_id"`
+	CourseID           *uuid.UUID `json:"course_id"`
 	LessonID           *uuid.UUID `json:"lesson_id"`
 	Title              string     `json:"title"`
 	TimeLimitSeconds   *int       `json:"time_limit_seconds"`
 	PassPercentage     float64    `json:"pass_percentage"`
 	RandomizeQuestions bool       `json:"randomize_questions"`
 	MaxAttempts        *int       `json:"max_attempts"`
-	CreatedAt          time.Time  `json:"created_at"`
-	UpdatedAt          time.Time  `json:"updated_at"`
+	IsPublished        bool       `json:"is_published"`
+	// QuestionCount is populated on listing responses and left nil elsewhere, so
+	// a create/update echo does not imply a count it did not load.
+	QuestionCount *int      `json:"question_count,omitempty"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 // NewQuizResponse maps a quiz entity to its authoring response.
@@ -87,9 +95,24 @@ func NewQuizResponse(q *entity.Quiz) QuizResponse {
 		PassPercentage:     q.PassPercentage,
 		RandomizeQuestions: q.RandomizeQuestions,
 		MaxAttempts:        q.MaxAttempts,
+		IsPublished:        q.IsPublished,
 		CreatedAt:          q.CreatedAt,
 		UpdatedAt:          q.UpdatedAt,
 	}
+}
+
+// NewQuizListResponse maps quiz entities plus their question tallies to the
+// authoring list response. counts is indexed in step with quizzes.
+func NewQuizListResponse(quizzes []*entity.Quiz, counts []int) []QuizResponse {
+	out := make([]QuizResponse, len(quizzes))
+	for i, q := range quizzes {
+		out[i] = NewQuizResponse(q)
+		if i < len(counts) {
+			n := counts[i]
+			out[i].QuestionCount = &n
+		}
+	}
+	return out
 }
 
 // QuestionResponse is the authoring-side view of a question (returned on add).
@@ -125,15 +148,15 @@ func NewQuestionResponse(q *entity.Question) QuestionResponse {
 // QuizClientResponse is the student-facing quiz metadata: question COUNT only,
 // never the questions. There is no field that could carry an answer key.
 type QuizClientResponse struct {
-	ID                 uuid.UUID `json:"id"`
-	CourseID           uuid.UUID `json:"course_id"`
-	Title              string    `json:"title"`
-	TimeLimitSeconds   *int      `json:"time_limit_seconds"`
-	PassPercentage     float64   `json:"pass_percentage"`
-	RandomizeQuestions bool      `json:"randomize_questions"`
-	MaxAttempts        *int      `json:"max_attempts"`
-	QuestionCount      int       `json:"question_count"`
-	AttemptsUsed       int       `json:"attempts_used"`
+	ID                 uuid.UUID  `json:"id"`
+	CourseID           *uuid.UUID `json:"course_id"`
+	Title              string     `json:"title"`
+	TimeLimitSeconds   *int       `json:"time_limit_seconds"`
+	PassPercentage     float64    `json:"pass_percentage"`
+	RandomizeQuestions bool       `json:"randomize_questions"`
+	MaxAttempts        *int       `json:"max_attempts"`
+	QuestionCount      int        `json:"question_count"`
+	AttemptsUsed       int        `json:"attempts_used"`
 }
 
 // NewQuizClientResponse maps the usecase client view to its response.

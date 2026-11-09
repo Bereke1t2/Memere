@@ -184,6 +184,37 @@ func (r *ExamRepo) ListQuestions(ctx context.Context, examID uuid.UUID) ([]*enti
 	return out, nil
 }
 
+// UpdateQuestionLink re-points an existing link's per-exam order and marks.
+func (r *ExamRepo) UpdateQuestionLink(ctx context.Context, eq *entity.ExamQuestion) error {
+	row, err := queriesFor(ctx, r.q).UpdateExamQuestion(ctx, sqlcgen.UpdateExamQuestionParams{
+		ExamID:     toPgUUID(eq.ExamID),
+		QuestionID: toPgUUID(eq.QuestionID),
+		OrderIndex: int32(eq.OrderIndex),
+		Marks:      int32(eq.Marks),
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperror.NotFound("question is not part of this exam", err)
+		}
+		return apperror.Internal(err)
+	}
+	*eq = *examQuestionFromRow(row)
+	return nil
+}
+
+// RemoveQuestion detaches a question from an exam, deleting the join row only.
+// The question itself stays in the bank so other exams reusing it are unaffected.
+func (r *ExamRepo) RemoveQuestion(ctx context.Context, examID, questionID uuid.UUID) error {
+	err := queriesFor(ctx, r.q).RemoveExamQuestion(ctx, sqlcgen.RemoveExamQuestionParams{
+		ExamID:     toPgUUID(examID),
+		QuestionID: toPgUUID(questionID),
+	})
+	if err != nil {
+		return apperror.Internal(err)
+	}
+	return nil
+}
+
 // GetExamWithQuestions loads the exam and, per linked question, its full answer
 // set INCLUDING the answer key — for server-side grading only.
 func (r *ExamRepo) GetExamWithQuestions(ctx context.Context, examID uuid.UUID) (*repository.ExamWithQuestions, error) {

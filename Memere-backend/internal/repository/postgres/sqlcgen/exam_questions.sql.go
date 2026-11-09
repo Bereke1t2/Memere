@@ -195,3 +195,56 @@ func (q *Queries) ListExamQuestionsForGrading(ctx context.Context, examID pgtype
 	}
 	return items, nil
 }
+
+const removeExamQuestion = `-- name: RemoveExamQuestion :exec
+DELETE FROM courses.exam_questions
+WHERE exam_id = $1 AND question_id = $2
+`
+
+type RemoveExamQuestionParams struct {
+	ExamID     pgtype.UUID
+	QuestionID pgtype.UUID
+}
+
+// Detaches a question from an exam. This is a true DELETE of the JOIN ROW only —
+// the question itself survives in the bank for reuse by other exams, so
+// Non-Negotiable #5 (no hard deletes of user content) is not in play here.
+func (q *Queries) RemoveExamQuestion(ctx context.Context, arg RemoveExamQuestionParams) error {
+	_, err := q.db.Exec(ctx, removeExamQuestion, arg.ExamID, arg.QuestionID)
+	return err
+}
+
+const updateExamQuestion = `-- name: UpdateExamQuestion :one
+UPDATE courses.exam_questions
+SET order_index = $3,
+    marks = $4
+WHERE exam_id = $1 AND question_id = $2
+RETURNING id, exam_id, question_id, order_index, marks
+`
+
+type UpdateExamQuestionParams struct {
+	ExamID     pgtype.UUID
+	QuestionID pgtype.UUID
+	OrderIndex int32
+	Marks      int32
+}
+
+// Re-points an existing link's per-exam order and mark value. Scoped by exam_id
+// as well as question_id so one exam's edit can never touch another's link.
+func (q *Queries) UpdateExamQuestion(ctx context.Context, arg UpdateExamQuestionParams) (CoursesExamQuestion, error) {
+	row := q.db.QueryRow(ctx, updateExamQuestion,
+		arg.ExamID,
+		arg.QuestionID,
+		arg.OrderIndex,
+		arg.Marks,
+	)
+	var i CoursesExamQuestion
+	err := row.Scan(
+		&i.ID,
+		&i.ExamID,
+		&i.QuestionID,
+		&i.OrderIndex,
+		&i.Marks,
+	)
+	return i, err
+}

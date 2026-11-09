@@ -53,7 +53,7 @@ type DownloadQuestionResponse struct {
 // QuizDownloadResponse is the full quiz WITH answer keys for offline grading.
 type QuizDownloadResponse struct {
 	ID               uuid.UUID                  `json:"id"`
-	CourseID         uuid.UUID                  `json:"course_id"`
+	CourseID         *uuid.UUID                 `json:"course_id"`
 	Title            string                     `json:"title"`
 	TimeLimitSeconds *int                       `json:"time_limit_seconds"`
 	PassPercentage   float64                    `json:"pass_percentage"`

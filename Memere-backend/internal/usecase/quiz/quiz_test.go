@@ -81,7 +81,7 @@ func (h *harness) seedQuiz(timeLimit, maxAttempts *int, randomize bool) *entity.
 // tests, which need a paid course).
 func (h *harness) seedQuizUnder(courseID uuid.UUID, timeLimit, maxAttempts *int, randomize bool) *entity.Quiz {
 	q := &entity.Quiz{
-		CourseID:           courseID,
+		CourseID:           &courseID,
 		Title:              "Sample",
 		TimeLimitSeconds:   timeLimit,
 		MaxAttempts:        maxAttempts,
@@ -156,7 +156,7 @@ func TestStartAttempt_RandomizationStableWithinAttemptDiffersAcross(t *testing.T
 	h := newHarness(t)
 	// Many options so a shuffle is observable.
 	courseID := h.publishedCourse()
-	quiz := &entity.Quiz{CourseID: courseID, Title: "Q", PassPercentage: 50, RandomizeQuestions: true}
+	quiz := &entity.Quiz{CourseID: &courseID, Title: "Q", PassPercentage: 50, RandomizeQuestions: true}
 	_ = h.quizzes.Create(context.Background(), quiz)
 	answers := make([]*entity.Answer, 6)
 	for i := range answers {
@@ -302,7 +302,7 @@ func TestSubmitAttempt_FailBelowThreshold(t *testing.T) {
 func TestSubmitAttempt_ShortAnswerNormalized(t *testing.T) {
 	h := newHarness(t)
 	courseID := h.publishedCourse()
-	quiz := &entity.Quiz{CourseID: courseID, Title: "SA", PassPercentage: 100}
+	quiz := &entity.Quiz{CourseID: &courseID, Title: "SA", PassPercentage: 100}
 	_ = h.quizzes.Create(context.Background(), quiz)
 	h.quizzes.addQuestion(quiz.ID,
 		&entity.Question{Text: "Capital of France?", Type: entity.QuestionShortAnswer, Points: 1},

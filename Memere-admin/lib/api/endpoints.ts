@@ -21,6 +21,10 @@ import {
   QuizSchema,
   QuizListResponseSchema,
   QuizQuestionSchema,
+  AuthoredQuizSchema,
+  AuthoredExamSchema,
+  AuthoredQuestionSchema,
+  ImportResultSchema,
   ExamSchema,
   ExamListResponseSchema,
   ExamStatsSchema,
@@ -55,6 +59,13 @@ import {
   type CreateQuizInput,
   type QuizQuestion,
   type AddQuizQuestionInput,
+  type AuthoredQuiz,
+  type AuthoredExam,
+  type AuthoredQuestion,
+  type UpdateQuestionInput,
+  type UpdateExamQuestionInput,
+  type ImportDocument,
+  type ImportResult,
   type Exam,
   type CreateExamInput,
   type ExamStats,
@@ -492,6 +503,130 @@ export async function publishExamEndpoint(examId: string): Promise<void> {
 
 export async function getExamStats(examId: string): Promise<ExamStats> {
   const data = await apiFetch(`/exams/${examId}/stats`, { schema: ExamStatsSchema });
+  return data!;
+}
+
+// ---- Assessments: standalone create, listing, per-question editing -------------
+
+/** A page of quizzes across all courses, for the top-level Quizzes page. */
+export async function listAllQuizzes(params: {
+  limit?: number;
+  after?: string;
+  course_id?: string;
+  standalone?: boolean;
+  published?: boolean;
+}): Promise<{ data: Quiz[]; next_cursor?: string | null }> {
+  const qs = new URLSearchParams();
+  if (params.limit) qs.set("limit", String(params.limit));
+  if (params.after) qs.set("after", params.after);
+  if (params.course_id) qs.set("course_id", params.course_id);
+  if (params.standalone !== undefined) qs.set("standalone", String(params.standalone));
+  if (params.published !== undefined) qs.set("published", String(params.published));
+  const data = await apiFetch(`/quizzes?${qs}`, { schema: QuizListResponseSchema });
+  return data ?? { data: [] };
+}
+
+/** Creates a quiz with no course (admin) or under the course_id in the body. */
+export async function createStandaloneQuiz(input: CreateQuizInput): Promise<Quiz> {
+  const data = await apiFetch("/quizzes", { method: "POST", body: input, schema: QuizSchema });
+  return data!;
+}
+
+/** The quiz and its questions WITH answer keys, for the editor. */
+export async function getQuizForAuthoring(quizId: string): Promise<AuthoredQuiz> {
+  const data = await apiFetch(`/quizzes/${quizId}/questions`, { schema: AuthoredQuizSchema });
+  return data!;
+}
+
+export async function updateQuizQuestion(
+  questionId: string,
+  input: UpdateQuestionInput
+): Promise<AuthoredQuestion> {
+  const data = await apiFetch(`/questions/${questionId}`, {
+    method: "PUT",
+    body: input,
+    schema: AuthoredQuestionSchema,
+  });
+  return data!;
+}
+
+export async function deleteQuizQuestion(questionId: string): Promise<void> {
+  await apiFetch(`/questions/${questionId}`, { method: "DELETE" });
+}
+
+export async function reorderQuizQuestions(quizId: string, questionIds: string[]): Promise<void> {
+  await apiFetch(`/quizzes/${quizId}/questions/order`, {
+    method: "PUT",
+    body: { question_ids: questionIds },
+  });
+}
+
+/** A page of exams including the caller's unpublished drafts. */
+export async function listAllExams(params: {
+  limit?: number;
+  after?: string;
+  subject?: string;
+  grade?: number;
+  published?: boolean;
+}): Promise<{ data: Exam[]; next_cursor?: string | null }> {
+  const qs = new URLSearchParams();
+  if (params.limit) qs.set("limit", String(params.limit));
+  if (params.after) qs.set("after", params.after);
+  if (params.subject) qs.set("subject", params.subject);
+  if (params.grade) qs.set("grade", String(params.grade));
+  if (params.published !== undefined) qs.set("published", String(params.published));
+  const data = await apiFetch(`/exams?${qs}`, { schema: ExamListResponseSchema });
+  return data ?? { data: [] };
+}
+
+/** Creates an exam with no course (admin) or under the course_id in the body. */
+export async function createStandaloneExam(input: CreateExamInput): Promise<Exam> {
+  const data = await apiFetch("/exams", { method: "POST", body: input, schema: ExamSchema });
+  return data!;
+}
+
+/** The exam and its questions WITH answer keys, for the editor. */
+export async function getExamForAuthoring(examId: string): Promise<AuthoredExam> {
+  const data = await apiFetch(`/exams/${examId}/questions`, { schema: AuthoredExamSchema });
+  return data!;
+}
+
+export async function updateExamQuestion(
+  examId: string,
+  questionId: string,
+  input: UpdateExamQuestionInput
+): Promise<AuthoredQuestion> {
+  const data = await apiFetch(`/exams/${examId}/questions/${questionId}`, {
+    method: "PUT",
+    body: input,
+    schema: AuthoredQuestionSchema,
+  });
+  return data!;
+}
+
+export async function removeExamQuestion(examId: string, questionId: string): Promise<Exam> {
+  const data = await apiFetch(`/exams/${examId}/questions/${questionId}`, {
+    method: "DELETE",
+    schema: ExamSchema,
+  });
+  return data!;
+}
+
+export async function reorderExamQuestions(examId: string, questionIds: string[]): Promise<void> {
+  await apiFetch(`/exams/${examId}/questions/order`, {
+    method: "PUT",
+    body: { question_ids: questionIds },
+  });
+}
+
+export async function unpublishExamEndpoint(examId: string): Promise<void> {
+  await apiFetch(`/exams/${examId}/unpublish`, { method: "POST" });
+}
+
+/** Bulk-creates a whole quiz or exam from one import document, atomically. */
+export async function importAssessment(doc: ImportDocument): Promise<ImportResult> {
+  const path = doc.kind === "exam" ? "/exams/import" : "/quizzes/import";
+  const data = await apiFetch(path, { method: "POST", body: doc, schema: ImportResultSchema });
   return data!;
 }
 

@@ -354,3 +354,233 @@ func (h *ExamHandler) ListMyAttempts(c *gin.Context) {
 	resp := dto.NewExamAttemptHistoryListResponse(attempts)
 	respondJSON(c, http.StatusOK, resp)
 }
+
+// CreateStandaloneExam handles POST /exams → 201. Unlike the nested
+// POST /courses/:id/exams route the course comes from the body and may be
+// omitted entirely, which creates a standalone (course-less) exam — admin only.
+func (h *ExamHandler) CreateStandaloneExam(c *gin.Context) {
+	var req dto.CreateExamRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, apperror.BadRequest("invalid request body", err))
+		return
+	}
+	created, err := h.svc.CreateExam(c.Request.Context(), examActor(c), exam.CreateExamInput{
+		CourseID:        req.CourseID,
+		Title:           req.Title,
+		Subject:         req.Subject,
+		Grade:           req.Grade,
+		DurationMinutes: req.DurationMinutes,
+		PassMarks:       req.PassMarks,
+		Instructions:    req.Instructions,
+	})
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	resp := dto.NewExamResponse(created)
+	respondJSON(c, http.StatusCreated, &resp)
+}
+
+// ListExamsForAuthoring handles GET /exams → 200: the authoring catalog with
+// cursor pagination, including the caller's unpublished drafts. The public
+// student-facing catalog stays on GET /mock-exams, which forces is_published.
+func (h *ExamHandler) ListExamsForAuthoring(c *gin.Context) {
+	cursor, err := pagination.Decode(c.Query("after"))
+	if err != nil {
+		respondError(c, apperror.BadRequest("invalid cursor", err))
+		return
+	}
+	limit := pagination.NormalizeLimit(atoiDefault(c.Query("limit"), 0))
+
+	var filter repository.ExamFilter
+	if s := c.Query("subject"); s != "" {
+		filter.Subject = &s
+	}
+	if g := c.Query("grade"); g != "" {
+		grade, convErr := strconv.Atoi(g)
+		if convErr != nil {
+			respondError(c, apperror.BadRequest("invalid grade", convErr))
+			return
+		}
+		filter.Grade = &grade
+	}
+	if raw := c.Query("published"); raw != "" {
+		published, convErr := strconv.ParseBool(raw)
+		if convErr != nil {
+			respondError(c, apperror.BadRequest("invalid published", convErr))
+			return
+		}
+		filter.IsPublished = &published
+	}
+
+	exams, next, err := h.svc.ListExams(c.Request.Context(), examActor(c), filter, cursor, limit)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	nextCursor := ""
+	if next != nil {
+		nextCursor = next.Encode()
+	}
+	respondJSON(c, http.StatusOK, gin.H{
+		"data":        dto.NewExamListResponse(exams),
+		"next_cursor": nextCursor,
+	})
+}
+
+// GetExamForAuthoring handles GET /exams/:id/questions → 200. The response
+// carries answer keys, so this route MUST stay behind requireAuth +
+// teacherOrAdmin; the usecase additionally proves exam ownership.
+func (h *ExamHandler) GetExamForAuthoring(c *gin.Context) {
+	examID, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	view, err := h.svc.GetExamForAuthoring(c.Request.Context(), examActor(c), examID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	resp := dto.NewAuthoredExamResponse(view)
+	respondJSON(c, http.StatusOK, &resp)
+}
+
+// UpdateExamQuestion handles PUT /exams/:id/questions/:questionId → 200.
+func (h *ExamHandler) UpdateExamQuestion(c *gin.Context) {
+	examID, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	questionID, err := parseUUIDParam(c, "questionId")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	var req dto.UpdateExamQuestionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, apperror.BadRequest("invalid request body", err))
+		return
+	}
+
+	in := exam.UpdateExamQuestionInput{
+		Text:        req.Text,
+		Marks:       req.Marks,
+		Explanation: req.Explanation,
+		OrderIndex:  req.OrderIndex,
+		Subject:     req.Subject,
+		Topic:       req.Topic,
+	}
+	if req.Type != nil {
+		qType := entity.QuestionType(*req.Type)
+		in.Type = &qType
+	}
+	if req.Answers != nil {
+		answers := make([]exam.InlineAnswerInput, 0, len(*req.Answers))
+		for i, a := range *req.Answers {
+			order := a.OrderIndex
+			if order == 0 {
+				// A client that omits order_index gets the array order, so a
+				// replacement set never collapses to all-zero indexes.
+				order = i
+			}
+			answers = append(answers, exam.InlineAnswerInput{Text: a.Text, IsCorrect: a.IsCorrect, OrderIndex: order})
+		}
+		in.Answers = answers
+	}
+
+	updated, err := h.svc.UpdateExamQuestion(c.Request.Context(), examActor(c), examID, questionID, in)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	resp := dto.NewAuthoredExamQuestionResponse(updated)
+	respondJSON(c, http.StatusOK, &resp)
+}
+
+// RemoveExamQuestion handles DELETE /exams/:id/questions/:questionId → 200,
+// returning the exam with its re-derived total_marks.
+func (h *ExamHandler) RemoveExamQuestion(c *gin.Context) {
+	examID, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	questionID, err := parseUUIDParam(c, "questionId")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	updated, err := h.svc.RemoveExamQuestion(c.Request.Context(), examActor(c), examID, questionID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	resp := dto.NewExamResponse(updated)
+	respondJSON(c, http.StatusOK, &resp)
+}
+
+// ReorderExamQuestions handles PUT /exams/:id/questions/order → 204.
+func (h *ExamHandler) ReorderExamQuestions(c *gin.Context) {
+	examID, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	var req dto.ReorderQuestionsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, apperror.BadRequest("invalid request body", err))
+		return
+	}
+	if err := h.svc.ReorderExamQuestions(c.Request.Context(), examActor(c), examID, req.QuestionIDs); err != nil {
+		respondError(c, err)
+		return
+	}
+	c.Status(http.StatusNoContent)
+}
+
+// Unpublish handles POST /exams/:id/unpublish → 200, hiding an exam from
+// students again so a published exam can be corrected.
+func (h *ExamHandler) Unpublish(c *gin.Context) {
+	examID, err := parseUUIDParam(c, "id")
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	updated, err := h.svc.UnpublishExam(c.Request.Context(), examActor(c), examID)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	resp := dto.NewExamResponse(updated)
+	respondJSON(c, http.StatusOK, &resp)
+}
+
+// ImportExam handles POST /exams/import → 201: a whole exam and its question
+// set from one uploaded document, created atomically with a derived total_marks.
+func (h *ExamHandler) ImportExam(c *gin.Context) {
+	var req dto.ImportRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, apperror.BadRequest("invalid import document", err))
+		return
+	}
+	in, err := req.ToExamImport()
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	created, count, err := h.svc.ImportExam(c.Request.Context(), examActor(c), in)
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	total := created.TotalMarks
+	respondJSON(c, http.StatusCreated, &dto.ImportResponse{
+		Kind:          "exam",
+		ID:            created.ID,
+		Title:         created.Title,
+		QuestionCount: count,
+		TotalMarks:    &total,
+	})
+}

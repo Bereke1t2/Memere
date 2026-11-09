@@ -13,7 +13,7 @@ import (
 // key-free) on StartAttempt.
 type QuizClientView struct {
 	ID                 uuid.UUID
-	CourseID           uuid.UUID
+	CourseID           *uuid.UUID
 	Title              string
 	TimeLimitSeconds   *int
 	PassPercentage     float64

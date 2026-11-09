@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
+	"github.com/Bereke1t2/Memere/memere-backend/pkg/pagination"
 )
 
 // QuestionWithAnswers is a question together with its answer options (answer key
@@ -46,11 +47,27 @@ type ClientQuestion struct {
 	Answers    []ClientAnswer
 }
 
+// QuizFilter narrows a quiz listing. Nil fields are ignored. Standalone selects
+// by whether the quiz has a parent course: true = course-less quizzes only,
+// false = course-attached only.
+type QuizFilter struct {
+	CourseID    *uuid.UUID
+	IsPublished *bool
+	Standalone  *bool
+}
+
 // QuizRepository persists quizzes and their question tree (spec §4.2.5).
 type QuizRepository interface {
 	Create(ctx context.Context, q *entity.Quiz) error
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.Quiz, error)
 	ListByCourse(ctx context.Context, courseID uuid.UUID) ([]*entity.Quiz, error)
+	// List returns up to limit quizzes matching filter, ordered by
+	// (created_at, id) DESC starting after cursor (nil = first page). The
+	// returned cursor is non-nil only when more rows may exist.
+	List(ctx context.Context, filter QuizFilter, cursor *pagination.Cursor, limit int) ([]*entity.Quiz, *pagination.Cursor, error)
+	// CountQuestions returns the quiz's question tally, for authoring lists that
+	// show a count without loading the tree.
+	CountQuestions(ctx context.Context, quizID uuid.UUID) (int, error)
 	Update(ctx context.Context, q *entity.Quiz) error
 	// Delete soft-deletes the quiz (Non-Negotiable #5); attempts are preserved.
 	Delete(ctx context.Context, id uuid.UUID) error

@@ -28,6 +28,12 @@ func (a *Actor) isTeacherOrAdmin() bool {
 	return a != nil && (a.Role == entity.RoleTeacher || a.Role == entity.RoleAdmin)
 }
 
+// isAdmin reports whether the actor is an admin. Standalone (course-less)
+// quizzes have no owning teacher, so admin is the only role that may author them.
+func (a *Actor) isAdmin() bool {
+	return a != nil && a.Role == entity.RoleAdmin
+}
+
 // ownsCourse reports whether the actor may author content under the course: the
 // owning teacher, or any admin.
 func (a *Actor) ownsCourse(c *entity.Course) bool {

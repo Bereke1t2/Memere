@@ -17,5 +17,11 @@ type QuestionRepository interface {
 	ListByQuiz(ctx context.Context, quizID uuid.UUID) ([]*entity.Question, error)
 	ListAnswers(ctx context.Context, questionID uuid.UUID) ([]*entity.Answer, error)
 	Update(ctx context.Context, q *entity.Question) error
+	// UpdateWithAnswers rewrites the question AND replaces its whole answer set
+	// in one call. Answer options carry no stable identity for the author (they
+	// are reordered, retyped and added/removed freely), so an edit replaces the
+	// set wholesale rather than diffing it. Callers MUST wrap this in a
+	// transaction so the answer key is never left half-written.
+	UpdateWithAnswers(ctx context.Context, q *entity.Question, answers []*entity.Answer) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }

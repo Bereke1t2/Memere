@@ -41,13 +41,22 @@ type UpdateExamInput struct {
 	Instructions    *string
 }
 
-// CreateExam creates an exam, optionally under a course the actor owns. total_marks
-// starts at 0 and is maintained from the question set as questions are added.
+// CreateExam creates an exam, optionally under a course the actor owns.
+// total_marks starts at 0 and is maintained from the question set as questions
+// are added.
+//
+// A course-less (standalone) exam requires admin, matching loadOwnedExam: a
+// teacher who created one could not subsequently edit it, so creating it is
+// refused up front rather than handing back content its author is locked out of.
 func (s *Service) CreateExam(ctx context.Context, actor *Actor, in CreateExamInput) (*entity.Exam, error) {
 	if !actor.isTeacherOrAdmin() {
 		return nil, apperror.Forbidden("only teachers may create exams", nil)
 	}
-	if in.CourseID != nil {
+	if in.CourseID == nil {
+		if !actor.isAdmin() {
+			return nil, apperror.Forbidden("only an admin may create a standalone exam", nil)
+		}
+	} else {
 		if _, err := s.loadOwnedCourse(ctx, actor, *in.CourseID); err != nil {
 			return nil, err
 		}

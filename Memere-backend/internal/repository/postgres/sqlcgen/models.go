@@ -167,6 +167,7 @@ type CoursesQuiz struct {
 	CreatedAt          pgtype.Timestamptz
 	UpdatedAt          pgtype.Timestamptz
 	DeletedAt          pgtype.Timestamptz
+	IsPublished        bool
 }
 
 type CoursesQuizAttempt struct {
