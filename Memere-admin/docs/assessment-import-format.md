@@ -136,9 +136,64 @@ Use exactly one of `answers` or `options` per question. Supplying both, neither,
 a `correct` that matches nothing is rejected — a question with no correct answer
 cannot be graded, so it is never imported silently.
 
-## HTML
+## Question bank files
 
-HTML is read structurally. It cannot be interpreted with certainty, so the import
+The content team's self-contained exam viewers — the files with an embedded
+question set and a MathJax-rendering UI — import **as they are**, with no editing.
+Upload the `.html` directly.
+
+Four shapes are recognized, all carrying the same question fields:
+
+| Shape | Where the questions live |
+|---|---|
+| `{ "metadata": {…}, "questions": [ … ] }` | a `<script type="application/json">` block |
+| `[ … ]` | a `<script type="application/json">` block |
+| `window.__EXAM_DATA__ = [ … ]` | a `<script>` JS array literal |
+| `window.__EXAM_STORE__ = { subject: [ … ] }` | a `<script>` JS literal, keyed by subject |
+
+The JS shapes are read with a scanner, not `eval` — nothing in an uploaded file
+is ever executed.
+
+### How bank fields map across
+
+| Bank field | Becomes | Notes |
+|---|---|---|
+| `questionText` | `text` | `<br>` becomes a line break; other tags are stripped and entities decoded. |
+| `options` | `options` | Same text cleanup. |
+| `correctAnswer` | `correct` | A 0-based index. Out-of-range or non-numeric **aborts** the import rather than defaulting to A. |
+| `explanation` | `explanation` | Tags stripped; LaTeX kept verbatim. |
+| `points` / `marks` | `points` / `marks` | Defaults to 1. |
+| `sourceRef` | appended to `explanation` | As a trailing `Source: …` line, so provenance is not lost. |
+| leading `<b>Label:</b>` in the explanation | `topic` | "Antonyms", "Map Reading & Scale Conversion" and the like feed the weak-areas analytics. Generic lead-ins such as "Step-by-step derivation" are ignored rather than becoming a meaningless topic. |
+| `<title>` or `<h1>` | the title | Falls back to the file name. |
+| `meta[name="exam:subject"]`, `metadata.subject` | the subject | |
+
+A bank file states no grade and usually no duration, so the import screen asks
+for the fields it needs and will not import until they are filled in. Nothing is
+guessed on a graded exam.
+
+### Checks run on a bank file
+
+- **The answer key against the explanation.** Many explanations restate the key
+  in prose ("Correct Choice: B"). Where that disagrees with `correctAnswer`, the
+  questions are named for you to check — one of the two is wrong, and importing
+  either would be a coin flip.
+- **Invalid JSON escapes are repaired and reported.** A generator that writes
+  LaTeX `\{` into a JSON string produces invalid JSON; the backslash is taken
+  literally and the count is reported. This only ever runs on input strict
+  parsing already refused, so a valid file is never altered.
+- **Lost LaTeX is detected.** A command written with a *single* backslash —
+  `\times` instead of `\\times` — is a legal JSON escape, so it silently becomes
+  a control character and the command is gone before any importer sees it. Those
+  questions are flagged; the file must be re-exported, since the content cannot
+  be recovered at import time.
+- **An empty `application/json` block is never mistaken for the data.** Several
+  bank files ship one next to their real JS literal; treating it as the answer
+  would import zero questions while appearing to succeed.
+
+## Hand-written HTML
+
+HTML without any embedded data block is read structurally. It cannot be interpreted with certainty, so the import
 screen always flags it and shows every resolved answer key for confirmation. For
 an exact import, prefer JSON — or embed a JSON block in the HTML, which is used
 verbatim and skips the guesswork entirely:
