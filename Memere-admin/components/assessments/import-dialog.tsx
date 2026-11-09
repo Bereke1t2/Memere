@@ -6,6 +6,8 @@ import { Upload, Loader2, AlertTriangle, Check, X, FileJson, FileCode } from "lu
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +29,55 @@ import type { ImportResult } from "@/lib/api/schemas";
  * confirms before anything is written. The import itself is atomic server-side:
  * either the whole file lands or none of it does.
  */
+interface HeaderDraft {
+  title: string;
+  subject: string;
+  grade: string;
+  durationMinutes: string;
+  passMarks: string;
+  passPercentage: string;
+  timeLimitMinutes: string;
+}
+
+const emptyHeader: HeaderDraft = {
+  title: "",
+  subject: "",
+  grade: "12",
+  durationMinutes: "",
+  passMarks: "",
+  passPercentage: "60",
+  timeLimitMinutes: "",
+};
+
+/**
+ * Prefills the header form from whatever the file supplied, falling back to the
+ * file name for a title so an untitled bank file still arrives with something
+ * recognizable rather than "(untitled)".
+ */
+function seedHeader(result: ParseResult, fileName: string): HeaderDraft {
+  const doc = result.document;
+  const fallbackTitle = fileName.replace(/\.(html?|json)$/i, "").trim();
+
+  if (doc.kind === "exam") {
+    const e = doc.exam!;
+    return {
+      ...emptyHeader,
+      title: e.title || fallbackTitle,
+      subject: e.subject || "",
+      grade: e.grade ? String(e.grade) : "12",
+      durationMinutes: e.duration_minutes ? String(e.duration_minutes) : "",
+      passMarks: e.pass_marks ? String(e.pass_marks) : "",
+    };
+  }
+  const q = doc.quiz!;
+  return {
+    ...emptyHeader,
+    title: q.title || fallbackTitle,
+    passPercentage: q.pass_percentage != null ? String(q.pass_percentage) : "60",
+    timeLimitMinutes: q.time_limit_seconds ? String(Math.round(q.time_limit_seconds / 60)) : "",
+  };
+}
+
 export function ImportAssessmentDialog({
   kind,
   courseId,
@@ -41,6 +92,10 @@ export function ImportAssessmentDialog({
   const [error, setError] = useState<{ message: string; issues: string[] } | null>(null);
   const [fileName, setFileName] = useState("");
   const [importing, setImporting] = useState(false);
+  // Header values the operator can confirm or correct before importing. A
+  // question-bank file carries a title at best, so these are editable for every
+  // upload rather than only when something is missing.
+  const [header, setHeader] = useState<HeaderDraft>(emptyHeader);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -48,6 +103,7 @@ export function ImportAssessmentDialog({
     setParsed(null);
     setError(null);
     setFileName("");
+    setHeader(emptyHeader);
     setImporting(false);
     if (inputRef.current) inputRef.current.value = "";
   }
@@ -58,7 +114,7 @@ export function ImportAssessmentDialog({
     setFileName(file.name);
     try {
       const text = await file.text();
-      const result = parseImportFile(file.name, text);
+      const result = parseImportFile(file.name, text, kind);
       if (result.document.kind !== kind) {
         setError({
           message: `This file describes a ${result.document.kind}, but this page imports ${kind}s.`,
@@ -67,6 +123,7 @@ export function ImportAssessmentDialog({
         return;
       }
       setParsed(result);
+      setHeader(seedHeader(result, file.name));
     } catch (err) {
       if (err instanceof ParseError) {
         setError({ message: err.message, issues: err.issues });
@@ -80,9 +137,29 @@ export function ImportAssessmentDialog({
     if (!parsed) return;
     setImporting(true);
 
+    // The header the operator confirmed wins over whatever the file carried.
+    const doc = { ...parsed.document };
+    if (doc.kind === "exam" && doc.exam) {
+      doc.exam = {
+        ...doc.exam,
+        title: header.title.trim(),
+        subject: header.subject.trim(),
+        grade: Number(header.grade) || 12,
+        duration_minutes: Number(header.durationMinutes) || 0,
+        pass_marks: Number(header.passMarks) || 0,
+      };
+    } else if (doc.kind === "quiz" && doc.quiz) {
+      const minutes = Number(header.timeLimitMinutes) || 0;
+      doc.quiz = {
+        ...doc.quiz,
+        title: header.title.trim(),
+        pass_percentage: Number(header.passPercentage) || 0,
+        time_limit_seconds: minutes > 0 ? minutes * 60 : null,
+      };
+    }
+
     // A document with no course of its own is filed under the course being
     // viewed, if any. An explicit course_id in the file always wins.
-    const doc = { ...parsed.document };
     if (courseId) {
       if (doc.kind === "quiz" && doc.quiz && !doc.quiz.course_id) {
         doc.quiz = { ...doc.quiz, course_id: courseId };
@@ -107,12 +184,31 @@ export function ImportAssessmentDialog({
   }
 
   const questions = parsed?.document.questions ?? [];
-  const header =
-    parsed?.document.kind === "exam" ? parsed.document.exam : parsed?.document.quiz;
   const totalMarks =
     parsed?.document.kind === "exam"
       ? questions.reduce((sum, q) => sum + (q.marks ?? q.points ?? 1), 0)
       : undefined;
+
+  // Blocking problems with the header the operator has entered. Import stays
+  // disabled while any of these hold, so a required field is never defaulted
+  // behind their back on a graded assessment.
+  const headerProblems: string[] = [];
+  if (parsed) {
+    if (!header.title.trim()) headerProblems.push("A title is required.");
+    if (kind === "exam") {
+      if (!header.subject.trim()) headerProblems.push("A subject is required.");
+      const grade = Number(header.grade);
+      if (!Number.isInteger(grade) || grade < 1 || grade > 13) {
+        headerProblems.push("Grade must be between 1 and 13.");
+      }
+      if (!(Number(header.durationMinutes) > 0)) {
+        headerProblems.push("A duration in minutes is required.");
+      }
+      if (totalMarks !== undefined && Number(header.passMarks) > totalMarks) {
+        headerProblems.push(`Pass marks cannot exceed the ${totalMarks} marks on offer.`);
+      }
+    }
+  }
 
   return (
     <>
@@ -214,7 +310,7 @@ export function ImportAssessmentDialog({
               <>
                 <div className="rounded-md border bg-muted/30 p-3 text-sm">
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                    <span className="font-medium">{header?.title || "(untitled)"}</span>
+                    <span className="font-medium">{header.title || "(untitled)"}</span>
                     <Badge variant="secondary" className="text-xs">
                       {questions.length} question{questions.length === 1 ? "" : "s"}
                     </Badge>
@@ -224,9 +320,122 @@ export function ImportAssessmentDialog({
                       </Badge>
                     )}
                     <Badge variant="outline" className="text-xs">
-                      parsed from {parsed.source.toUpperCase()}
+                      {parsed.dialect === "canonical"
+                        ? "import format"
+                        : parsed.dialect === "markup"
+                          ? "read from markup"
+                          : `question bank (${parsed.dialect})`}
                     </Badge>
                   </div>
+                </div>
+
+                <div className="flex flex-col gap-3 rounded-md border p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {kind === "exam" ? "Exam details" : "Quiz details"}
+                    {parsed.missingHeader && parsed.missingHeader.length > 0 && (
+                      <span className="ml-2 font-normal normal-case tracking-normal text-amber-700 dark:text-amber-400">
+                        — this file does not specify{" "}
+                        {parsed.missingHeader.join(", ").replace(/_/g, " ")}
+                      </span>
+                    )}
+                  </p>
+
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="imp-title" className="text-xs">Title</Label>
+                    <Input
+                      id="imp-title"
+                      value={header.title}
+                      onChange={(e) => setHeader((h) => ({ ...h, title: e.target.value }))}
+                    />
+                  </div>
+
+                  {kind === "exam" ? (
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="imp-subject" className="text-xs">Subject</Label>
+                        <Input
+                          id="imp-subject"
+                          placeholder="e.g. Biology"
+                          value={header.subject}
+                          onChange={(e) => setHeader((h) => ({ ...h, subject: e.target.value }))}
+                        />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="imp-grade" className="text-xs">Grade</Label>
+                        <Input
+                          id="imp-grade"
+                          type="number"
+                          min="1"
+                          max="13"
+                          value={header.grade}
+                          onChange={(e) => setHeader((h) => ({ ...h, grade: e.target.value }))}
+                        />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="imp-dur" className="text-xs">Duration (min)</Label>
+                        <Input
+                          id="imp-dur"
+                          type="number"
+                          min="1"
+                          placeholder="e.g. 150"
+                          value={header.durationMinutes}
+                          onChange={(e) =>
+                            setHeader((h) => ({ ...h, durationMinutes: e.target.value }))
+                          }
+                        />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="imp-pass" className="text-xs">
+                          Pass marks{totalMarks !== undefined ? ` / ${totalMarks}` : ""}
+                        </Label>
+                        <Input
+                          id="imp-pass"
+                          type="number"
+                          min="0"
+                          value={header.passMarks}
+                          onChange={(e) => setHeader((h) => ({ ...h, passMarks: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="imp-pct" className="text-xs">Pass %</Label>
+                        <Input
+                          id="imp-pct"
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={header.passPercentage}
+                          onChange={(e) =>
+                            setHeader((h) => ({ ...h, passPercentage: e.target.value }))
+                          }
+                        />
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label htmlFor="imp-limit" className="text-xs">
+                          Time limit (min, blank = none)
+                        </Label>
+                        <Input
+                          id="imp-limit"
+                          type="number"
+                          min="0"
+                          value={header.timeLimitMinutes}
+                          onChange={(e) =>
+                            setHeader((h) => ({ ...h, timeLimitMinutes: e.target.value }))
+                          }
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {headerProblems.length > 0 && (
+                    <ul className="list-disc pl-5 text-xs text-destructive">
+                      {headerProblems.map((p, i) => (
+                        <li key={i}>{p}</li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
 
                 {parsed.warnings.length > 0 && (
@@ -307,7 +516,11 @@ export function ImportAssessmentDialog({
             >
               Cancel
             </Button>
-            <Button type="button" onClick={handleImport} disabled={!parsed || importing}>
+            <Button
+              type="button"
+              onClick={handleImport}
+              disabled={!parsed || importing || headerProblems.length > 0}
+            >
               {importing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
