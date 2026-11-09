@@ -48,15 +48,18 @@ void main() {
       '/usr/share/fonts/noto/NotoSans-Bold.ttf',
       '/usr/share/fonts/liberation/LiberationSans-Regular.ttf',
     ];
-    for (final family in const [
-      'Roboto',
-      'Sora',
-      'DM Sans',
-      'Noto Sans',
-      'Noto Sans Ethiopic',
-    ]) {
+    for (final family in const ['Roboto', 'Sora', 'DM_Sans', 'Noto Sans', 'Noto Sans Ethiopic']) {
       await load(family, substitute);
     }
+
+    // Icons render as boxes without this. The font ships with the SDK but its
+    // location varies by install, so every candidate is tried and a miss is
+    // simply skipped.
+    await load('MaterialIcons', [
+      '${Platform.environment['HOME']}/fvm/versions/3.44.4/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
+      '/usr/lib/flutter/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
+      '${Platform.environment['HOME']}/.pub-cache/hosted/pub.dev/provider-6.1.2/extension/devtools/build/assets/fonts/MaterialIcons-Regular.otf',
+    ]);
 
     // flutter_math asks for its glyphs under the package-prefixed family name
     // (see make_symbol.dart), which is what a dependency's declared fonts are
