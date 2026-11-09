@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../shared/widgets/math_text.dart';
 import '../../domain/entities/quiz_question_entity.dart';
 import 'answer_option_tile.dart';
 import 'short_answer_field.dart';
@@ -36,22 +37,22 @@ class QuizQuestionCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          // Wrap, not Row: a real subject name ("Mathematics") alongside the
+          // points and type chips overflows a phone width on one line.
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _Chip(
                 label: '${question.points} ${question.points == 1 ? 'Point' : 'Points'}',
                 isHighlight: true,
               ),
-              const SizedBox(width: 8),
               _Chip(label: _questionTypeLabel(question.type)),
-              if (question.subject != null) ...[
-                const SizedBox(width: 8),
-                _Chip(label: question.subject!),
-              ],
+              if (question.subject != null) _Chip(label: question.subject!),
             ],
           ),
           const SizedBox(height: 16),
-          Text(
+          MathText(
             question.text,
             style: const TextStyle(
               fontSize: 17,
@@ -113,10 +114,10 @@ class _Chip extends StatelessWidget {
         vertical: 4,
       ),
       decoration: BoxDecoration(
-        color: isHighlight ? const Color(0x2210B981) : AppColors.bgTertiary,
+        color: isHighlight ? const Color(0x2235A862) : AppColors.bgTertiary,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isHighlight ? const Color(0x5510B981) : AppColors.borderStrong,
+          color: isHighlight ? const Color(0x5535A862) : AppColors.borderStrong,
         ),
       ),
       child: Text(
@@ -124,7 +125,7 @@ class _Chip extends StatelessWidget {
         style: TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
-          color: isHighlight ? const Color(0xFF10B981) : const Color(0xFF94A3B8),
+          color: isHighlight ? const Color(0xFF35A862) : const Color(0xFF9AA09A),
         ),
       ),
     );

@@ -133,24 +133,24 @@ class ProfileScreen extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4.5),
                         decoration: BoxDecoration(
-                          color: const Color(0x24F59E0B),
+                          color: const Color(0x24D99A2B),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: const Color(0x5DF59E0B),
+                            color: const Color(0x5DD99A2B),
                           ),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(Icons.hourglass_top_rounded,
-                                size: 13.5, color: Color(0xFFF59E0B)),
+                                size: 13.5, color: Color(0xFFD99A2B)),
                             SizedBox(width: 5),
                             Text(
                               'Waitlist • Pending Approval',
                               style: TextStyle(
                                 fontSize: 11.5,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFFF59E0B),
+                                color: Color(0xFFD99A2B),
                               ),
                             ),
                           ],
@@ -161,10 +161,10 @@ class ProfileScreen extends ConsumerWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4.5),
                         decoration: BoxDecoration(
-                          color: const Color(0x1E10B981),
+                          color: const Color(0x1E35A862),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: const Color(0x4D10B981),
+                            color: const Color(0x4D35A862),
                           ),
                         ),
                         child: const Row(
@@ -191,13 +191,13 @@ class ProfileScreen extends ConsumerWidget {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
-                            color: const Color(0x22F59E0B),
+                            color: const Color(0x22D99A2B),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0x66F59E0B)),
+                            border: Border.all(color: const Color(0x66D99A2B)),
                           ),
                           child: const Row(
                             children: [
-                              Icon(Icons.mark_email_unread_rounded, size: 18, color: Color(0xFFF59E0B)),
+                              Icon(Icons.mark_email_unread_rounded, size: 18, color: Color(0xFFD99A2B)),
                               SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -205,11 +205,11 @@ class ProfileScreen extends ConsumerWidget {
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
-                                    color: Color(0xFFF59E0B),
+                                    color: Color(0xFFD99A2B),
                                   ),
                                 ),
                               ),
-                              Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFFF59E0B)),
+                              Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Color(0xFFD99A2B)),
                             ],
                           ),
                         ),
@@ -479,7 +479,7 @@ class ProfileScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: const BoxDecoration(
-                color: Color(0x1DEF4444),
+                color: Color(0x1DDD5F55),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -515,16 +515,16 @@ class ProfileScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0x1DEF4444),
+                color: const Color(0x1DDD5F55),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0x55EF4444)),
+                border: Border.all(color: const Color(0x55DD5F55)),
               ),
               child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(
                     Icons.warning_amber_rounded,
-                    color: Color(0xFFEF4444),
+                    color: Color(0xFFDD5F55),
                     size: 20,
                   ),
                   SizedBox(width: 10),
@@ -533,7 +533,7 @@ class ProfileScreen extends ConsumerWidget {
                       'Warning: To protect course materials, signing out will erase all offline downloaded videos, PDF/HTML study notes, and mock exams from this device.',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFFFCA5A5),
+                        color: Color(0xFFEBA09A),
                         fontWeight: FontWeight.w500,
                         height: 1.4,
                       ),
@@ -647,7 +647,7 @@ class ProfileScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: const BoxDecoration(
-                color: Color(0x1DEF4444),
+                color: Color(0x1DDD5F55),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -683,16 +683,16 @@ class ProfileScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0x1DEF4444),
+                color: const Color(0x1DDD5F55),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0x55EF4444)),
+                border: Border.all(color: const Color(0x55DD5F55)),
               ),
               child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(
                     Icons.warning_amber_rounded,
-                    color: Color(0xFFEF4444),
+                    color: Color(0xFFDD5F55),
                     size: 20,
                   ),
                   SizedBox(width: 10),
@@ -701,7 +701,7 @@ class ProfileScreen extends ConsumerWidget {
                       'Warning: This action is permanent and cannot be undone. All your course enrollments, mock exam results, academic scores, and downloaded materials will be permanently erased.',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Color(0xFFFCA5A5),
+                        color: Color(0xFFEBA09A),
                         fontWeight: FontWeight.w500,
                         height: 1.4,
                       ),
@@ -809,7 +809,7 @@ class ProfileScreen extends ConsumerWidget {
                 'For our full privacy policy, visit https://mirkuz.app/privacy or email support@mirkuz.app.',
                 style: TextStyle(
                   fontSize: 12,
-                  color: Color(0xFF38BDF8),
+                  color: Color(0xFF5FA8D3),
                   height: 1.4,
                 ),
               ),
@@ -852,7 +852,7 @@ class ProfileScreen extends ConsumerWidget {
         ),
         title: const Row(
           children: [
-            Icon(Icons.description_outlined, color: Color(0xFF38BDF8), size: 20),
+            Icon(Icons.description_outlined, color: Color(0xFF5FA8D3), size: 20),
             SizedBox(width: 10),
             Text(
               'Terms of Service',
@@ -932,10 +932,10 @@ class _ProfileHeaderBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final topPadding = MediaQuery.paddingOf(context).top;
     final Color avatarBorderColor = isPending
-        ? const Color(0xFFF59E0B)
+        ? const Color(0xFFD99A2B)
         : (isApproved ? AppColors.brandEmerald : AppColors.borderStrong);
     final Color avatarTextColor = isPending
-        ? const Color(0xFFF59E0B)
+        ? const Color(0xFFD99A2B)
         : (isApproved ? AppColors.brandEmerald : AppColors.textPrimary);
 
     return Stack(
@@ -1006,7 +1006,7 @@ class _ProfileHeaderBanner extends StatelessWidget {
                 height: 72,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF141926),
+                  color: const Color(0xFF141A14),
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: avatarBorderColor,
@@ -1040,10 +1040,10 @@ class _ProfileHeaderBanner extends StatelessWidget {
                     width: 20,
                     height: 20,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF141926),
+                      color: const Color(0xFF141A14),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: const Color(0xFF141926),
+                        color: const Color(0xFF141A14),
                         width: 2,
                       ),
                     ),
@@ -1062,17 +1062,17 @@ class _ProfileHeaderBanner extends StatelessWidget {
                     width: 20,
                     height: 20,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF141926),
+                      color: const Color(0xFF141A14),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: const Color(0xFFF59E0B),
+                        color: const Color(0xFFD99A2B),
                         width: 1.5,
                       ),
                     ),
                     child: const Icon(
                       Icons.hourglass_top_rounded,
                       size: 12,
-                      color: Color(0xFFF59E0B),
+                      color: Color(0xFFD99A2B),
                     ),
                   ),
                 ),
@@ -1097,7 +1097,7 @@ class _WaitlistNoticeCard extends StatelessWidget {
         color: const Color(0xFF161D26),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFFF59E0B).withAlpha(90),
+          color: const Color(0xFFD99A2B).withAlpha(90),
         ),
       ),
       child: Column(
@@ -1108,13 +1108,13 @@ class _WaitlistNoticeCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: const Color(0x28F59E0B),
+                  color: const Color(0x28D99A2B),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
                   Icons.hourglass_empty_rounded,
                   size: 18,
-                  color: Color(0xFFF59E0B),
+                  color: Color(0xFFD99A2B),
                 ),
               ),
               const SizedBox(width: 10),
@@ -1125,7 +1125,7 @@ class _WaitlistNoticeCard extends StatelessWidget {
                     fontFamily: 'Sora',
                     fontSize: 14.5,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFFF59E0B),
+                    color: Color(0xFFD99A2B),
                   ),
                 ),
               ),
@@ -1185,7 +1185,7 @@ class _SocialStatsRow extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Icon(Icons.school_rounded,
-                          size: 15, color: Color(0xFF38BDF8)),
+                          size: 15, color: Color(0xFF5FA8D3)),
                       const SizedBox(width: 4),
                       Text(
                         '$enrolledCount',
@@ -1313,14 +1313,14 @@ class _ProfileActionsBar extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.person_add_alt_1_rounded,
-                      size: 17, color: Color(0xFF38BDF8)),
+                      size: 17, color: Color(0xFF5FA8D3)),
                   SizedBox(width: 8),
                   Text(
                     'SHARE PROFILE',
                     style: TextStyle(
                       fontSize: 12.5,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF38BDF8),
+                      color: Color(0xFF5FA8D3),
                       letterSpacing: 0.5,
                     ),
                   ),
@@ -1347,7 +1347,7 @@ class _ProfileActionsBar extends StatelessWidget {
             child: const Icon(
               Icons.ios_share_rounded,
               size: 18,
-              color: Color(0xFF38BDF8),
+              color: Color(0xFF5FA8D3),
             ),
           ),
         ),
@@ -1420,10 +1420,10 @@ class _SettingsGroup extends StatelessWidget {
           final Color iconColor =
               item.isDestructive ? AppColors.error : AppColors.textSecondary;
           final Color iconBg = item.isDestructive
-              ? const Color(0x1DEF4444)
+              ? const Color(0x1DDD5F55)
               : AppColors.bgTertiary;
           final Color iconBorder = item.isDestructive
-              ? const Color(0x35EF4444)
+              ? const Color(0x35DD5F55)
               : AppColors.borderStrong;
 
           return InkWell(
@@ -1536,7 +1536,7 @@ class _GuestProfileView extends StatelessWidget {
                       height: 72,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF141926),
+                        color: const Color(0xFF141A14),
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: AppColors.brandEmerald,
@@ -1729,7 +1729,7 @@ class _GuestProfileView extends StatelessWidget {
                               ),
                               title: const Row(
                                 children: [
-                                  Icon(Icons.description_outlined, color: Color(0xFF38BDF8), size: 20),
+                                  Icon(Icons.description_outlined, color: Color(0xFF5FA8D3), size: 20),
                                   SizedBox(width: 10),
                                   Text(
                                     'Terms of Service',

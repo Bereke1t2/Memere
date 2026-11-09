@@ -125,7 +125,7 @@ class _AccountGateSheet extends StatelessWidget {
                 height: 52,
                 alignment: Alignment.center,
                 decoration: const BoxDecoration(
-                  color: Color(0x1D22C55E),
+                  color: Color(0x1D3FAE66),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -248,7 +248,7 @@ class _EmailVerificationGateSheet extends StatelessWidget {
                 height: 52,
                 alignment: Alignment.center,
                 decoration: const BoxDecoration(
-                  color: Color(0x1D22C55E),
+                  color: Color(0x1D3FAE66),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(

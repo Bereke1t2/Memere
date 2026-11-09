@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
+import '../../../../shared/widgets/assessment/explanation_panel.dart';
+import '../../../../shared/widgets/math_text.dart';
 import '../../domain/entities/question_feedback_entity.dart';
 
 class QuestionFeedbackTile extends StatelessWidget {
@@ -17,8 +19,8 @@ class QuestionFeedbackTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCorrect = feedback.correct;
-    const emeraldColor = Color(0xFF10B981);
-    const redColor = Color(0xFFEF4444);
+    const emeraldColor = Color(0xFF35A862);
+    const redColor = Color(0xFFDD5F55);
     final statusColor = isCorrect ? emeraldColor : redColor;
 
     return Container(
@@ -79,7 +81,7 @@ class QuestionFeedbackTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text(
+          MathText(
             feedback.questionText != null && feedback.questionText!.isNotEmpty
                 ? 'Q${index + 1}. ${feedback.questionText!}'
                 : 'Question ${index + 1}',
@@ -89,6 +91,8 @@ class QuestionFeedbackTile extends StatelessWidget {
               color: Colors.white,
               height: 1.35,
             ),
+            // A review screen is where a student wants to copy a worked answer.
+            selectable: true,
           ),
           const SizedBox(height: 14),
           if (feedback.answers.isNotEmpty) ...[
@@ -105,19 +109,19 @@ class QuestionFeedbackTile extends StatelessWidget {
               Widget? icon;
 
               if (isSelected && isCorrectAns) {
-                optBg = const Color(0x2210B981);
+                optBg = const Color(0x2235A862);
                 optBorder = emeraldColor;
                 textColor = Colors.white;
                 icon = const Icon(Icons.check_circle_rounded,
                     color: emeraldColor, size: 18);
               } else if (isSelected && !isCorrectAns) {
-                optBg = const Color(0x22EF4444);
+                optBg = const Color(0x22DD5F55);
                 optBorder = redColor;
                 textColor = Colors.white;
                 icon = const Icon(Icons.cancel_rounded,
                     color: redColor, size: 18);
               } else if (isCorrectAns) {
-                optBg = const Color(0x1810B981);
+                optBg = const Color(0x1835A862);
                 optBorder = emeraldColor.withValues(alpha: 0.6);
                 textColor = emeraldColor;
                 icon = const Icon(Icons.check_circle_outline_rounded,
@@ -161,7 +165,7 @@ class QuestionFeedbackTile extends StatelessWidget {
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Text(
+                        child: MathText(
                           ans.text,
                           style: TextStyle(
                             fontSize: 13.5,
@@ -185,51 +189,9 @@ class QuestionFeedbackTile extends StatelessWidget {
             _HumanReadableAnswerFallback(feedback: feedback),
           ],
           if (feedback.explanation != null &&
-              feedback.explanation!.isNotEmpty) ...[
+              feedback.explanation!.trim().isNotEmpty) ...[
             const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0x1806B6D4),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0x4406B6D4)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.lightbulb_outline_rounded,
-                    size: 18,
-                    color: Color(0xFF38BDF8),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Explanation',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF38BDF8),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          feedback.explanation!,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            color: Color(0xFFCBD5E1),
-                            height: 1.35,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ExplanationPanel(explanation: feedback.explanation!),
           ],
         ],
       ),
@@ -277,8 +239,8 @@ class _HumanReadableAnswerFallback extends StatelessWidget {
               'Your Answer: $userAns',
               style: TextStyle(
                 color: feedback.correct
-                    ? const Color(0xFF10B981)
-                    : const Color(0xFFEF4444),
+                    ? const Color(0xFF35A862)
+                    : const Color(0xFFDD5F55),
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -288,7 +250,7 @@ class _HumanReadableAnswerFallback extends StatelessWidget {
           Text(
             'Correct Answer: $correctAns',
             style: const TextStyle(
-              color: Color(0xFF10B981),
+              color: Color(0xFF35A862),
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),

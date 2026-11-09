@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../shared/widgets/math_text.dart';
 import '../../domain/entities/quiz_answer_entity.dart';
 
 class AnswerOptionTile extends StatelessWidget {
@@ -30,9 +31,9 @@ class AnswerOptionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const emeraldColor = Color(0xFF10B981);
+    const emeraldColor = Color(0xFF35A862);
     final borderColor = isSelected ? emeraldColor : AppColors.borderStrong.withAlpha(100);
-    final bgColor = isSelected ? const Color(0x1E10B981) : AppColors.bgSecondary;
+    final bgColor = isSelected ? const Color(0x1E35A862) : AppColors.bgSecondary;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSizes.sm + 2),
@@ -87,7 +88,7 @@ class AnswerOptionTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 14),
                 Expanded(
-                  child: Text(
+                  child: MathText(
                     answer.text,
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: isSelected ? Colors.white : AppColors.textPrimary,
@@ -105,7 +106,7 @@ class AnswerOptionTile extends StatelessWidget {
                       : (isSelected
                           ? Icons.check_circle_rounded
                           : Icons.radio_button_unchecked_rounded),
-                  color: isSelected ? emeraldColor : const Color(0xFF64748B),
+                  color: isSelected ? emeraldColor : const Color(0xFF6E746C),
                   size: 20,
                 ),
               ],

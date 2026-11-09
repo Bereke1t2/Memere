@@ -27,7 +27,7 @@ class CourseStatsRow extends StatelessWidget {
           Expanded(
             child: _StatItem(
               icon: Icons.video_library_rounded,
-              iconColor: const Color(0xFF38BDF8),
+              iconColor: const Color(0xFF5FA8D3),
               label: 'Lessons',
               value: '${course.totalLessons}',
             ),
@@ -36,7 +36,7 @@ class CourseStatsRow extends StatelessWidget {
           Expanded(
             child: _StatItem(
               icon: Icons.timer_outlined,
-              iconColor: const Color(0xFFA855F7),
+              iconColor: const Color(0xFF9B72D1),
               label: 'Duration',
               value: course.durationLabel,
             ),
@@ -45,7 +45,7 @@ class CourseStatsRow extends StatelessWidget {
           Expanded(
             child: _StatItem(
               icon: Icons.star_rounded,
-              iconColor: const Color(0xFFF59E0B),
+              iconColor: const Color(0xFFD99A2B),
               label: 'Rating',
               value: course.ratingAvg > 0
                   ? course.ratingAvg.toStringAsFixed(1)
@@ -56,7 +56,7 @@ class CourseStatsRow extends StatelessWidget {
           Expanded(
             child: _StatItem(
               icon: Icons.people_alt_rounded,
-              iconColor: const Color(0xFF4ADE80),
+              iconColor: const Color(0xFF6FC98D),
               label: 'Students',
               value: formatCompactCount(course.enrollmentCount > 0 ? course.enrollmentCount : 1240),
             ),

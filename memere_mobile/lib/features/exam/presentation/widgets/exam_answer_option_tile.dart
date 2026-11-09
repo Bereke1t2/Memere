@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../shared/widgets/math_text.dart';
 import '../../domain/entities/exam_answer_entity.dart';
 
 /// Modern, luxury answer tile for live exam attempts with A/B/C/D letter badges,
@@ -105,10 +106,10 @@ class ExamAnswerOptionTile extends StatelessWidget {
                   const SizedBox(width: 14),
                   // Answer Text
                   Expanded(
-                    child: Text(
+                    child: MathText(
                       answer.text,
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: isSelected ? Colors.white : const Color(0xFFE4E4E7),
+                        color: isSelected ? Colors.white : const Color(0xFFE2E4DF),
                         fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                         height: 1.4,
                       ),

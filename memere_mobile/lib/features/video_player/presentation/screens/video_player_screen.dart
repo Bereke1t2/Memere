@@ -239,13 +239,13 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen>
                                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                                         decoration: BoxDecoration(
                                           color: playback.isOffline
-                                              ? const Color(0x2210B981)
-                                              : const Color(0xFF1E293B),
+                                              ? const Color(0x2235A862)
+                                              : const Color(0xFF1D231F),
                                           borderRadius: BorderRadius.circular(4),
                                           border: Border.all(
                                             color: playback.isOffline
-                                                ? const Color(0x4510B981)
-                                                : const Color(0xFF334155),
+                                                ? const Color(0x4535A862)
+                                                : const Color(0xFF333A34),
                                           ),
                                         ),
                                         child: Row(
@@ -257,7 +257,7 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen>
                                                   : Icons.stream_rounded,
                                               color: playback.isOffline
                                                   ? AppColors.brandEmerald
-                                                  : const Color(0xFF38BDF8),
+                                                  : const Color(0xFF5FA8D3),
                                               size: 12,
                                             ),
                                             const SizedBox(width: 4),
@@ -270,7 +270,7 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen>
                                                 fontWeight: FontWeight.w700,
                                                 color: playback.isOffline
                                                     ? AppColors.brandEmerald
-                                                    : const Color(0xFF38BDF8),
+                                                    : const Color(0xFF5FA8D3),
                                                 letterSpacing: 0.3,
                                               ),
                                             ),
@@ -284,8 +284,8 @@ class _VideoPlayerScreenState extends ConsumerState<VideoPlayerScreen>
                                             : 'Auto-saves progress',
                                         style: AppTextStyles.caption.copyWith(
                                           color: playback.isCompleted
-                                              ? const Color(0xFF10B981)
-                                              : const Color(0xFF64748B),
+                                              ? const Color(0xFF35A862)
+                                              : const Color(0xFF6E746C),
                                           fontSize: 11,
                                         ),
                                       ),

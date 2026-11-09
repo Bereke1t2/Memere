@@ -40,30 +40,30 @@ class _MockExamCardState extends ConsumerState<MockExamCard> {
     LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color(0xFF0F261E), Color(0xFF141926)],
+      colors: [Color(0xFF0F261E), Color(0xFF141A14)],
     ),
     LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color(0xFF0E2232), Color(0xFF141926)],
+      colors: [Color(0xFF0E2232), Color(0xFF141A14)],
     ),
     LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color(0xFF241B12), Color(0xFF141926)],
+      colors: [Color(0xFF241B12), Color(0xFF141A14)],
     ),
     LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color(0xFF1D1B36), Color(0xFF141926)],
+      colors: [Color(0xFF1D1B36), Color(0xFF141A14)],
     ),
   ];
 
   static const List<Color> _borderGlowColors = [
-    Color(0xFF34D399),
-    Color(0xFF38BDF8),
-    Color(0xFFFBBF24),
-    Color(0xFFA78BFA),
+    Color(0xFF5FBF80),
+    Color(0xFF5FA8D3),
+    Color(0xFFE3B055),
+    Color(0xFFA99BD8),
   ];
 
   @override
@@ -130,8 +130,8 @@ class _MockExamCardState extends ConsumerState<MockExamCard> {
                               ),
                               decoration: BoxDecoration(
                                 color: (latestAttempt.isPassed
-                                        ? const Color(0xFF10B981)
-                                        : const Color(0xFFF59E0B))
+                                        ? const Color(0xFF35A862)
+                                        : const Color(0xFFD99A2B))
                                     .withAlpha(90),
                                 borderRadius: BorderRadius.circular(6),
                                 border: Border.all(
@@ -175,7 +175,7 @@ class _MockExamCardState extends ConsumerState<MockExamCard> {
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF0284C7).withAlpha(100),
+                              color: const Color(0xFF3E7FA6).withAlpha(100),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Row(

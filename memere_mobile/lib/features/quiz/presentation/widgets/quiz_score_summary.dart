@@ -13,8 +13,8 @@ class QuizScoreSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const emeraldColor = Color(0xFF10B981);
-    const amberColor = Color(0xFFF59E0B);
+    const emeraldColor = Color(0xFF35A862);
+    const amberColor = Color(0xFFD99A2B);
     final isPassed = result.passed;
     final primaryColor = isPassed ? emeraldColor : amberColor;
 
@@ -95,7 +95,7 @@ class QuizScoreSummary extends StatelessWidget {
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 13,
-              color: Color(0xFF94A3B8),
+              color: Color(0xFF9AA09A),
               height: 1.4,
             ),
           ),

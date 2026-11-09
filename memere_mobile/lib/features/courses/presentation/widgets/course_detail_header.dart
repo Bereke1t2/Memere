@@ -38,18 +38,18 @@ class CourseDetailHeader extends StatelessWidget {
             ),
             _GlassBadge(
               label: 'GRADE ${course.grade}',
-              color: const Color(0xFF38BDF8),
+              color: const Color(0xFF5FA8D3),
               icon: Icons.school_rounded,
             ),
             _GlassBadge(
               label: course.levelLabel.toUpperCase(),
-              color: const Color(0xFFA855F7),
+              color: const Color(0xFF9B72D1),
               icon: Icons.workspace_premium_rounded,
             ),
             if (course.isFree)
               const _GlassBadge(
                 label: 'FREE ACCESS',
-                color: Color(0xFF4ADE80),
+                color: Color(0xFF6FC98D),
                 icon: Icons.bolt_rounded,
               ),
           ],
@@ -96,7 +96,7 @@ class CourseDetailHeader extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(2),
                       decoration: const BoxDecoration(
-                        color: Color(0xFF38BDF8),
+                        color: Color(0xFF5FA8D3),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -126,7 +126,7 @@ class CourseDetailHeader extends StatelessWidget {
                         const Icon(
                           Icons.verified_rounded,
                           size: 14,
-                          color: Color(0xFF38BDF8),
+                          color: Color(0xFF5FA8D3),
                         ),
                       ],
                     ),
@@ -144,23 +144,23 @@ class CourseDetailHeader extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0x22F59E0B),
+                  color: const Color(0x22D99A2B),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0x44F59E0B)),
+                  border: Border.all(color: const Color(0x44D99A2B)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(
                       Icons.star_rounded,
-                      color: Color(0xFFF59E0B),
+                      color: Color(0xFFD99A2B),
                       size: 14,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       course.ratingAvg > 0 ? course.ratingAvg.toStringAsFixed(1) : '4.9',
                       style: AppTextStyles.labelSmall.copyWith(
-                        color: const Color(0xFFF59E0B),
+                        color: const Color(0xFFD99A2B),
                         fontWeight: FontWeight.bold,
                       ),
                     ),

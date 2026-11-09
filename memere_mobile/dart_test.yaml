@@ -1,0 +1,13 @@
+# Tags used by the test suite.
+#
+# `golden` marks the image previews under test/golden. They render widgets to
+# PNG and byte-compare the result, so they only pass where the fonts they load
+# are present — a CI runner without them renders every glyph as a box and the
+# comparison fails for reasons that have nothing to do with the code.
+#
+# They exist to be looked at, not to gate a build, so CI runs
+# `flutter test --exclude-tags golden` and they are regenerated locally with
+# `flutter test --update-goldens test/golden`.
+tags:
+  golden:
+    description: Image previews; font-dependent, excluded from CI.

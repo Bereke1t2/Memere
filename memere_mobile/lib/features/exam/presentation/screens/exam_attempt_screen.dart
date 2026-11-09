@@ -8,11 +8,15 @@ import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/providers/flagged_questions_provider.dart';
+import '../../../../shared/providers/reading_scale_provider.dart';
+import '../../../../shared/widgets/assessment/question_palette_sheet.dart';
+import '../../../../shared/widgets/assessment/question_status.dart';
+import '../../../../shared/widgets/assessment/submit_summary_sheet.dart';
 import '../../domain/entities/exam_question_entity.dart';
 import '../providers/exam_attempt_provider.dart';
 import '../providers/exam_timer_provider.dart';
 import '../widgets/exam_question_card.dart';
-import '../widgets/exam_question_palette.dart';
 import '../widgets/exam_save_status.dart';
 import '../widgets/exam_timer_badge.dart';
 
@@ -59,7 +63,7 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFF070709),
         appBar: AppBar(
-          backgroundColor: const Color(0xFF0C0C10),
+          backgroundColor: const Color(0xFF0B0E0C),
           elevation: 0,
           scrolledUnderElevation: 0,
           automaticallyImplyLeading: false,
@@ -70,7 +74,7 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                 _safeExit();
               }
             },
-            icon: const Icon(Icons.close_rounded, color: Color(0xFFD4D4D8)),
+            icon: const Icon(Icons.close_rounded, color: Color(0xFFD7D9D4)),
           ),
           title: attemptAsync.maybeWhen(
             data: (state) => Container(
@@ -94,6 +98,10 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
           centerTitle: true,
           actions: [
             attemptAsync.maybeWhen(
+              data: (_) => const _TextSizeAction(),
+              orElse: () => const SizedBox.shrink(),
+            ),
+            attemptAsync.maybeWhen(
               data: (state) {
                 final seed = _seedFor(state);
                 final seconds = ref.watch(examTimerProvider(seed)).valueOrNull;
@@ -109,15 +117,17 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
             preferredSize: const Size.fromHeight(3.0),
             child: attemptAsync.maybeWhen(
               data: (state) {
+                // Answered, not position: what is left to do is the fact a
+                // student is actually tracking during a timed paper.
                 final progress = state.questionCount > 0
-                    ? (state.currentIndex + 1) / state.questionCount
+                    ? state.answeredCount / state.questionCount
                     : 0.0;
                 return LinearProgressIndicator(
                   minHeight: 3,
                   value: progress,
                   backgroundColor: const Color(0xFF181822),
                   valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF10B981),
+                    Color(0xFF35A862),
                   ),
                 );
               },
@@ -133,14 +143,14 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   CircularProgressIndicator(
-                    color: Color(0xFF10B981),
+                    color: Color(0xFF35A862),
                     strokeWidth: 2.5,
                   ),
                   SizedBox(height: 16),
                   Text(
                     'Preparing your exam questions...',
                     style: TextStyle(
-                      color: Color(0xFFA1A1AA),
+                      color: Color(0xFFA6ABA4),
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -189,11 +199,11 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
         backgroundColor: const Color(0xFF14141B),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Color(0xFF2C2C38)),
+          side: const BorderSide(color: Color(0xFF2A302C)),
         ),
         title: const Row(
           children: [
-            Icon(Icons.pause_circle_outline_rounded, color: Color(0xFFF59E0B)),
+            Icon(Icons.pause_circle_outline_rounded, color: Color(0xFFD99A2B)),
             SizedBox(width: 8),
             Text(
               'Leave exam?',
@@ -209,7 +219,7 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
           'Your progress is automatically saved to the server. '
           'The exam timer will continue running in the background until it expires.',
           style: TextStyle(
-            color: Color(0xFFA1A1AA),
+            color: Color(0xFFA6ABA4),
             fontSize: 14,
             height: 1.4,
           ),
@@ -220,13 +230,13 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
             onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text(
               'Stay & Continue',
-              style: TextStyle(color: Color(0xFFA1A1AA), fontWeight: FontWeight.w600),
+              style: TextStyle(color: Color(0xFFA6ABA4), fontWeight: FontWeight.w600),
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
+              backgroundColor: const Color(0xFFC44A41),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
@@ -250,12 +260,17 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
     messenger.showSnackBar(
       const SnackBar(
         content: Text('Time is up! Submitting your answers...'),
-        backgroundColor: Color(0xFF10B981),
+        backgroundColor: Color(0xFF35A862),
       ),
     );
 
     final resultAttemptId =
         await ref.read(examAttemptProvider(_params).notifier).submit();
+    if (resultAttemptId != null) {
+      await ref
+          .read(flaggedQuestionsProvider(widget.attemptId).notifier)
+          .clear();
+    }
     if (!mounted) return;
     if (resultAttemptId != null) {
       context.go(AppRoutes.examResultPath(resultAttemptId));
@@ -263,256 +278,26 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
   }
 
   Future<void> _confirmSubmit(ExamAttemptState state) async {
+    final flagged = ref.read(flaggedQuestionsProvider(widget.attemptId));
+    final statuses = _statuses(state, _answeredIndexes(state), flagged);
+    final firstBlank = statuses.indexWhere((s) => !s.isAnswered);
     final seconds = ref.read(examTimerProvider(_seedFor(state))).valueOrNull;
 
-    final submit = await showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF111118),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        side: BorderSide(color: Color(0xFF262633)),
-      ),
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Drag bar
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3F3F46),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0x2210B981),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.assignment_turned_in_rounded,
-                        color: Color(0xFF10B981), size: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Ready to submit?',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 19,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Review your completion before finalizing',
-                          style: TextStyle(
-                            color: Color(0xFF71717A),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              // Summary cards
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0x1810B981),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFF10B981).withAlpha(60)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${state.answeredCount}',
-                            style: const TextStyle(
-                              color: Color(0xFF10B981),
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          const Text(
-                            'Answered',
-                            style: TextStyle(
-                              color: Color(0xFFA1A1AA),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: state.unansweredCount > 0
-                            ? const Color(0x18F59E0B)
-                            : const Color(0xFF1A1A22),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: state.unansweredCount > 0
-                              ? const Color(0xFFF59E0B).withAlpha(60)
-                              : const Color(0xFF2C2C38),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${state.unansweredCount}',
-                            style: TextStyle(
-                              color: state.unansweredCount > 0
-                                  ? const Color(0xFFF59E0B)
-                                  : const Color(0xFFA1A1AA),
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          const Text(
-                            'Unanswered',
-                            style: TextStyle(
-                              color: Color(0xFFA1A1AA),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (seconds != null) ...[
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1A1A22),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFF2C2C38)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              formatExamTimer(seconds),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            const Text(
-                              'Time Left',
-                              style: TextStyle(
-                                color: Color(0xFFA1A1AA),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 14),
-              if (state.unansweredCount > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: const Color(0x18F59E0B),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFF59E0B).withAlpha(60)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFFF59E0B)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'You have ${state.unansweredCount} unanswered questions. Unanswered questions will receive 0 marks.',
-                          style: const TextStyle(
-                            color: Color(0xFFFCD34D),
-                            fontSize: 12,
-                            height: 1.3,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    flex: 1,
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(sheetContext).pop(false),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFA1A1AA),
-                        side: const BorderSide(color: Color(0xFF323242)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text('Review Answers', style: TextStyle(fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.of(sheetContext).pop(true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981),
-                        foregroundColor: Colors.black,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      child: const Text(
-                        'Submit Exam Now',
-                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ),
+    final submit = await SubmitSummarySheet.show(
+      context,
+      title: 'Submit exam?',
+      total: statuses.length,
+      answered: statuses.where((s) => s.isAnswered).length,
+      flagged: statuses.where((s) => s.isFlagged).length,
+      isTimeUp: seconds == 0,
+      onReviewBlank: firstBlank < 0
+          ? null
+          : () => ref
+              .read(examAttemptProvider(_params).notifier)
+              .goToQuestion(firstBlank),
     );
 
-    if (submit != true) return;
+    if (!submit) return;
 
     final resultAttemptId =
         await ref.read(examAttemptProvider(_params).notifier).submit();
@@ -564,29 +349,69 @@ class _AttemptBody extends ConsumerWidget {
 
     final currentQuestion = state.attempt.questions[state.currentIndex];
 
+    final scale = ref.watch(readingScaleProvider);
+    final attemptId = state.attempt.attemptId;
+    final flagged = ref.watch(flaggedQuestionsProvider(attemptId));
+    final isFlagged = flagged.contains(currentQuestion.questionId);
+    final answeredIndexes = _answeredIndexes(state);
+    final firstBlank = List.generate(
+      state.questionCount,
+      answeredIndexes.contains,
+    ).indexWhere((answered) => !answered);
+
     return ListView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 120),
       children: [
-        // Question Card View
-        ExamQuestionCard(
-          question: currentQuestion,
-          selectedAnswer: state.answers[currentQuestion.questionId],
-          onSingleAnswerSelected: notifier.selectSingleAnswer,
-          onMultiAnswerToggled: notifier.toggleMultiAnswer,
-          onShortAnswerChanged: notifier.setShortAnswer,
+        // The student's chosen size applies to the question content only, so
+        // scaling it can never break the chrome around it.
+        MediaQuery.withClampedTextScaling(
+          minScaleFactor: scale,
+          maxScaleFactor: scale,
+          child: ExamQuestionCard(
+            question: currentQuestion,
+            selectedAnswer: state.answers[currentQuestion.questionId],
+            onSingleAnswerSelected: notifier.selectSingleAnswer,
+            onMultiAnswerToggled: notifier.toggleMultiAnswer,
+            onShortAnswerChanged: notifier.setShortAnswer,
+          ),
         ),
         const SizedBox(height: 14),
 
-        // Auto-save Status Indicator
-        Align(
-          alignment: Alignment.centerLeft,
-          child: ExamSaveStatus(
-            isSaving: state.isSaving,
-            saveError: state.saveError,
-            lastSavedAt: state.lastSavedAt,
-          ),
+        Row(
+          children: [
+            _ExamFlagButton(
+              isFlagged: isFlagged,
+              onTap: () => ref
+                  .read(flaggedQuestionsProvider(attemptId).notifier)
+                  .toggle(currentQuestion.questionId),
+            ),
+            const Spacer(),
+            ExamSaveStatus(
+              isSaving: state.isSaving,
+              saveError: state.saveError,
+              lastSavedAt: state.lastSavedAt,
+            ),
+          ],
         ),
+
+        // Paging one at a time through a 100-question paper to find what is
+        // left is the slowest part of finishing it.
+        if (firstBlank >= 0 && firstBlank != state.currentIndex) ...[
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton.icon(
+              onPressed: () => notifier.goToQuestion(firstBlank),
+              icon: const Icon(Icons.skip_next_rounded, size: 18),
+              label: Text('Next unanswered (Q${firstBlank + 1})'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.accentPrimary,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -613,7 +438,7 @@ class _StickyBottomBar extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
       decoration: const BoxDecoration(
-        color: Color(0xFF0C0C10),
+        color: Color(0xFF0B0E0C),
         border: Border(
           top: BorderSide(color: Color(0xFF1E1E28), width: 1.2),
         ),
@@ -626,10 +451,10 @@ class _StickyBottomBar extends ConsumerWidget {
             Container(
               height: 46,
               decoration: BoxDecoration(
-                color: isFirst ? const Color(0xFF111116) : const Color(0xFF1A1A24),
+                color: isFirst ? const Color(0xFF101311) : const Color(0xFF1A1A24),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isFirst ? const Color(0xFF1A1A22) : const Color(0xFF2E2E3C),
+                  color: isFirst ? const Color(0xFF191D1A) : const Color(0xFF2E2E3C),
                 ),
               ),
               child: IconButton(
@@ -650,11 +475,16 @@ class _StickyBottomBar extends ConsumerWidget {
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () {
-                    showExamQuestionPaletteSheet(
-                      context: context,
-                      count: state.questionCount,
+                    QuestionPaletteSheet.show(
+                      context,
+                      statuses: _statuses(
+                        state,
+                        answeredIndexes,
+                        ref.read(
+                          flaggedQuestionsProvider(state.attempt.attemptId),
+                        ),
+                      ),
                       currentIndex: state.currentIndex,
-                      answeredIndexes: answeredIndexes,
                       onSelected: notifier.goToQuestion,
                     );
                   },
@@ -673,7 +503,7 @@ class _StickyBottomBar extends ConsumerWidget {
                         const Icon(
                           Icons.grid_view_rounded,
                           size: 16,
-                          color: Color(0xFF10B981),
+                          color: Color(0xFF35A862),
                         ),
                         const SizedBox(width: 7),
                         Text(
@@ -688,7 +518,7 @@ class _StickyBottomBar extends ConsumerWidget {
                         const Icon(
                           Icons.keyboard_arrow_up_rounded,
                           size: 16,
-                          color: Color(0xFFA1A1AA),
+                          color: Color(0xFFA6ABA4),
                         ),
                       ],
                     ),
@@ -706,7 +536,7 @@ class _StickyBottomBar extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF10B981).withAlpha(50),
+                      color: const Color(0xFF35A862).withAlpha(50),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -715,7 +545,7 @@ class _StickyBottomBar extends ConsumerWidget {
                 child: ElevatedButton(
                   onPressed: state.isSubmitting ? null : onSubmit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: const Color(0xFF35A862),
                     foregroundColor: Colors.black,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -752,11 +582,11 @@ class _StickyBottomBar extends ConsumerWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                    colors: [Color(0xFF35A862), Color(0xFF24814A)],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF10B981).withAlpha(45),
+                      color: const Color(0xFF35A862).withAlpha(45),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -856,4 +686,101 @@ bool _hasAnswer(ExamQuestionEntity question, Object? answer) {
   }
   if (answer is List) return answer.isNotEmpty;
   return answer is String && answer.trim().isNotEmpty;
+}
+
+
+/// Combines answers and flags into the per-question status the palette and the
+/// submit summary both read, so the two can never disagree about what is left.
+List<QuestionStatus> _statuses(
+  ExamAttemptState state,
+  Set<int> answeredIndexes,
+  Set<String> flagged,
+) {
+  return List.generate(state.questionCount, (index) {
+    return QuestionStatus.of(
+      answered: answeredIndexes.contains(index),
+      flagged: flagged.contains(state.attempt.questions[index].questionId),
+    );
+  });
+}
+
+/// A–/A+ in the app bar. Sits next to the timer because both are things a
+/// student reaches for mid-question without wanting to leave the page.
+class _TextSizeAction extends ConsumerWidget {
+  const _TextSizeAction();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(readingScaleProvider);
+    final ctrl = ref.read(readingScaleProvider.notifier);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          tooltip: 'Smaller text',
+          visualDensity: VisualDensity.compact,
+          onPressed: ctrl.canDecrease ? ctrl.decrease : null,
+          icon: const Icon(Icons.text_decrease_rounded, size: 20),
+          color: AppColors.textSecondary,
+          disabledColor: AppColors.textDisabled,
+        ),
+        IconButton(
+          tooltip: 'Larger text (${ctrl.label})',
+          visualDensity: VisualDensity.compact,
+          onPressed: ctrl.canIncrease ? ctrl.increase : null,
+          icon: const Icon(Icons.text_increase_rounded, size: 20),
+          color: AppColors.textSecondary,
+          disabledColor: AppColors.textDisabled,
+        ),
+      ],
+    );
+  }
+}
+
+class _ExamFlagButton extends StatelessWidget {
+  const _ExamFlagButton({required this.isFlagged, required this.onTap});
+
+  final bool isFlagged;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isFlagged ? AppColors.warning : AppColors.textMuted;
+    return Semantics(
+      button: true,
+      selected: isFlagged,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: isFlagged ? AppColors.warningSurface : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: isFlagged ? AppColors.warning : AppColors.borderStrong,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isFlagged ? Icons.flag_rounded : Icons.flag_outlined,
+                size: 14,
+                color: color,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                isFlagged ? 'Flagged' : 'Flag for review',
+                style: AppTextStyles.caption.copyWith(
+                  color: color,
+                  fontWeight: isFlagged ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

@@ -8,6 +8,7 @@ import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/assessment/review_filter_tabs.dart';
 import '../../../courses/presentation/providers/completed_lessons_provider.dart';
 import '../providers/quiz_result_provider.dart';
 import '../widgets/question_feedback_tile.dart';
@@ -15,7 +16,7 @@ import '../widgets/quiz_result_skeleton.dart';
 import '../widgets/quiz_score_summary.dart';
 import '../widgets/subject_breakdown_card.dart';
 
-class QuizResultScreen extends ConsumerWidget {
+class QuizResultScreen extends ConsumerStatefulWidget {
   const QuizResultScreen({
     super.key,
     required this.attemptId,
@@ -24,7 +25,16 @@ class QuizResultScreen extends ConsumerWidget {
   final String attemptId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<QuizResultScreen> createState() => _QuizResultScreenState();
+}
+
+class _QuizResultScreenState extends ConsumerState<QuizResultScreen> {
+  ReviewFilter _filter = ReviewFilter.all;
+
+  @override
+  Widget build(BuildContext context) {
+    final attemptId = widget.attemptId;
+
     ref.listen(quizResultProvider(attemptId), (prev, next) {
       final quizId = next.valueOrNull?.quizId;
       if (quizId != null && quizId.isNotEmpty) {
@@ -94,7 +104,7 @@ class QuizResultScreen extends ConsumerWidget {
                   Icon(
                     Icons.assignment_outlined,
                     size: 20,
-                    color: Color(0xFF10B981),
+                    color: Color(0xFF35A862),
                   ),
                   SizedBox(width: 8),
                   Text(
@@ -108,12 +118,51 @@ class QuizResultScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 14),
-              ...result.feedback.asMap().entries.map(
-                    (entry) => QuestionFeedbackTile(
-                      feedback: entry.value,
-                      index: entry.key,
+              if (result.feedback.isNotEmpty) ...[
+                ReviewFilterTabs(
+                  selected: _filter,
+                  total: result.feedback.length,
+                  correct: result.feedback.where((f) => f.correct).length,
+                  onChanged: (f) => setState(() => _filter = f),
+                ),
+                const SizedBox(height: 14),
+              ],
+              ...() {
+                // The index is taken before filtering so a question keeps the
+                // number it had in the quiz — renumbering a filtered list would
+                // stop it matching what the student just sat.
+                final filtered = result.feedback
+                    .asMap()
+                    .entries
+                    .where((e) => _filter.matches(e.value.correct))
+                    .toList();
+                if (filtered.isEmpty) {
+                  return [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      child: Center(
+                        child: Text(
+                          _filter == ReviewFilter.missed
+                              ? 'Nothing missed — every answer was correct.'
+                              : 'No questions were answered correctly.',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                  ];
+                }
+                return filtered
+                    .map(
+                      (entry) => QuestionFeedbackTile(
+                        feedback: entry.value,
+                        index: entry.key,
+                      ),
+                    )
+                    .toList();
+              }(),
               const SizedBox(height: 20),
               AppButton(
                 label: 'Back to Courses',

@@ -25,7 +25,7 @@ class HlsVideoPlayer extends StatelessWidget {
           aspectRatio: 16 / 9,
           child: Center(
             child: CircularProgressIndicator(
-              color: Color(0xFFFF5252),
+              color: Color(0xFFE8655A),
               strokeWidth: 2,
             ),
           ),

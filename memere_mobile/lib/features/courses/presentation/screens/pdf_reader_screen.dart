@@ -315,8 +315,8 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
                 decoration: InputDecoration(
                   filled: true,
                   fillColor: _isNightMode
-                      ? const Color(0xFF141824)
-                      : const Color(0xFFF1F5F9),
+                      ? const Color(0xFF141A14)
+                      : const Color(0xFFEFF1EC),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                     borderSide: BorderSide.none,
@@ -356,7 +356,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
   void _showAddNoteBottomSheet() {
     final noteCtrl = TextEditingController();
     final cardColor = _isNightMode ? AppColors.bgSecondary : Colors.white;
-    final textColor = _isNightMode ? Colors.white : const Color(0xFF0F172A);
+    final textColor = _isNightMode ? Colors.white : const Color(0xFF0F1310);
 
     showModalBottomSheet(
       context: context,
@@ -376,7 +376,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
               border: Border.all(
                 color: _isNightMode
                     ? AppColors.borderStrong
-                    : const Color(0xFFE2E8F0),
+                    : const Color(0xFFE2E4DF),
               ),
             ),
             child: Column(
@@ -423,14 +423,14 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
                         color: AppColors.textMuted, fontSize: 13),
                     filled: true,
                     fillColor: _isNightMode
-                        ? const Color(0xFF141824)
-                        : const Color(0xFFF8FAFC),
+                        ? const Color(0xFF141A14)
+                        : const Color(0xFFF6F7F4),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide(
                         color: _isNightMode
                             ? AppColors.borderStrong
-                            : const Color(0xFFE2E8F0),
+                            : const Color(0xFFE2E4DF),
                       ),
                     ),
                   ),
@@ -537,14 +537,14 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
   @override
   Widget build(BuildContext context) {
     final bgColor =
-        _isNightMode ? AppColors.bgPrimary : const Color(0xFFF8FAFC);
+        _isNightMode ? AppColors.bgPrimary : const Color(0xFFF6F7F4);
     final cardColor = _isNightMode ? AppColors.bgSecondary : Colors.white;
     final textColor =
-        _isNightMode ? AppColors.textPrimary : const Color(0xFF0F172A);
+        _isNightMode ? AppColors.textPrimary : const Color(0xFF0F1310);
     final mutedColor =
-        _isNightMode ? AppColors.textMuted : const Color(0xFF64748B);
+        _isNightMode ? AppColors.textMuted : const Color(0xFF6E746C);
     final borderColor =
-        _isNightMode ? AppColors.borderStrong : const Color(0xFFE2E8F0);
+        _isNightMode ? AppColors.borderStrong : const Color(0xFFE2E4DF);
 
     if (_isFullScreen) {
       return Scaffold(
@@ -720,8 +720,8 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: _isNightMode
-                                  ? const Color(0xFF181820)
-                                  : const Color(0xFFE2E8F0),
+                                  ? const Color(0xFF171B18)
+                                  : const Color(0xFFE2E4DF),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -754,8 +754,8 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
                                 horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
                               color: _isNightMode
-                                  ? const Color(0xFF181820)
-                                  : const Color(0xFFE2E8F0),
+                                  ? const Color(0xFF171B18)
+                                  : const Color(0xFFE2E4DF),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
@@ -845,7 +845,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
               decoration: BoxDecoration(
                 color: _isNightMode
                     ? const Color(0xFF161B26)
-                    : const Color(0xFFF1F5F9),
+                    : const Color(0xFFEFF1EC),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -895,9 +895,9 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0x1810B981),
+                color: const Color(0x1835A862),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0x3510B981)),
+                border: Border.all(color: const Color(0x3535A862)),
               ),
               child: Text(
                 '$_progressPercent%',
@@ -1004,11 +1004,11 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
                   child: Row(
                     children: [
                       Icon(Icons.delete_outline_rounded,
-                          size: 16, color: Color(0xFFEF4444)),
+                          size: 16, color: Color(0xFFDD5F55)),
                       SizedBox(width: 8),
                       Text('Clear Cache',
                           style: TextStyle(
-                              color: Color(0xFFEF4444), fontSize: 13)),
+                              color: Color(0xFFDD5F55), fontSize: 13)),
                     ],
                   ),
                 ),
@@ -1048,9 +1048,9 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0x1810B981),
+                color: const Color(0x1835A862),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0x3510B981)),
+                border: Border.all(color: const Color(0x3535A862)),
               ),
               child: const Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1125,10 +1125,10 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: _isNightMode
-                    ? const Color(0xFF141824)
-                    : const Color(0xFFF1F5F9),
+                    ? const Color(0xFF141A14)
+                    : const Color(0xFFEFF1EC),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0x3510B981)),
+                border: Border.all(color: const Color(0x3535A862)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1165,7 +1165,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
                 height: 40,
                 alignment: Alignment.center,
                 decoration: const BoxDecoration(
-                  color: Color(0x1810B981),
+                  color: Color(0x1835A862),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -1384,8 +1384,8 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: _isNightMode
-                  ? const Color(0xFF141824)
-                  : const Color(0xFFF1F5F9),
+                  ? const Color(0xFF141A14)
+                  : const Color(0xFFEFF1EC),
               borderRadius: BorderRadius.circular(10),
               border: Border(
                 left:
@@ -1518,7 +1518,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
       margin: const EdgeInsets.symmetric(vertical: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: _isNightMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+        color: _isNightMode ? const Color(0xFF0F1310) : const Color(0xFFF6F7F4),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: borderColor),
       ),
@@ -1558,7 +1558,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _isNightMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+        color: _isNightMode ? const Color(0xFF0F1310) : const Color(0xFFEFF1EC),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: borderColor),
       ),
@@ -1725,8 +1725,8 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
               margin: const EdgeInsets.symmetric(horizontal: 2),
               decoration: BoxDecoration(
                 color: _isNightMode
-                    ? const Color(0xFF1E293B)
-                    : const Color(0xFFE2E8F0),
+                    ? const Color(0xFF1D231F)
+                    : const Color(0xFFE2E4DF),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -1803,7 +1803,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
                     child: LinearProgressIndicator(
                       value: _downloadProgress > 0 ? _downloadProgress : null,
                       color: AppColors.brandEmerald,
-                      backgroundColor: const Color(0xFF1E293B),
+                      backgroundColor: const Color(0xFF1D231F),
                       minHeight: 8,
                     ),
                   ),
@@ -1926,7 +1926,7 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
                       children: [
                         const Icon(
                           Icons.error_outline_rounded,
-                          color: Color(0xFFEF4444),
+                          color: Color(0xFFDD5F55),
                           size: 48,
                         ),
                         const SizedBox(height: 12),
@@ -2064,8 +2064,8 @@ class _PdfReaderScreenState extends ConsumerState<PdfReaderScreen> {
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
                     color: _isNightMode
-                        ? const Color(0xFF0F172A)
-                        : const Color(0xFFF1F5F9),
+                        ? const Color(0xFF0F1310)
+                        : const Color(0xFFEFF1EC),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(color: borderColor),
                   ),
@@ -2233,7 +2233,7 @@ class _ReaderTabItem extends StatelessWidget {
                   ? Colors.white
                   : (isNightMode
                       ? AppColors.textMuted
-                      : const Color(0xFF64748B)),
+                      : const Color(0xFF6E746C)),
             ),
             const SizedBox(width: 5),
             Flexible(
@@ -2248,7 +2248,7 @@ class _ReaderTabItem extends StatelessWidget {
                       ? Colors.white
                       : (isNightMode
                           ? AppColors.textSecondary
-                          : const Color(0xFF334155)),
+                          : const Color(0xFF333A34)),
                 ),
               ),
             ),
