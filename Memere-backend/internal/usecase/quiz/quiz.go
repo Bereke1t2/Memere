@@ -87,7 +87,7 @@ func (s *Service) GetQuizForStudent(ctx context.Context, actor *Actor, quizID uu
 	if err != nil {
 		return nil, err
 	}
-	if err := s.assertCourseAccess(ctx, actor, quiz.CourseID); err != nil {
+	if err := s.assertQuizAccess(ctx, actor, quiz); err != nil {
 		return nil, err
 	}
 
@@ -128,7 +128,7 @@ func (s *Service) StartAttempt(ctx context.Context, actor *Actor, quizID uuid.UU
 	if err != nil {
 		return nil, err
 	}
-	if err := s.assertCourseAccess(ctx, actor, quiz.CourseID); err != nil {
+	if err := s.assertQuizAccess(ctx, actor, quiz); err != nil {
 		return nil, err
 	}
 
@@ -375,19 +375,36 @@ func (s *Service) ListMyAttempts(ctx context.Context, actor *Actor, quizID uuid.
 	return s.attempts.ListByStudentAndQuiz(ctx, studentID, quizID)
 }
 
-// assertCourseAccess gates graded quiz work on FullAccess to the parent course
-// (owner/admin, free course, active enrollment, or active subscription) via the
-// shared access.Service. PreviewAccess is deliberately insufficient: previews
-// are for watching sample lessons, never for graded attempts.
-func (s *Service) assertCourseAccess(ctx context.Context, actor *Actor, courseID uuid.UUID) error {
+// assertQuizAccess gates graded quiz work. A course-attached quiz requires
+// FullAccess to that course (owner/admin, free course, active enrollment, or
+// active subscription) via the shared access.Service — PreviewAccess is
+// deliberately insufficient, since previews are for watching sample lessons and
+// never for graded attempts.
+//
+// A standalone quiz (CourseID == nil, migration 0026) has no course to gate on,
+// so it follows the mock-exam rule in exam.assertExamAccess instead: once
+// published it is open to everyone including guests, and while unpublished it
+// stays visible to admins only. Publishing is therefore the single deliberate
+// act that exposes a course-less quiz — it is never reachable by default, and
+// this branch cannot widen access to any course-attached quiz.
+func (s *Service) assertQuizAccess(ctx context.Context, actor *Actor, quiz *entity.Quiz) error {
 	if access.DisableEnrollmentCheck {
 		return nil
+	}
+	if quiz.CourseID == nil {
+		if quiz.IsPublished {
+			return nil
+		}
+		if actor != nil && actor.Role == entity.RoleAdmin {
+			return nil
+		}
+		return apperror.Forbidden("this quiz is not published", nil)
 	}
 	var act access.Actor
 	if actor != nil {
 		act = access.Actor{UserID: actor.UserID, Role: actor.Role}
 	}
-	return s.access.RequireFullAccess(ctx, act, courseID)
+	return s.access.RequireFullAccess(ctx, act, *quiz.CourseID)
 }
 
 // expired reports whether a timed attempt is past its server-side deadline.
