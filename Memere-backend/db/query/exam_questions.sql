@@ -47,3 +47,19 @@ JOIN courses.questions q ON q.id = eq.question_id
 JOIN courses.answers a ON a.question_id = q.id
 WHERE eq.exam_id = $1
 ORDER BY eq.order_index ASC, eq.id ASC, a.order_index ASC, a.id ASC;
+
+-- name: UpdateExamQuestion :one
+-- Re-points an existing link's per-exam order and mark value. Scoped by exam_id
+-- as well as question_id so one exam's edit can never touch another's link.
+UPDATE courses.exam_questions
+SET order_index = $3,
+    marks = $4
+WHERE exam_id = $1 AND question_id = $2
+RETURNING *;
+
+-- name: RemoveExamQuestion :exec
+-- Detaches a question from an exam. This is a true DELETE of the JOIN ROW only —
+-- the question itself survives in the bank for reuse by other exams, so
+-- Non-Negotiable #5 (no hard deletes of user content) is not in play here.
+DELETE FROM courses.exam_questions
+WHERE exam_id = $1 AND question_id = $2;

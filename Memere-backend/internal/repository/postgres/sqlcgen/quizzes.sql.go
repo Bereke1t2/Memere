@@ -11,14 +11,28 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countQuestionsByQuiz = `-- name: CountQuestionsByQuiz :one
+SELECT COUNT(*) FROM courses.questions
+WHERE quiz_id = $1
+`
+
+// Question tally for the authoring lists, so the admin panel does not have to
+// fetch every question just to show a count.
+func (q *Queries) CountQuestionsByQuiz(ctx context.Context, quizID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countQuestionsByQuiz, quizID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createQuiz = `-- name: CreateQuiz :one
 INSERT INTO courses.quizzes (
     lesson_id, course_id, title, time_limit_seconds, pass_percentage,
-    randomize_questions, max_attempts
+    randomize_questions, max_attempts, is_published
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7
+    $1, $2, $3, $4, $5, $6, $7, $8
 )
-RETURNING id, lesson_id, course_id, title, time_limit_seconds, pass_percentage, randomize_questions, max_attempts, created_at, updated_at, deleted_at
+RETURNING id, lesson_id, course_id, title, time_limit_seconds, pass_percentage, randomize_questions, max_attempts, created_at, updated_at, deleted_at, is_published
 `
 
 type CreateQuizParams struct {
@@ -29,8 +43,11 @@ type CreateQuizParams struct {
 	PassPercentage     pgtype.Numeric
 	RandomizeQuestions bool
 	MaxAttempts        *int32
+	IsPublished        bool
 }
 
+// course_id is nullable since 0026: a NULL means a standalone quiz, authored on
+// its own rather than under a course.
 func (q *Queries) CreateQuiz(ctx context.Context, arg CreateQuizParams) (CoursesQuiz, error) {
 	row := q.db.QueryRow(ctx, createQuiz,
 		arg.LessonID,
@@ -40,6 +57,7 @@ func (q *Queries) CreateQuiz(ctx context.Context, arg CreateQuizParams) (Courses
 		arg.PassPercentage,
 		arg.RandomizeQuestions,
 		arg.MaxAttempts,
+		arg.IsPublished,
 	)
 	var i CoursesQuiz
 	err := row.Scan(
@@ -54,12 +72,13 @@ func (q *Queries) CreateQuiz(ctx context.Context, arg CreateQuizParams) (Courses
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.IsPublished,
 	)
 	return i, err
 }
 
 const getQuizByID = `-- name: GetQuizByID :one
-SELECT id, lesson_id, course_id, title, time_limit_seconds, pass_percentage, randomize_questions, max_attempts, created_at, updated_at, deleted_at FROM courses.quizzes
+SELECT id, lesson_id, course_id, title, time_limit_seconds, pass_percentage, randomize_questions, max_attempts, created_at, updated_at, deleted_at, is_published FROM courses.quizzes
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -78,12 +97,84 @@ func (q *Queries) GetQuizByID(ctx context.Context, id pgtype.UUID) (CoursesQuiz,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.IsPublished,
 	)
 	return i, err
 }
 
+const listQuizzes = `-- name: ListQuizzes :many
+SELECT id, lesson_id, course_id, title, time_limit_seconds, pass_percentage, randomize_questions, max_attempts, created_at, updated_at, deleted_at, is_published FROM courses.quizzes
+WHERE deleted_at IS NULL
+  AND ($1::uuid IS NULL OR course_id = $1)
+  AND ($2::bool IS NULL OR is_published = $2)
+  AND (
+      $3::bool IS NULL
+      OR ($3::bool AND course_id IS NULL)
+      OR (NOT $3::bool AND course_id IS NOT NULL)
+  )
+  AND (
+      $4::timestamptz IS NULL
+      OR (created_at, id) < ($4::timestamptz, $5::uuid)
+  )
+ORDER BY created_at DESC, id DESC
+LIMIT $6
+`
+
+type ListQuizzesParams struct {
+	CourseID       pgtype.UUID
+	IsPublished    *bool
+	Standalone     *bool
+	AfterCreatedAt pgtype.Timestamptz
+	AfterID        pgtype.UUID
+	RowLimit       int32
+}
+
+// Keyset (cursor) pagination ordered by (created_at, id) DESC, for the admin
+// panel's cross-course quiz list. Nullable filter args are ignored when NULL.
+// 'standalone' = true narrows to course-less quizzes, false to course-attached
+// ones. Soft-deleted quizzes are excluded.
+func (q *Queries) ListQuizzes(ctx context.Context, arg ListQuizzesParams) ([]CoursesQuiz, error) {
+	rows, err := q.db.Query(ctx, listQuizzes,
+		arg.CourseID,
+		arg.IsPublished,
+		arg.Standalone,
+		arg.AfterCreatedAt,
+		arg.AfterID,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CoursesQuiz{}
+	for rows.Next() {
+		var i CoursesQuiz
+		if err := rows.Scan(
+			&i.ID,
+			&i.LessonID,
+			&i.CourseID,
+			&i.Title,
+			&i.TimeLimitSeconds,
+			&i.PassPercentage,
+			&i.RandomizeQuestions,
+			&i.MaxAttempts,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+			&i.IsPublished,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listQuizzesByCourse = `-- name: ListQuizzesByCourse :many
-SELECT id, lesson_id, course_id, title, time_limit_seconds, pass_percentage, randomize_questions, max_attempts, created_at, updated_at, deleted_at FROM courses.quizzes
+SELECT id, lesson_id, course_id, title, time_limit_seconds, pass_percentage, randomize_questions, max_attempts, created_at, updated_at, deleted_at, is_published FROM courses.quizzes
 WHERE course_id = $1 AND deleted_at IS NULL
 ORDER BY created_at DESC, id DESC
 `
@@ -109,6 +200,7 @@ func (q *Queries) ListQuizzesByCourse(ctx context.Context, courseID pgtype.UUID)
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.IsPublished,
 		); err != nil {
 			return nil, err
 		}
@@ -139,9 +231,11 @@ SET title = $2,
     time_limit_seconds = $3,
     pass_percentage = $4,
     randomize_questions = $5,
-    max_attempts = $6
+    max_attempts = $6,
+    lesson_id = $7,
+    is_published = $8
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, lesson_id, course_id, title, time_limit_seconds, pass_percentage, randomize_questions, max_attempts, created_at, updated_at, deleted_at
+RETURNING id, lesson_id, course_id, title, time_limit_seconds, pass_percentage, randomize_questions, max_attempts, created_at, updated_at, deleted_at, is_published
 `
 
 type UpdateQuizParams struct {
@@ -151,6 +245,8 @@ type UpdateQuizParams struct {
 	PassPercentage     pgtype.Numeric
 	RandomizeQuestions bool
 	MaxAttempts        *int32
+	LessonID           pgtype.UUID
+	IsPublished        bool
 }
 
 func (q *Queries) UpdateQuiz(ctx context.Context, arg UpdateQuizParams) (CoursesQuiz, error) {
@@ -161,6 +257,8 @@ func (q *Queries) UpdateQuiz(ctx context.Context, arg UpdateQuizParams) (Courses
 		arg.PassPercentage,
 		arg.RandomizeQuestions,
 		arg.MaxAttempts,
+		arg.LessonID,
+		arg.IsPublished,
 	)
 	var i CoursesQuiz
 	err := row.Scan(
@@ -175,6 +273,7 @@ func (q *Queries) UpdateQuiz(ctx context.Context, arg UpdateQuizParams) (Courses
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.IsPublished,
 	)
 	return i, err
 }
