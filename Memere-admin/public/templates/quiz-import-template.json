@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "kind": "quiz",
+  "quiz": {
+    "title": "Cell Biology — Practice Quiz",
+    "course_id": null,
+    "lesson_id": null,
+    "time_limit_seconds": 1200,
+    "pass_percentage": 60,
+    "randomize_questions": false,
+    "max_attempts": 3
+  },
+  "questions": [
+    {
+      "text": "Which organelle is the main site of ATP production?",
+      "type": "multiple_choice",
+      "points": 2,
+      "subject": "Biology",
+      "topic": "Cell structure",
+      "explanation": "Mitochondria carry out oxidative phosphorylation, which produces most of the cell's ATP.",
+      "options": ["Nucleus", "Mitochondrion", "Ribosome", "Golgi apparatus"],
+      "correct": "Mitochondrion"
+    },
+    {
+      "text": "Which of these are found in plant cells but NOT animal cells?",
+      "type": "multiple_choice",
+      "points": 3,
+      "subject": "Biology",
+      "topic": "Cell structure",
+      "explanation": "Chloroplasts and a cellulose cell wall are plant-specific; both cell types have mitochondria and ribosomes.",
+      "options": ["Chloroplast", "Mitochondrion", "Cell wall", "Ribosome"],
+      "correct": [0, 2]
+    },
+    {
+      "text": "Ribosomes are enclosed in a membrane.",
+      "type": "true_false",
+      "points": 1,
+      "subject": "Biology",
+      "topic": "Cell structure",
+      "explanation": "Ribosomes are non-membrane-bound complexes of RNA and protein.",
+      "answers": [
+        { "text": "True", "is_correct": false },
+        { "text": "False", "is_correct": true }
+      ]
+    }
+  ]
+}

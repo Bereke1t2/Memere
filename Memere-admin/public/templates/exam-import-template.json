@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "kind": "exam",
+  "exam": {
+    "title": "Physics Mock Exam — Grade 12",
+    "course_id": null,
+    "subject": "Physics",
+    "grade": 12,
+    "duration_minutes": 120,
+    "pass_marks": 8,
+    "instructions": "Answer every question. Calculators are permitted. The timer is enforced by the server."
+  },
+  "questions": [
+    {
+      "text": "A car accelerates uniformly from rest to 20 m/s in 5 s. What is its acceleration?",
+      "type": "multiple_choice",
+      "marks": 5,
+      "subject": "Physics",
+      "topic": "Kinematics",
+      "explanation": "a = (v - u) / t = (20 - 0) / 5 = 4 m/s².",
+      "options": ["2 m/s²", "4 m/s²", "5 m/s²", "100 m/s²"],
+      "correct": "B"
+    },
+    {
+      "text": "Momentum is conserved in an isolated system.",
+      "type": "true_false",
+      "marks": 5,
+      "subject": "Physics",
+      "topic": "Momentum",
+      "explanation": "With no external net force acting, total momentum stays constant.",
+      "answers": [
+        { "text": "True", "is_correct": true },
+        { "text": "False", "is_correct": false }
+      ]
+    }
+  ]
+}
