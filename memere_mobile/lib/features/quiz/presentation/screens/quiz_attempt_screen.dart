@@ -9,11 +9,16 @@ import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/router/app_router.dart';
+import '../../../../shared/providers/flagged_questions_provider.dart';
+import '../../../../shared/providers/reading_scale_provider.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/assessment/attempt_header.dart';
+import '../../../../shared/widgets/assessment/question_palette_sheet.dart';
+import '../../../../shared/widgets/assessment/question_status.dart';
+import '../../../../shared/widgets/assessment/submit_summary_sheet.dart';
 import '../../domain/entities/quiz_question_entity.dart';
 import '../providers/quiz_attempt_provider.dart';
 import '../providers/quiz_timer_provider.dart';
-import '../widgets/question_navigator.dart';
 import '../widgets/quiz_question_card.dart';
 import '../widgets/quiz_timer_badge.dart';
 
@@ -86,38 +91,45 @@ class QuizAttemptScreen extends ConsumerWidget {
                   state.attempt.questions[state.currentIndex];
               final answeredIndexes = _answeredIndexes(state);
 
-              return ListView(
-                padding: const EdgeInsets.all(AppSizes.screenPaddingH),
+              final notifier = ref.read(quizAttemptProvider(params).notifier);
+              final flagged = ref.watch(flaggedQuestionsProvider(attemptId));
+              final flags = ref.read(
+                flaggedQuestionsProvider(attemptId).notifier,
+              );
+              final scale = ref.watch(readingScaleProvider);
+              final scaleCtrl = ref.read(readingScaleProvider.notifier);
+              final statuses = _statuses(state, answeredIndexes, flagged);
+              final firstBlank = statuses.indexWhere((s) => !s.isAnswered);
+
+              return Column(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Question ${state.currentIndex + 1} of ${state.questionCount}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                      QuizTimerBadge(seconds: seconds),
-                    ],
-                  ),
-                  const SizedBox(height: AppSizes.sm),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      minHeight: 7,
-                      value: (state.currentIndex + 1) / state.questionCount,
-                      backgroundColor: AppColors.bgTertiary,
-                      valueColor: const AlwaysStoppedAnimation(
-                        Color(0xFF35A862),
-                      ),
+                  AttemptHeader(
+                    currentIndex: state.currentIndex,
+                    total: state.questionCount,
+                    answered: answeredIndexes.length,
+                    timer: QuizTimerBadge(seconds: seconds),
+                    textScaleLabel: scaleCtrl.label,
+                    onDecreaseText:
+                        scaleCtrl.canDecrease ? scaleCtrl.decrease : null,
+                    onIncreaseText:
+                        scaleCtrl.canIncrease ? scaleCtrl.increase : null,
+                    onOpenPalette: () => QuestionPaletteSheet.show(
+                      context,
+                      statuses: statuses,
+                      currentIndex: state.currentIndex,
+                      onSelected: notifier.goToQuestion,
                     ),
                   ),
-                  const SizedBox(height: AppSizes.lg),
-                  QuizQuestionCard(
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.all(AppSizes.screenPaddingH),
+                      children: [
+                  // The student's chosen size applies to the question content
+                  // only; chrome stays put so the layout cannot be broken by it.
+                  MediaQuery.withClampedTextScaling(
+                    minScaleFactor: scale,
+                    maxScaleFactor: scale,
+                    child: QuizQuestionCard(
                     question: currentQuestion,
                     selectedAnswer: state.answers[currentQuestion.id],
                     onSingleAnswerSelected: ref
@@ -129,17 +141,18 @@ class QuizAttemptScreen extends ConsumerWidget {
                     onShortAnswerChanged: ref
                         .read(quizAttemptProvider(params).notifier)
                         .setShortAnswer,
+                    ),
                   ),
                   const SizedBox(height: AppSizes.md),
-                  _SaveStatus(state: state),
-                  const SizedBox(height: AppSizes.lg),
-                  QuestionNavigator(
-                    count: state.questionCount,
-                    currentIndex: state.currentIndex,
-                    answeredIndexes: answeredIndexes,
-                    onSelected: ref
-                        .read(quizAttemptProvider(params).notifier)
-                        .goToQuestion,
+                  Row(
+                    children: [
+                      _FlagButton(
+                        isFlagged: flagged.contains(currentQuestion.id),
+                        onTap: () => flags.toggle(currentQuestion.id),
+                      ),
+                      const Spacer(),
+                      _SaveStatus(state: state),
+                    ],
                   ),
                   const SizedBox(height: AppSizes.lg),
                   Row(
@@ -166,20 +179,30 @@ class QuizAttemptScreen extends ConsumerWidget {
                                   ref,
                                   params,
                                   state,
+                                  statuses,
                                 ),
                               )
                             : AppButton(
                                 label: 'Next',
-                                onPressed: ref
-                                    .read(
-                                      quizAttemptProvider(params).notifier,
-                                    )
-                                    .nextQuestion,
+                                onPressed: notifier.nextQuestion,
                                 suffixIcon: Icons.arrow_forward_rounded,
                               ),
                       ),
                     ],
                   ),
+                  // Paging one-by-one through a long paper to find what is left
+                  // is the slowest part of finishing; this jumps straight there.
+                  if (firstBlank >= 0 && firstBlank != state.currentIndex) ...[
+                    const SizedBox(height: AppSizes.sm),
+                    SizedBox(
+                      width: double.infinity,
+                      child: AppButton(
+                        label: 'Next unanswered (Q${firstBlank + 1})',
+                        onPressed: () => notifier.goToQuestion(firstBlank),
+                        variant: AppButtonVariant.ghost,
+                      ),
+                    ),
+                  ],
                   if (seconds == 0) ...[
                     const SizedBox(height: AppSizes.md),
                     Text(
@@ -189,6 +212,9 @@ class QuizAttemptScreen extends ConsumerWidget {
                       ),
                     ),
                   ],
+                      ],
+                    ),
+                  ),
                 ],
               );
             },
@@ -238,52 +264,30 @@ class QuizAttemptScreen extends ConsumerWidget {
     WidgetRef ref,
     QuizAttemptParams params,
     QuizAttemptState state,
+    List<QuestionStatus> statuses,
   ) async {
-    final submit = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: AppColors.bgSecondary,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSizes.screenPaddingH),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Submit quiz?', style: AppTextStyles.headlineSmall),
-              const SizedBox(height: AppSizes.sm),
-              Text(
-                '${state.answeredCount} answered, ${state.unansweredCount} unanswered. Submission is final.',
-                style: AppTextStyles.bodySmall,
-              ),
-              const SizedBox(height: AppSizes.lg),
-              Row(
-                children: [
-                  Expanded(
-                    child: AppButton(
-                      label: 'Cancel',
-                      onPressed: () => Navigator.of(context).pop(false),
-                      variant: AppButtonVariant.secondary,
-                    ),
-                  ),
-                  const SizedBox(width: AppSizes.md),
-                  Expanded(
-                    child: AppButton(
-                      label: 'Submit',
-                      onPressed: () => Navigator.of(context).pop(true),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    final firstBlank = statuses.indexWhere((s) => !s.isAnswered);
+    final submit = await SubmitSummarySheet.show(
+      context,
+      title: 'Submit quiz?',
+      total: statuses.length,
+      answered: statuses.where((s) => s.isAnswered).length,
+      flagged: statuses.where((s) => s.isFlagged).length,
+      isTimeUp: false,
+      onReviewBlank: firstBlank < 0
+          ? null
+          : () => ref
+              .read(quizAttemptProvider(params).notifier)
+              .goToQuestion(firstBlank),
     );
 
-    if (submit != true) return;
+    if (!submit) return;
 
     final resultAttemptId =
         await ref.read(quizAttemptProvider(params).notifier).submit();
+    if (resultAttemptId != null) {
+      await ref.read(flaggedQuestionsProvider(attemptId).notifier).clear();
+    }
     if (!context.mounted) return;
     if (resultAttemptId == null) {
       final message =
@@ -384,4 +388,68 @@ bool _hasAnswer(QuizQuestionEntity question, Object? answer) {
   }
   if (answer is List) return answer.isNotEmpty;
   return answer is String && answer.trim().isNotEmpty;
+}
+
+
+/// Combines answers and flags into the per-question status the palette and the
+/// submit summary both read, so the two can never disagree about what is left.
+List<QuestionStatus> _statuses(
+  QuizAttemptState state,
+  Set<int> answeredIndexes,
+  Set<String> flagged,
+) {
+  return List.generate(state.questionCount, (index) {
+    return QuestionStatus.of(
+      answered: answeredIndexes.contains(index),
+      flagged: flagged.contains(state.attempt.questions[index].id),
+    );
+  });
+}
+
+class _FlagButton extends StatelessWidget {
+  const _FlagButton({required this.isFlagged, required this.onTap});
+
+  final bool isFlagged;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = isFlagged ? AppColors.warning : AppColors.textMuted;
+    return Semantics(
+      button: true,
+      selected: isFlagged,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: isFlagged ? AppColors.warningSurface : Colors.transparent,
+            borderRadius: BorderRadius.circular(AppSizes.radiusFull),
+            border: Border.all(
+              color: isFlagged ? AppColors.warning : AppColors.borderStrong,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isFlagged ? Icons.flag_rounded : Icons.flag_outlined,
+                size: AppSizes.iconXs,
+                color: color,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                isFlagged ? 'Flagged' : 'Flag for review',
+                style: AppTextStyles.caption.copyWith(
+                  color: color,
+                  fontWeight: isFlagged ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
