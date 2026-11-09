@@ -219,6 +219,44 @@ void main() {
     await shoot(tester, 'feedback_correct', QuestionFeedbackTile(feedback: feedback, index: 0));
   });
 
+  testWidgets('feedback tile — long derivation collapses', (tester) async {
+    // A real multi-step worked solution. Printing these in full is what turns a
+    // 100-question review into a scroll a student abandons.
+    final feedback = QuestionFeedbackEntity(
+      questionId: 'q3',
+      correct: false,
+      pointsAwarded: 0,
+      pointsPossible: 5,
+      questionText: r'Consider $\triangle ABC$ with a right angle at $C$ and '
+          r'$m(\angle ABC) = 55^\circ$. If $\overline{AC}$ is $10$ units, what is the area?',
+      explanation: 'Step-by-step derivation:\n'
+          r'1. In right triangle $ABC$ with the right angle at $C$, '
+          r'$m(\angle BAC) = 90^\circ - 55^\circ = 35^\circ$.'
+          '\n'
+          r'2. From the definition of tangent for $\angle BAC$:'
+          '\n'
+          r'$$\tan(35^\circ) = \frac{BC}{AC}$$'
+          '\n'
+          r'3. So $BC = AC \times \tan(35^\circ) = 10 \times 0.7 = 7$ units.'
+          '\n'
+          r'4. The area of a right triangle is half the product of its legs:'
+          '\n'
+          r'$$A = \frac{1}{2} \times AC \times BC = \frac{1}{2} \times 10 \times 7 = 35$$'
+          '\n\nSource: Q1 [2014 E.C. | Booklet 3]',
+      selectedAnswers: const ['b'],
+      correctAnswerIds: const ['a'],
+      answers: [
+        reviewed('a', '35 sq. units', isCorrect: true),
+        reviewed('b', '70 sq. units'),
+        reviewed('c', r'$5\sqrt{149}$ sq. units'),
+      ],
+    );
+
+    await shoot(tester, 'feedback_long_explanation',
+        QuestionFeedbackTile(feedback: feedback, index: 2),
+        height: 1000);
+  });
+
   testWidgets('feedback tile — incorrect', (tester) async {
     final feedback = QuestionFeedbackEntity(
       questionId: 'q2',
