@@ -235,7 +235,7 @@ class _CourseRowCardState extends State<CourseRowCard> {
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
-                              color: Color(0xFF38BDF8),
+                              color: Color(0xFF5FA8D3),
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -328,13 +328,13 @@ class _CourseRowCardState extends State<CourseRowCard> {
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                           decoration: BoxDecoration(
                             color: course.isFree
-                                ? const Color(0x1810B981)
-                                : const Color(0x1838BDF8),
+                                ? const Color(0x1835A862)
+                                : const Color(0x185FA8D3),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: course.isFree
-                                  ? const Color(0x3510B981)
-                                  : const Color(0x3538BDF8),
+                                  ? const Color(0x3535A862)
+                                  : const Color(0x355FA8D3),
                             ),
                           ),
                           child: Row(
@@ -347,7 +347,7 @@ class _CourseRowCardState extends State<CourseRowCard> {
                                   fontWeight: FontWeight.bold,
                                   color: course.isFree
                                       ? AppColors.brandEmerald
-                                      : const Color(0xFF38BDF8),
+                                      : const Color(0xFF5FA8D3),
                                 ),
                               ),
                               const SizedBox(width: 4),
@@ -356,7 +356,7 @@ class _CourseRowCardState extends State<CourseRowCard> {
                                 size: 12,
                                 color: course.isFree
                                     ? AppColors.brandEmerald
-                                    : const Color(0xFF38BDF8),
+                                    : const Color(0xFF5FA8D3),
                               ),
                             ],
                           ),
@@ -457,12 +457,12 @@ class _BannerOverlayBadges extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
             decoration: BoxDecoration(
               color: course.isFree
-                  ? const Color(0xE0065F46)
+                  ? const Color(0xE0165235)
                   : Colors.black.withAlpha(150),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                 color: course.isFree
-                    ? const Color(0xFF10B981)
+                    ? const Color(0xFF35A862)
                     : Colors.white.withAlpha(35),
               ),
             ),
@@ -471,7 +471,7 @@ class _BannerOverlayBadges extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-                color: course.isFree ? Colors.white : const Color(0xFFE2E8F0),
+                color: course.isFree ? Colors.white : const Color(0xFFE2E4DF),
               ),
             ),
           ),
@@ -491,8 +491,8 @@ String _streamLabel(String subject) {
 
 Color _subjectGradientStart(String subject) {
   final lower = subject.toLowerCase();
-  if (lower.contains('bio')) return const Color(0xFF064E3B);
-  if (lower.contains('phys')) return const Color(0xFF1E293B);
+  if (lower.contains('bio')) return const Color(0xFF14422C);
+  if (lower.contains('phys')) return const Color(0xFF1D231F);
   if (lower.contains('chem')) return const Color(0xFF311B92);
   if (lower.contains('math')) return const Color(0xFF1E3A8A);
   return const Color(0xFF182234);
@@ -501,7 +501,7 @@ Color _subjectGradientStart(String subject) {
 Color _subjectGradientEnd(String subject) {
   final lower = subject.toLowerCase();
   if (lower.contains('bio')) return const Color(0xFF022C22);
-  if (lower.contains('phys')) return const Color(0xFF0F172A);
+  if (lower.contains('phys')) return const Color(0xFF0F1310);
   if (lower.contains('chem')) return const Color(0xFF1A103C);
   if (lower.contains('math')) return const Color(0xFF172554);
   return const Color(0xFF0B0F17);
@@ -556,7 +556,7 @@ class _CourseLevelBadge extends StatelessWidget {
         style: const TextStyle(
           fontSize: 9.5,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF94A3B8),
+          color: Color(0xFF9AA09A),
           letterSpacing: 0.4,
         ),
       ),

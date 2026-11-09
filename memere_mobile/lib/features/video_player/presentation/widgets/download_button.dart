@@ -61,8 +61,8 @@ class DownloadButton extends ConsumerWidget {
       onPressed: disabled ? null : () => _handlePressed(context, ref, download, status),
       style: ElevatedButton.styleFrom(
         backgroundColor: isDownloaded
-            ? const Color(0x1810B981)
-            : const Color(0xFF1E293B),
+            ? const Color(0x1835A862)
+            : const Color(0xFF1D231F),
         foregroundColor: isDownloaded ? AppColors.brandEmerald : Colors.white,
         minimumSize: const Size.fromHeight(44),
         elevation: 0,
@@ -70,8 +70,8 @@ class DownloadButton extends ConsumerWidget {
           borderRadius: BorderRadius.circular(10),
           side: BorderSide(
             color: isDownloaded
-                ? const Color(0x4510B981)
-                : const Color(0xFF334155),
+                ? const Color(0x4535A862)
+                : const Color(0xFF333A34),
           ),
         ),
       ),
@@ -119,7 +119,7 @@ class DownloadButton extends ConsumerWidget {
       final shouldDelete = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF141824),
+          backgroundColor: const Color(0xFF141A14),
           title: const Text('Remove Offline Video?', style: TextStyle(color: Colors.white, fontSize: 16)),
           content: const Text(
             'This will remove the downloaded video file from your device storage.',
@@ -132,7 +132,7 @@ class DownloadButton extends ConsumerWidget {
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDD5F55)),
               child: const Text('Remove', style: TextStyle(color: Colors.white)),
             ),
           ],

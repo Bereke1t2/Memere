@@ -19,7 +19,7 @@ void showExamAttemptHistorySheet({
     backgroundColor: const Color(0xFF0F0F14),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      side: BorderSide(color: Color(0xFF22222C), width: 1),
+      side: BorderSide(color: Color(0xFF232825), width: 1),
     ),
     builder: (sheetContext) => DraggableScrollableSheet(
       initialChildSize: 0.65,
@@ -67,7 +67,7 @@ class _HistorySheetContent extends ConsumerWidget {
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFF3F3F46),
+                color: const Color(0xFF3E443F),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -95,7 +95,7 @@ class _HistorySheetContent extends ConsumerWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF71717A),
+                        color: Color(0xFF7E847C),
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -105,7 +105,7 @@ class _HistorySheetContent extends ConsumerWidget {
               ),
               IconButton(
                 onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close_rounded, color: Color(0xFF71717A)),
+                icon: const Icon(Icons.close_rounded, color: Color(0xFF7E847C)),
               ),
             ],
           ),
@@ -115,7 +115,7 @@ class _HistorySheetContent extends ConsumerWidget {
           Expanded(
             child: attemptsAsync.when(
               loading: () => const Center(
-                child: CircularProgressIndicator(color: Color(0xFF10B981), strokeWidth: 2),
+                child: CircularProgressIndicator(color: Color(0xFF35A862), strokeWidth: 2),
               ),
               error: (err, _) => Center(
                 child: Text('Could not load history: $err', style: const TextStyle(color: Colors.white)),
@@ -126,11 +126,11 @@ class _HistorySheetContent extends ConsumerWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.history_toggle_off_rounded, size: 40, color: Color(0xFF52525B)),
+                        Icon(Icons.history_toggle_off_rounded, size: 40, color: Color(0xFF515A53)),
                         SizedBox(height: 10),
                         Text(
                           'No previous attempts found.',
-                          style: TextStyle(color: Color(0xFFA1A1AA), fontSize: 14),
+                          style: TextStyle(color: Color(0xFFA6ABA4), fontSize: 14),
                         ),
                       ],
                     ),
@@ -167,7 +167,7 @@ class _HistorySheetContent extends ConsumerWidget {
                   style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF10B981),
+                  backgroundColor: const Color(0xFF35A862),
                   foregroundColor: Colors.black,
                   elevation: 0,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -196,11 +196,11 @@ class _AttemptHistoryCard extends StatelessWidget {
     final scorePct = attempt.percentage ?? 0.0;
     final isPassed = attempt.isPassed;
 
-    Color badgeColor = isPassed ? const Color(0xFF10B981) : const Color(0xFFF59E0B);
+    Color badgeColor = isPassed ? const Color(0xFF35A862) : const Color(0xFFD99A2B);
     String statusText = isPassed ? 'Passed' : 'Needs Practice';
 
     if (!isGraded) {
-      badgeColor = const Color(0xFF38BDF8);
+      badgeColor = const Color(0xFF5FA8D3);
       statusText = 'In Progress';
     }
 
@@ -208,9 +208,9 @@ class _AttemptHistoryCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFF14141C),
+        color: const Color(0xFF141814),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF22222E)),
+        border: Border.all(color: const Color(0xFF232825)),
       ),
       child: Row(
         children: [
@@ -273,7 +273,7 @@ class _AttemptHistoryCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   _formatDate(attempt.submittedAt ?? attempt.startedAt),
-                  style: const TextStyle(color: Color(0xFF71717A), fontSize: 11),
+                  style: const TextStyle(color: Color(0xFF7E847C), fontSize: 11),
                 ),
               ],
             ),
@@ -287,7 +287,7 @@ class _AttemptHistoryCard extends StatelessWidget {
                 context.push(AppRoutes.examResultPath(attempt.attemptId));
               },
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF38BDF8),
+                foregroundColor: const Color(0xFF5FA8D3),
                 side: const BorderSide(color: Color(0xFF263342)),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 minimumSize: Size.zero,

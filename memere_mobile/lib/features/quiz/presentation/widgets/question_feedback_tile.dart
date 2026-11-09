@@ -18,8 +18,8 @@ class QuestionFeedbackTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCorrect = feedback.correct;
-    const emeraldColor = Color(0xFF10B981);
-    const redColor = Color(0xFFEF4444);
+    const emeraldColor = Color(0xFF35A862);
+    const redColor = Color(0xFFDD5F55);
     final statusColor = isCorrect ? emeraldColor : redColor;
 
     return Container(
@@ -108,19 +108,19 @@ class QuestionFeedbackTile extends StatelessWidget {
               Widget? icon;
 
               if (isSelected && isCorrectAns) {
-                optBg = const Color(0x2210B981);
+                optBg = const Color(0x2235A862);
                 optBorder = emeraldColor;
                 textColor = Colors.white;
                 icon = const Icon(Icons.check_circle_rounded,
                     color: emeraldColor, size: 18);
               } else if (isSelected && !isCorrectAns) {
-                optBg = const Color(0x22EF4444);
+                optBg = const Color(0x22DD5F55);
                 optBorder = redColor;
                 textColor = Colors.white;
                 icon = const Icon(Icons.cancel_rounded,
                     color: redColor, size: 18);
               } else if (isCorrectAns) {
-                optBg = const Color(0x1810B981);
+                optBg = const Color(0x1835A862);
                 optBorder = emeraldColor.withValues(alpha: 0.6);
                 textColor = emeraldColor;
                 icon = const Icon(Icons.check_circle_outline_rounded,
@@ -193,9 +193,9 @@ class QuestionFeedbackTile extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0x1806B6D4),
+                color: const Color(0x184E9FAE),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0x4406B6D4)),
+                border: Border.all(color: const Color(0x444E9FAE)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,7 +203,7 @@ class QuestionFeedbackTile extends StatelessWidget {
                   const Icon(
                     Icons.lightbulb_outline_rounded,
                     size: 18,
-                    color: Color(0xFF38BDF8),
+                    color: Color(0xFF5FA8D3),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -215,7 +215,7 @@ class QuestionFeedbackTile extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF38BDF8),
+                            color: Color(0xFF5FA8D3),
                           ),
                         ),
                         const SizedBox(height: 2),
@@ -223,12 +223,12 @@ class QuestionFeedbackTile extends StatelessWidget {
                           feedback.explanation!,
                           style: const TextStyle(
                             fontSize: 12.5,
-                            color: Color(0xFFCBD5E1),
+                            color: Color(0xFFCDD0C9),
                             height: 1.35,
                           ),
                           // Formulas stay brighter than the explanation prose
                           // so a derivation reads clearly on the tinted panel.
-                          mathColor: const Color(0xFFE2E8F0),
+                          mathColor: const Color(0xFFE2E4DF),
                           selectable: true,
                         ),
                       ],
@@ -284,8 +284,8 @@ class _HumanReadableAnswerFallback extends StatelessWidget {
               'Your Answer: $userAns',
               style: TextStyle(
                 color: feedback.correct
-                    ? const Color(0xFF10B981)
-                    : const Color(0xFFEF4444),
+                    ? const Color(0xFF35A862)
+                    : const Color(0xFFDD5F55),
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -295,7 +295,7 @@ class _HumanReadableAnswerFallback extends StatelessWidget {
           Text(
             'Correct Answer: $correctAns',
             style: const TextStyle(
-              color: Color(0xFF10B981),
+              color: Color(0xFF35A862),
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),

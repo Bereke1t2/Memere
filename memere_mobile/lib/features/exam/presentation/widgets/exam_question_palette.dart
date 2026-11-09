@@ -18,7 +18,7 @@ void showExamQuestionPaletteSheet({
     backgroundColor: const Color(0xFF0F0F14),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      side: BorderSide(color: Color(0xFF22222C), width: 1),
+      side: BorderSide(color: Color(0xFF232825), width: 1),
     ),
     builder: (sheetContext) => DraggableScrollableSheet(
       initialChildSize: 0.65,
@@ -77,7 +77,7 @@ class _PaletteSheetContentState extends State<_PaletteSheetContent> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFF3F3F46),
+                color: const Color(0xFF3E443F),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -96,7 +96,7 @@ class _PaletteSheetContentState extends State<_PaletteSheetContent> {
               ),
               IconButton(
                 onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close_rounded, color: Color(0xFF71717A)),
+                icon: const Icon(Icons.close_rounded, color: Color(0xFF7E847C)),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
@@ -110,18 +110,18 @@ class _PaletteSheetContentState extends State<_PaletteSheetContent> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                   decoration: BoxDecoration(
-                    color: const Color(0x1810B981),
+                    color: const Color(0x1835A862),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFF10B981).withAlpha(80)),
+                    border: Border.all(color: const Color(0xFF35A862).withAlpha(80)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF10B981)),
+                      const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF35A862)),
                       const SizedBox(width: 8),
                       Text(
                         '$answeredCount Answered',
                         style: AppTextStyles.labelMedium.copyWith(
-                          color: const Color(0xFF10B981),
+                          color: const Color(0xFF35A862),
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -134,18 +134,18 @@ class _PaletteSheetContentState extends State<_PaletteSheetContent> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A22),
+                    color: const Color(0xFF191D1A),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFF2C2C38)),
+                    border: Border.all(color: const Color(0xFF2A302C)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.radio_button_unchecked_rounded, size: 16, color: Color(0xFFA1A1AA)),
+                      const Icon(Icons.radio_button_unchecked_rounded, size: 16, color: Color(0xFFA6ABA4)),
                       const SizedBox(width: 8),
                       Text(
                         '$unansweredCount Left',
                         style: AppTextStyles.labelMedium.copyWith(
-                          color: const Color(0xFFA1A1AA),
+                          color: const Color(0xFFA6ABA4),
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -192,17 +192,17 @@ class _PaletteSheetContentState extends State<_PaletteSheetContent> {
                 Color textColor;
 
                 if (isCurrent) {
-                  bgColor = const Color(0xFF0284C7); // Azure blue
-                  borderColor = const Color(0xFF38BDF8);
+                  bgColor = const Color(0xFF3E7FA6); // Azure blue
+                  borderColor = const Color(0xFF5FA8D3);
                   textColor = Colors.white;
                 } else if (isAnswered) {
-                  bgColor = const Color(0xFF064E3B); // Dark emerald
-                  borderColor = const Color(0xFF10B981);
-                  textColor = const Color(0xFF34D399);
+                  bgColor = const Color(0xFF14422C); // Dark emerald
+                  borderColor = const Color(0xFF35A862);
+                  textColor = const Color(0xFF5FBF80);
                 } else {
                   bgColor = const Color(0xFF16161D);
                   borderColor = const Color(0xFF2A2A36);
-                  textColor = const Color(0xFFA1A1AA);
+                  textColor = const Color(0xFFA6ABA4);
                 }
 
                 return Material(
@@ -222,7 +222,7 @@ class _PaletteSheetContentState extends State<_PaletteSheetContent> {
                         boxShadow: isCurrent
                             ? [
                                 BoxShadow(
-                                  color: const Color(0xFF38BDF8).withAlpha(80),
+                                  color: const Color(0xFF5FA8D3).withAlpha(80),
                                   blurRadius: 8,
                                 ),
                               ]
@@ -255,7 +255,7 @@ class _PaletteSheetContentState extends State<_PaletteSheetContent> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? Colors.white : const Color(0xFF181820),
+          color: selected ? Colors.white : const Color(0xFF171B18),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: selected ? Colors.white : const Color(0xFF2A2A36),
@@ -264,7 +264,7 @@ class _PaletteSheetContentState extends State<_PaletteSheetContent> {
         child: Text(
           label,
           style: AppTextStyles.labelSmall.copyWith(
-            color: selected ? Colors.black : const Color(0xFFA1A1AA),
+            color: selected ? Colors.black : const Color(0xFFA6ABA4),
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
           ),
         ),

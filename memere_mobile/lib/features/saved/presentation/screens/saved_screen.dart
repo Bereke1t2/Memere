@@ -270,7 +270,7 @@ class _SavedScreenState extends ConsumerState<SavedScreen> {
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF141824),
+        backgroundColor: const Color(0xFF141A14),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           'Remove $kindName?',
@@ -700,10 +700,10 @@ class _SavedCardTileState extends ConsumerState<_SavedCardTile> {
           const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF0F261E), Color(0xFF141926)],
+            colors: [Color(0xFF0F261E), Color(0xFF141A14)],
           ),
-          const Color(0xFF34D399),
-          const Color(0xFF059669),
+          const Color(0xFF5FBF80),
+          const Color(0xFF24814A),
           'COURSE',
           Icons.menu_book_rounded,
           'View Course',
@@ -713,10 +713,10 @@ class _SavedCardTileState extends ConsumerState<_SavedCardTile> {
           const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF1D1B36), Color(0xFF141926)],
+            colors: [Color(0xFF1D1B36), Color(0xFF141A14)],
           ),
-          const Color(0xFFA78BFA),
-          const Color(0xFF7C3AED),
+          const Color(0xFFA99BD8),
+          const Color(0xFF6F5FB0),
           'OFFLINE QUIZ',
           Icons.quiz_rounded,
           'Start Quiz',
@@ -726,10 +726,10 @@ class _SavedCardTileState extends ConsumerState<_SavedCardTile> {
           const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF0E2232), Color(0xFF141926)],
+            colors: [Color(0xFF0E2232), Color(0xFF141A14)],
           ),
-          const Color(0xFF38BDF8),
-          const Color(0xFF0284C7),
+          const Color(0xFF5FA8D3),
+          const Color(0xFF3E7FA6),
           'OFFLINE EXAM',
           Icons.assignment_rounded,
           'Start Exam',

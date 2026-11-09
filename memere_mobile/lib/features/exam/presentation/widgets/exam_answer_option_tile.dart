@@ -109,7 +109,7 @@ class ExamAnswerOptionTile extends StatelessWidget {
                     child: MathText(
                       answer.text,
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: isSelected ? Colors.white : const Color(0xFFE4E4E7),
+                        color: isSelected ? Colors.white : const Color(0xFFE2E4DF),
                         fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                         height: 1.4,
                       ),

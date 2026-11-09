@@ -20,22 +20,22 @@ class ExamTimerBadge extends StatelessWidget {
     final warning = value <= 300;
 
     final color = critical
-        ? const Color(0xFFEF4444)
+        ? const Color(0xFFDD5F55)
         : warning
-            ? const Color(0xFFF59E0B)
-            : const Color(0xFF10B981);
+            ? const Color(0xFFD99A2B)
+            : const Color(0xFF35A862);
 
     final bgTint = critical
-        ? const Color(0x28EF4444)
+        ? const Color(0x28DD5F55)
         : warning
-            ? const Color(0x28F59E0B)
-            : const Color(0x2010B981);
+            ? const Color(0x28D99A2B)
+            : const Color(0x2035A862);
 
     final borderColor = critical
-        ? const Color(0xFFEF4444).withAlpha(120)
+        ? const Color(0xFFDD5F55).withAlpha(120)
         : warning
-            ? const Color(0xFFF59E0B).withAlpha(120)
-            : const Color(0xFF10B981).withAlpha(100);
+            ? const Color(0xFFD99A2B).withAlpha(120)
+            : const Color(0xFF35A862).withAlpha(100);
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

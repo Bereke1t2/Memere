@@ -72,7 +72,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF070709),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0C0C10),
+        backgroundColor: const Color(0xFF0B0E0C),
         elevation: 0,
         scrolledUnderElevation: 0,
         title: const Text(
@@ -88,7 +88,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
               context.go(AppRoutes.mockExams);
             }
           },
-          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFFD4D4D8)),
+          icon: const Icon(Icons.arrow_back_rounded, color: Color(0xFFD7D9D4)),
         ),
         actions: [
           resultAsync.maybeWhen(
@@ -98,12 +98,12 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
                   ? const SizedBox(
                       width: 14,
                       height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981)),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF35A862)),
                     )
-                  : const Icon(Icons.replay_rounded, size: 16, color: Color(0xFF10B981)),
+                  : const Icon(Icons.replay_rounded, size: 16, color: Color(0xFF35A862)),
               label: const Text(
                 'Retake',
-                style: TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.w700),
+                style: TextStyle(color: Color(0xFF35A862), fontWeight: FontWeight.w700),
               ),
             ),
             orElse: () => const SizedBox.shrink(),
@@ -155,13 +155,13 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0x1810B981),
+                          color: const Color(0x1835A862),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFF10B981).withAlpha(60)),
+                          border: Border.all(color: const Color(0xFF35A862).withAlpha(60)),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.check_circle_rounded, size: 18, color: Color(0xFF10B981)),
+                            const Icon(Icons.check_circle_rounded, size: 18, color: Color(0xFF35A862)),
                             const SizedBox(width: 8),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -169,14 +169,14 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
                                 Text(
                                   '$correctCount Correct',
                                   style: const TextStyle(
-                                    color: Color(0xFF10B981),
+                                    color: Color(0xFF35A862),
                                     fontWeight: FontWeight.w800,
                                     fontSize: 14,
                                   ),
                                 ),
                                 Text(
                                   '${result.totalMarks > 0 ? (correctCount / result.feedback.length * 100).toStringAsFixed(0) : 0}% Accuracy',
-                                  style: const TextStyle(color: Color(0xFFA1A1AA), fontSize: 11),
+                                  style: const TextStyle(color: Color(0xFFA6ABA4), fontSize: 11),
                                 ),
                               ],
                             ),
@@ -189,11 +189,11 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
-                          color: missedCount > 0 ? const Color(0x18EF4444) : const Color(0xFF14141C),
+                          color: missedCount > 0 ? const Color(0x18DD5F55) : const Color(0xFF141814),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                             color: missedCount > 0
-                                ? const Color(0xFFEF4444).withAlpha(60)
+                                ? const Color(0xFFDD5F55).withAlpha(60)
                                 : const Color(0xFF262633),
                           ),
                         ),
@@ -202,7 +202,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
                             Icon(
                               Icons.cancel_rounded,
                               size: 18,
-                              color: missedCount > 0 ? const Color(0xFFEF4444) : const Color(0xFFA1A1AA),
+                              color: missedCount > 0 ? const Color(0xFFDD5F55) : const Color(0xFFA6ABA4),
                             ),
                             const SizedBox(width: 8),
                             Column(
@@ -211,14 +211,14 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
                                 Text(
                                   '$missedCount Missed',
                                   style: TextStyle(
-                                    color: missedCount > 0 ? const Color(0xFFEF4444) : const Color(0xFFA1A1AA),
+                                    color: missedCount > 0 ? const Color(0xFFDD5F55) : const Color(0xFFA6ABA4),
                                     fontWeight: FontWeight.w800,
                                     fontSize: 14,
                                   ),
                                 ),
                                 const Text(
                                   'Review below',
-                                  style: TextStyle(color: Color(0xFFA1A1AA), fontSize: 11),
+                                  style: TextStyle(color: Color(0xFFA6ABA4), fontSize: 11),
                                 ),
                               ],
                             ),
@@ -242,7 +242,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFF13131B),
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFF22222E)),
+                    border: Border.all(color: const Color(0xFF232825)),
                   ),
                   child: Row(
                     children: [
@@ -266,14 +266,14 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
                               ? Icons.sentiment_dissatisfied_rounded
                               : Icons.celebration_rounded,
                           size: 40,
-                          color: const Color(0xFF52525B),
+                          color: const Color(0xFF515A53),
                         ),
                         const SizedBox(height: 10),
                         Text(
                           _filterIndex == 1
                               ? 'No correct answers yet.'
                               : 'Awesome! No missed questions in this section.',
-                          style: const TextStyle(color: Color(0xFFA1A1AA), fontSize: 14),
+                          style: const TextStyle(color: Color(0xFFA6ABA4), fontSize: 14),
                         ),
                       ],
                     ),
@@ -297,7 +297,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
                         icon: const Icon(Icons.arrow_back_rounded, size: 16),
                         label: const Text('Back to Exams', style: TextStyle(fontWeight: FontWeight.w700)),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFA1A1AA),
+                          foregroundColor: const Color(0xFFA6ABA4),
                           side: const BorderSide(color: Color(0xFF2C2C3A)),
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -314,7 +314,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
                           style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
+                          backgroundColor: const Color(0xFF35A862),
                           foregroundColor: Colors.black,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 14),
@@ -349,7 +349,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? Colors.white : const Color(0xFF71717A),
+              color: isSelected ? Colors.white : const Color(0xFF7E847C),
               fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               fontSize: 12,
             ),

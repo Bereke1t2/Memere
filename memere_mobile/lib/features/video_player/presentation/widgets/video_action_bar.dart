@@ -34,14 +34,14 @@ class VideoActionBar extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: lessonId.isEmpty ? null : onMarkComplete,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isCompleted ? const Color(0xFF10B981) : const Color(0xFF1E293B),
+                  backgroundColor: isCompleted ? const Color(0xFF35A862) : const Color(0xFF1D231F),
                   foregroundColor: Colors.white,
                   minimumSize: const Size.fromHeight(44),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                     side: BorderSide(
-                      color: isCompleted ? const Color(0xFF10B981) : const Color(0xFF334155),
+                      color: isCompleted ? const Color(0xFF35A862) : const Color(0xFF333A34),
                     ),
                   ),
                 ),
@@ -61,7 +61,7 @@ class VideoActionBar extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size(44, 44),
                 padding: EdgeInsets.zero,
-                side: const BorderSide(color: Color(0xFF334155)),
+                side: const BorderSide(color: Color(0xFF333A34)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -86,9 +86,9 @@ class VideoActionBar extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
+                  color: const Color(0xFF1D231F),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFF334155)),
+                  border: Border.all(color: const Color(0xFF333A34)),
                 ),
                 child: const SizedBox(
                   width: 16,

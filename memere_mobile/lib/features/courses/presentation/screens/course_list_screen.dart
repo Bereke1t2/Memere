@@ -492,7 +492,7 @@ class _HeroFeatureCard extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.stars_rounded,
-                                  size: 12, color: Color(0xFF4ADE80)),
+                                  size: 12, color: Color(0xFF6FC98D)),
                               SizedBox(width: 4),
                               Text(
                                 'Featured Courses',

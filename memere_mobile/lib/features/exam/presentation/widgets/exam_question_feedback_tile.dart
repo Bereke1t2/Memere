@@ -26,17 +26,17 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF111116),
+        color: const Color(0xFF101311),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: isCorrect
-              ? const Color(0xFF10B981).withAlpha(60)
-              : const Color(0xFFEF4444).withAlpha(60),
+              ? const Color(0xFF35A862).withAlpha(60)
+              : const Color(0xFFDD5F55).withAlpha(60),
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: (isCorrect ? const Color(0xFF10B981) : const Color(0xFFEF4444)).withAlpha(20),
+            color: (isCorrect ? const Color(0xFF35A862) : const Color(0xFFDD5F55)).withAlpha(20),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -55,13 +55,13 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: isCorrect
-                        ? const Color(0x2210B981)
-                        : const Color(0x22EF4444),
+                        ? const Color(0x2235A862)
+                        : const Color(0x22DD5F55),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: isCorrect
-                          ? const Color(0xFF10B981).withAlpha(100)
-                          : const Color(0xFFEF4444).withAlpha(100),
+                          ? const Color(0xFF35A862).withAlpha(100)
+                          : const Color(0xFFDD5F55).withAlpha(100),
                     ),
                   ),
                   child: Row(
@@ -73,16 +73,16 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
                             : Icons.cancel_rounded,
                         size: 15,
                         color: isCorrect
-                            ? const Color(0xFF10B981)
-                            : const Color(0xFFEF4444),
+                            ? const Color(0xFF35A862)
+                            : const Color(0xFFDD5F55),
                       ),
                       const SizedBox(width: 5),
                       Text(
                         'Q${index + 1}',
                         style: TextStyle(
                           color: isCorrect
-                              ? const Color(0xFF10B981)
-                              : const Color(0xFFEF4444),
+                              ? const Color(0xFF35A862)
+                              : const Color(0xFFDD5F55),
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
                         ),
@@ -100,7 +100,7 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFFA1A1AA),
+                        color: Color(0xFFA6ABA4),
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -121,8 +121,8 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
                     '${feedback.marksAwarded}/${feedback.marksPossible} Marks',
                     style: TextStyle(
                       color: isCorrect
-                          ? const Color(0xFF34D399)
-                          : const Color(0xFFF87171),
+                          ? const Color(0xFF5FBF80)
+                          : const Color(0xFFE58880),
                       fontWeight: FontWeight.w700,
                       fontSize: 11,
                     ),
@@ -168,7 +168,7 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
                   color: const Color(0xFF151922),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: const Color(0xFF38BDF8).withAlpha(70),
+                    color: const Color(0xFF5FA8D3).withAlpha(70),
                     width: 1,
                   ),
                 ),
@@ -180,13 +180,13 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
                         Icon(
                           Icons.lightbulb_rounded,
                           size: 16,
-                          color: Color(0xFF38BDF8),
+                          color: Color(0xFF5FA8D3),
                         ),
                         SizedBox(width: 6),
                         Text(
                           'Explanation & Solution',
                           style: TextStyle(
-                            color: Color(0xFF38BDF8),
+                            color: Color(0xFF5FA8D3),
                             fontWeight: FontWeight.w700,
                             fontSize: 12,
                           ),
@@ -197,13 +197,13 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
                     MathText(
                       feedback.explanation!,
                       style: const TextStyle(
-                        color: Color(0xFFD4D4D8),
+                        color: Color(0xFFD7D9D4),
                         fontSize: 13,
                         height: 1.4,
                       ),
                       // Formulas stay brighter than the surrounding prose so a
                       // worked solution reads clearly on the tinted panel.
-                      mathColor: const Color(0xFFE4E4E7),
+                      mathColor: const Color(0xFFE2E4DF),
                       selectable: true,
                     ),
                   ],
@@ -222,33 +222,33 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
     final isSelected = feedback.selectedAnswers.contains(answer.id);
     final isKeyCorrect = answer.isCorrect || feedback.correctAnswerIds.contains(answer.id);
 
-    Color bgColor = const Color(0xFF14141C);
-    Color borderColor = const Color(0xFF22222E);
+    Color bgColor = const Color(0xFF141814);
+    Color borderColor = const Color(0xFF232825);
     Color letterBg = const Color(0xFF1C1C26);
-    Color letterText = const Color(0xFFA1A1AA);
+    Color letterText = const Color(0xFFA6ABA4);
     Widget? statusBadge;
 
     if (isKeyCorrect) {
       // Correct answer
       bgColor = const Color(0xFF063A28);
-      borderColor = const Color(0xFF10B981);
-      letterBg = const Color(0xFF10B981);
+      borderColor = const Color(0xFF35A862);
+      letterBg = const Color(0xFF35A862);
       letterText = Colors.black;
       statusBadge = Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
-          color: const Color(0x3310B981),
+          color: const Color(0x3335A862),
           borderRadius: BorderRadius.circular(6),
         ),
         child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.check_rounded, size: 12, color: Color(0xFF10B981)),
+            Icon(Icons.check_rounded, size: 12, color: Color(0xFF35A862)),
             SizedBox(width: 3),
             Text(
               'Correct Answer',
               style: TextStyle(
-                color: Color(0xFF10B981),
+                color: Color(0xFF35A862),
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
               ),
@@ -259,24 +259,24 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
     } else if (isSelected && !isKeyCorrect) {
       // User selected wrong answer
       bgColor = const Color(0xFF3B1212);
-      borderColor = const Color(0xFFEF4444);
-      letterBg = const Color(0xFFEF4444);
+      borderColor = const Color(0xFFDD5F55);
+      letterBg = const Color(0xFFDD5F55);
       letterText = Colors.white;
       statusBadge = Container(
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
-          color: const Color(0x33EF4444),
+          color: const Color(0x33DD5F55),
           borderRadius: BorderRadius.circular(6),
         ),
         child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.close_rounded, size: 12, color: Color(0xFFEF4444)),
+            Icon(Icons.close_rounded, size: 12, color: Color(0xFFDD5F55)),
             SizedBox(width: 3),
             Text(
               'Your Answer',
               style: TextStyle(
-                color: Color(0xFFEF4444),
+                color: Color(0xFFDD5F55),
                 fontSize: 10,
                 fontWeight: FontWeight.w700,
               ),
@@ -323,7 +323,7 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
               style: TextStyle(
                 color: isKeyCorrect
                     ? Colors.white
-                    : (isSelected ? const Color(0xFFFCA5A5) : const Color(0xFFD4D4D8)),
+                    : (isSelected ? const Color(0xFFEBA09A) : const Color(0xFFD7D9D4)),
                 fontWeight: isKeyCorrect || isSelected ? FontWeight.w600 : FontWeight.w400,
                 fontSize: 13,
               ),
@@ -369,7 +369,7 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
             child: Text(
               'Your Answer: $userAns',
               style: TextStyle(
-                color: feedback.correct ? const Color(0xFF10B981) : const Color(0xFFEF4444),
+                color: feedback.correct ? const Color(0xFF35A862) : const Color(0xFFDD5F55),
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -379,7 +379,7 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
           Text(
             'Correct: $correctAns',
             style: const TextStyle(
-              color: Color(0xFF10B981),
+              color: Color(0xFF35A862),
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),

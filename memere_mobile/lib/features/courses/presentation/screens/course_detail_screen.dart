@@ -291,7 +291,7 @@ class _CourseContentSheetState extends ConsumerState<_CourseContentSheet> {
               width: 38,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFF334155),
+                color: const Color(0xFF333A34),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -314,7 +314,7 @@ class _CourseContentSheetState extends ConsumerState<_CourseContentSheet> {
             '${course.durationLabel} • ${course.totalLessons} lessons • Grade ${course.grade}',
             style: const TextStyle(
               fontSize: 13,
-              color: Color(0xFF94A3B8),
+              color: Color(0xFF9AA09A),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -434,7 +434,7 @@ class _CourseContentSheetState extends ConsumerState<_CourseContentSheet> {
                   child: Text(
                     'Lessons will appear here when this course is published.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                    style: TextStyle(fontSize: 13, color: Color(0xFF6E746C)),
                   ),
                 ),
               )
@@ -510,7 +510,7 @@ class _CourseContentSheetState extends ConsumerState<_CourseContentSheet> {
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF64748B),
+                              color: Color(0xFF6E746C),
                             ),
                           ),
                         ],
@@ -524,7 +524,7 @@ class _CourseContentSheetState extends ConsumerState<_CourseContentSheet> {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 12,
-                      color: Color(0xFF94A3B8),
+                      color: Color(0xFF9AA09A),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -535,7 +535,7 @@ class _CourseContentSheetState extends ConsumerState<_CourseContentSheet> {
                     child: const Icon(
                       Icons.keyboard_arrow_down_rounded,
                       size: 20,
-                      color: Color(0xFF94A3B8),
+                      color: Color(0xFF9AA09A),
                     ),
                   ),
                 ],
@@ -552,7 +552,7 @@ class _CourseContentSheetState extends ConsumerState<_CourseContentSheet> {
               padding: EdgeInsets.symmetric(vertical: 8, horizontal: 4),
               child: Text(
                 'No lessons in this section yet.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+                style: TextStyle(fontSize: 12, color: Color(0xFF6E746C)),
               ),
             ),
           );
@@ -662,7 +662,7 @@ class _DownloadWholeCourseButton extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Material(
-          color: offlineReady ? const Color(0x1810B981) : AppColors.bgSecondary,
+          color: offlineReady ? const Color(0x1835A862) : AppColors.bgSecondary,
           borderRadius: BorderRadius.circular(12),
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
@@ -677,7 +677,7 @@ class _DownloadWholeCourseButton extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: offlineReady
-                      ? const Color(0x5510B981)
+                      ? const Color(0x5535A862)
                       : AppColors.borderStrong,
                 ),
               ),
@@ -737,14 +737,14 @@ class _DownloadWholeCourseButton extends ConsumerWidget {
               progress.currentLabel!,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
+              style: const TextStyle(fontSize: 11.5, color: Color(0xFF9AA09A)),
             ),
           ],
         ] else if (!canDownload) ...[
           const SizedBox(height: 6),
           const Text(
             'Enroll to download this course for offline study.',
-            style: TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8)),
+            style: TextStyle(fontSize: 11.5, color: Color(0xFF9AA09A)),
           ),
         ],
       ],
@@ -1143,7 +1143,7 @@ class _CourseQuizzesTab extends ConsumerWidget {
                 Icon(
                   Icons.quiz_outlined,
                   size: 36,
-                  color: Color(0xFF64748B),
+                  color: Color(0xFF6E746C),
                 ),
                 SizedBox(height: 10),
                 Text(
@@ -1161,7 +1161,7 @@ class _CourseQuizzesTab extends ConsumerWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF94A3B8),
+                    color: Color(0xFF9AA09A),
                   ),
                 ),
               ],
@@ -1203,14 +1203,14 @@ class _CourseQuizzesTab extends ConsumerWidget {
                         height: 38,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: const Color(0x2210B981),
+                          color: const Color(0x2235A862),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0x5510B981)),
+                          border: Border.all(color: const Color(0x5535A862)),
                         ),
                         child: const Icon(
                           Icons.quiz_outlined,
                           size: 18,
-                          color: Color(0xFF10B981),
+                          color: Color(0xFF35A862),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1233,7 +1233,7 @@ class _CourseQuizzesTab extends ConsumerWidget {
                               '${quiz.questionCount} Questions • ${quiz.passPercentage.toStringAsFixed(0)}% Pass Mark',
                               style: const TextStyle(
                                 fontSize: 12,
-                                color: Color(0xFF64748B),
+                                color: Color(0xFF6E746C),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -1243,7 +1243,7 @@ class _CourseQuizzesTab extends ConsumerWidget {
                       const Icon(
                         Icons.arrow_forward_ios_rounded,
                         size: 14,
-                        color: Color(0xFF94A3B8),
+                        color: Color(0xFF9AA09A),
                       ),
                     ],
                   ),
@@ -1305,7 +1305,7 @@ class _CourseExamsTab extends ConsumerWidget {
                 Icon(
                   Icons.assignment_turned_in_outlined,
                   size: 36,
-                  color: Color(0xFF64748B),
+                  color: Color(0xFF6E746C),
                 ),
                 SizedBox(height: 10),
                 Text(
@@ -1323,7 +1323,7 @@ class _CourseExamsTab extends ConsumerWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Color(0xFF94A3B8),
+                    color: Color(0xFF9AA09A),
                   ),
                 ),
               ],
@@ -1365,14 +1365,14 @@ class _CourseExamsTab extends ConsumerWidget {
                         height: 38,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: const Color(0x2238BDF8),
+                          color: const Color(0x225FA8D3),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0x5538BDF8)),
+                          border: Border.all(color: const Color(0x555FA8D3)),
                         ),
                         child: const Icon(
                           Icons.assignment_turned_in_rounded,
                           size: 18,
-                          color: Color(0xFF38BDF8),
+                          color: Color(0xFF5FA8D3),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -1395,7 +1395,7 @@ class _CourseExamsTab extends ConsumerWidget {
                               'Grade ${exam.grade} • ${exam.durationMinutes} min • ${exam.totalMarks} Total Marks',
                               style: const TextStyle(
                                 fontSize: 12,
-                                color: Color(0xFF64748B),
+                                color: Color(0xFF6E746C),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -1405,7 +1405,7 @@ class _CourseExamsTab extends ConsumerWidget {
                       const Icon(
                         Icons.play_arrow_rounded,
                         size: 20,
-                        color: Color(0xFF38BDF8),
+                        color: Color(0xFF5FA8D3),
                       ),
                     ],
                   ),

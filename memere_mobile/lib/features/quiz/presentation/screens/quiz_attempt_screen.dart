@@ -59,7 +59,7 @@ class QuizAttemptScreen extends ConsumerWidget {
           child: attemptAsync.when(
             loading: () => const Center(
               child: CircularProgressIndicator(
-                color: Color(0xFF10B981),
+                color: Color(0xFF35A862),
                 strokeWidth: 2,
               ),
             ),
@@ -112,7 +112,7 @@ class QuizAttemptScreen extends ConsumerWidget {
                       value: (state.currentIndex + 1) / state.questionCount,
                       backgroundColor: AppColors.bgTertiary,
                       valueColor: const AlwaysStoppedAnimation(
-                        Color(0xFF10B981),
+                        Color(0xFF35A862),
                       ),
                     ),
                   ),

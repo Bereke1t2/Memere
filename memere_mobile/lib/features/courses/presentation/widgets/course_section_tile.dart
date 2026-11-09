@@ -54,16 +54,16 @@ class CourseSectionTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: const Color(0x2238BDF8),
+                  color: const Color(0x225FA8D3),
                   borderRadius: BorderRadius.circular(6),
-                  border: Border.all(color: const Color(0x4438BDF8)),
+                  border: Border.all(color: const Color(0x445FA8D3)),
                 ),
                 child: Text(
                   'SECTION $numPadded',
                   style: const TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF38BDF8),
+                    color: Color(0xFF5FA8D3),
                     letterSpacing: 0.6,
                   ),
                 ),

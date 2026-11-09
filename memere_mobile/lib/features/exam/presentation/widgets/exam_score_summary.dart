@@ -13,9 +13,9 @@ class ExamScoreSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final passed = result.passed;
-    final color = passed ? const Color(0xFF10B981) : const Color(0xFFF59E0B);
+    final color = passed ? const Color(0xFF35A862) : const Color(0xFFD99A2B);
     final gradientColors = passed
-        ? [const Color(0xFF064E3B), const Color(0xFF0F1F18)]
+        ? [const Color(0xFF14422C), const Color(0xFF0F1F18)]
         : [const Color(0xFF451A03), const Color(0xFF1F150F)];
 
     return Container(
@@ -76,7 +76,7 @@ class ExamScoreSummary extends StatelessWidget {
                           ? 'You successfully passed the examination.'
                           : 'Review weak topics to improve your score next time.',
                       style: const TextStyle(
-                        color: Color(0xFFD4D4D8),
+                        color: Color(0xFFD7D9D4),
                         fontSize: 12,
                       ),
                     ),
@@ -124,7 +124,7 @@ class ExamScoreSummary extends StatelessWidget {
             child: Text(
               'Required to pass: ${result.passMarks} marks (50%)',
               style: const TextStyle(
-                color: Color(0xFFA1A1AA),
+                color: Color(0xFFA6ABA4),
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),

@@ -29,7 +29,7 @@ class QuizDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final quizAsync = ref.watch(quizDetailProvider(quizId));
     final isStarting = ref.watch(quizStartLoadingProvider(quizId));
-    const emeraldColor = Color(0xFF10B981);
+    const emeraldColor = Color(0xFF35A862);
 
     return Scaffold(
       backgroundColor: AppColors.bgPrimary,
@@ -80,9 +80,9 @@ class QuizDetailScreen extends ConsumerWidget {
                           height: 52,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: const Color(0x2210B981),
+                            color: const Color(0x2235A862),
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: const Color(0x5510B981)),
+                            border: Border.all(color: const Color(0x5535A862)),
                           ),
                           child: const Icon(
                             Icons.quiz_rounded,
@@ -99,7 +99,7 @@ class QuizDetailScreen extends ConsumerWidget {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: const Color(0x2210B981),
+                                  color: const Color(0x2235A862),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: const Text(
@@ -135,7 +135,7 @@ class QuizDetailScreen extends ConsumerWidget {
                           : 'You have used all attempts for this practice quiz.',
                       style: const TextStyle(
                         fontSize: 13.5,
-                        color: Color(0xFF94A3B8),
+                        color: Color(0xFF9AA09A),
                         height: 1.45,
                       ),
                     ),
@@ -271,14 +271,14 @@ class _MetaRow extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: const Color(0xFF64748B)),
+          Icon(icon, size: 18, color: const Color(0xFF6E746C)),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               label,
               style: const TextStyle(
                 fontSize: 13.5,
-                color: Color(0xFF94A3B8),
+                color: Color(0xFF9AA09A),
                 fontWeight: FontWeight.w500,
               ),
             ),

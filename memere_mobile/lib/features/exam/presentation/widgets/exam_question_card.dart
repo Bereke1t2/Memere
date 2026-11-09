@@ -32,9 +32,9 @@ class ExamQuestionCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: const Color(0xFF111116),
+            color: const Color(0xFF101311),
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: const Color(0xFF22222C)),
+            border: Border.all(color: const Color(0xFF232825)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withAlpha(60),
@@ -54,10 +54,10 @@ class ExamQuestionCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0x2210B981),
+                      color: const Color(0x2235A862),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: const Color(0xFF10B981).withAlpha(100),
+                        color: const Color(0xFF35A862).withAlpha(100),
                         width: 1,
                       ),
                     ),
@@ -67,13 +67,13 @@ class ExamQuestionCard extends StatelessWidget {
                         const Icon(
                           Icons.verified_rounded,
                           size: 13,
-                          color: Color(0xFF10B981),
+                          color: Color(0xFF35A862),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${question.marks} Mark${question.marks == 1 ? '' : 's'}',
                           style: AppTextStyles.labelSmall.copyWith(
-                            color: const Color(0xFF10B981),
+                            color: const Color(0xFF35A862),
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -87,10 +87,10 @@ class ExamQuestionCard extends StatelessWidget {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1A1A22),
+                          color: const Color(0xFF191D1A),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: const Color(0xFF2C2C38),
+                            color: const Color(0xFF2A302C),
                             width: 1,
                           ),
                         ),
@@ -99,7 +99,7 @@ class ExamQuestionCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: AppTextStyles.labelSmall.copyWith(
-                            color: const Color(0xFFA1A1AA),
+                            color: const Color(0xFFA6ABA4),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -109,17 +109,17 @@ class ExamQuestionCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1A1A22),
+                        color: const Color(0xFF191D1A),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: const Color(0xFF2C2C38),
+                          color: const Color(0xFF2A302C),
                           width: 1,
                         ),
                       ),
                       child: Text(
                         _questionTypeLabel(question.type),
                         style: AppTextStyles.labelSmall.copyWith(
-                          color: const Color(0xFFA1A1AA),
+                          color: const Color(0xFFA6ABA4),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -151,7 +151,7 @@ class ExamQuestionCard extends StatelessWidget {
                   ? 'Your Answer:'
                   : 'Choose one answer:',
           style: AppTextStyles.labelMedium.copyWith(
-            color: const Color(0xFF71717A),
+            color: const Color(0xFF7E847C),
             fontWeight: FontWeight.w600,
             letterSpacing: 0.3,
           ),
@@ -242,7 +242,7 @@ class _ShortAnswerFieldState extends State<_ShortAnswerField> {
         decoration: InputDecoration(
           hintText: 'Type your explanation or answer here...',
           hintStyle: AppTextStyles.bodyMedium.copyWith(
-            color: const Color(0xFF52525B),
+            color: const Color(0xFF515A53),
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.all(16),

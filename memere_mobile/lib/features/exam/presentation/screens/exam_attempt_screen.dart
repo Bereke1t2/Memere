@@ -59,7 +59,7 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFF070709),
         appBar: AppBar(
-          backgroundColor: const Color(0xFF0C0C10),
+          backgroundColor: const Color(0xFF0B0E0C),
           elevation: 0,
           scrolledUnderElevation: 0,
           automaticallyImplyLeading: false,
@@ -70,7 +70,7 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                 _safeExit();
               }
             },
-            icon: const Icon(Icons.close_rounded, color: Color(0xFFD4D4D8)),
+            icon: const Icon(Icons.close_rounded, color: Color(0xFFD7D9D4)),
           ),
           title: attemptAsync.maybeWhen(
             data: (state) => Container(
@@ -117,7 +117,7 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                   value: progress,
                   backgroundColor: const Color(0xFF181822),
                   valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF10B981),
+                    Color(0xFF35A862),
                   ),
                 );
               },
@@ -133,14 +133,14 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   CircularProgressIndicator(
-                    color: Color(0xFF10B981),
+                    color: Color(0xFF35A862),
                     strokeWidth: 2.5,
                   ),
                   SizedBox(height: 16),
                   Text(
                     'Preparing your exam questions...',
                     style: TextStyle(
-                      color: Color(0xFFA1A1AA),
+                      color: Color(0xFFA6ABA4),
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -189,11 +189,11 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
         backgroundColor: const Color(0xFF14141B),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Color(0xFF2C2C38)),
+          side: const BorderSide(color: Color(0xFF2A302C)),
         ),
         title: const Row(
           children: [
-            Icon(Icons.pause_circle_outline_rounded, color: Color(0xFFF59E0B)),
+            Icon(Icons.pause_circle_outline_rounded, color: Color(0xFFD99A2B)),
             SizedBox(width: 8),
             Text(
               'Leave exam?',
@@ -209,7 +209,7 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
           'Your progress is automatically saved to the server. '
           'The exam timer will continue running in the background until it expires.',
           style: TextStyle(
-            color: Color(0xFFA1A1AA),
+            color: Color(0xFFA6ABA4),
             fontSize: 14,
             height: 1.4,
           ),
@@ -220,13 +220,13 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
             onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text(
               'Stay & Continue',
-              style: TextStyle(color: Color(0xFFA1A1AA), fontWeight: FontWeight.w600),
+              style: TextStyle(color: Color(0xFFA6ABA4), fontWeight: FontWeight.w600),
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
+              backgroundColor: const Color(0xFFC44A41),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
@@ -250,7 +250,7 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
     messenger.showSnackBar(
       const SnackBar(
         content: Text('Time is up! Submitting your answers...'),
-        backgroundColor: Color(0xFF10B981),
+        backgroundColor: Color(0xFF35A862),
       ),
     );
 
@@ -286,7 +286,7 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                   width: 36,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF3F3F46),
+                    color: const Color(0xFF3E443F),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -297,11 +297,11 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0x2210B981),
+                      color: const Color(0x2235A862),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(Icons.assignment_turned_in_rounded,
-                        color: Color(0xFF10B981), size: 24),
+                        color: Color(0xFF35A862), size: 24),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
@@ -320,7 +320,7 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                         Text(
                           'Review your completion before finalizing',
                           style: TextStyle(
-                            color: Color(0xFF71717A),
+                            color: Color(0xFF7E847C),
                             fontSize: 12,
                           ),
                         ),
@@ -337,9 +337,9 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0x1810B981),
+                        color: const Color(0x1835A862),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFF10B981).withAlpha(60)),
+                        border: Border.all(color: const Color(0xFF35A862).withAlpha(60)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,7 +347,7 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                           Text(
                             '${state.answeredCount}',
                             style: const TextStyle(
-                              color: Color(0xFF10B981),
+                              color: Color(0xFF35A862),
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
                             ),
@@ -356,7 +356,7 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                           const Text(
                             'Answered',
                             style: TextStyle(
-                              color: Color(0xFFA1A1AA),
+                              color: Color(0xFFA6ABA4),
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
@@ -371,13 +371,13 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
                         color: state.unansweredCount > 0
-                            ? const Color(0x18F59E0B)
-                            : const Color(0xFF1A1A22),
+                            ? const Color(0x18D99A2B)
+                            : const Color(0xFF191D1A),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
                           color: state.unansweredCount > 0
-                              ? const Color(0xFFF59E0B).withAlpha(60)
-                              : const Color(0xFF2C2C38),
+                              ? const Color(0xFFD99A2B).withAlpha(60)
+                              : const Color(0xFF2A302C),
                         ),
                       ),
                       child: Column(
@@ -387,8 +387,8 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                             '${state.unansweredCount}',
                             style: TextStyle(
                               color: state.unansweredCount > 0
-                                  ? const Color(0xFFF59E0B)
-                                  : const Color(0xFFA1A1AA),
+                                  ? const Color(0xFFD99A2B)
+                                  : const Color(0xFFA6ABA4),
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
                             ),
@@ -397,7 +397,7 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                           const Text(
                             'Unanswered',
                             style: TextStyle(
-                              color: Color(0xFFA1A1AA),
+                              color: Color(0xFFA6ABA4),
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                             ),
@@ -412,9 +412,9 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1A1A22),
+                          color: const Color(0xFF191D1A),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFF2C2C38)),
+                          border: Border.all(color: const Color(0xFF2A302C)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -431,7 +431,7 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                             const Text(
                               'Time Left',
                               style: TextStyle(
-                                color: Color(0xFFA1A1AA),
+                                color: Color(0xFFA6ABA4),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -448,19 +448,19 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
-                    color: const Color(0x18F59E0B),
+                    color: const Color(0x18D99A2B),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFF59E0B).withAlpha(60)),
+                    border: Border.all(color: const Color(0xFFD99A2B).withAlpha(60)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFFF59E0B)),
+                      const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFFD99A2B)),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'You have ${state.unansweredCount} unanswered questions. Unanswered questions will receive 0 marks.',
                           style: const TextStyle(
-                            color: Color(0xFFFCD34D),
+                            color: Color(0xFFE6C77A),
                             fontSize: 12,
                             height: 1.3,
                           ),
@@ -477,7 +477,7 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                     child: OutlinedButton(
                       onPressed: () => Navigator.of(sheetContext).pop(false),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFFA1A1AA),
+                        foregroundColor: const Color(0xFFA6ABA4),
                         side: const BorderSide(color: Color(0xFF323242)),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -491,7 +491,7 @@ class _ExamAttemptScreenState extends ConsumerState<ExamAttemptScreen> {
                     child: ElevatedButton(
                       onPressed: () => Navigator.of(sheetContext).pop(true),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981),
+                        backgroundColor: const Color(0xFF35A862),
                         foregroundColor: Colors.black,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -613,7 +613,7 @@ class _StickyBottomBar extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
       decoration: const BoxDecoration(
-        color: Color(0xFF0C0C10),
+        color: Color(0xFF0B0E0C),
         border: Border(
           top: BorderSide(color: Color(0xFF1E1E28), width: 1.2),
         ),
@@ -626,10 +626,10 @@ class _StickyBottomBar extends ConsumerWidget {
             Container(
               height: 46,
               decoration: BoxDecoration(
-                color: isFirst ? const Color(0xFF111116) : const Color(0xFF1A1A24),
+                color: isFirst ? const Color(0xFF101311) : const Color(0xFF1A1A24),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: isFirst ? const Color(0xFF1A1A22) : const Color(0xFF2E2E3C),
+                  color: isFirst ? const Color(0xFF191D1A) : const Color(0xFF2E2E3C),
                 ),
               ),
               child: IconButton(
@@ -673,7 +673,7 @@ class _StickyBottomBar extends ConsumerWidget {
                         const Icon(
                           Icons.grid_view_rounded,
                           size: 16,
-                          color: Color(0xFF10B981),
+                          color: Color(0xFF35A862),
                         ),
                         const SizedBox(width: 7),
                         Text(
@@ -688,7 +688,7 @@ class _StickyBottomBar extends ConsumerWidget {
                         const Icon(
                           Icons.keyboard_arrow_up_rounded,
                           size: 16,
-                          color: Color(0xFFA1A1AA),
+                          color: Color(0xFFA6ABA4),
                         ),
                       ],
                     ),
@@ -706,7 +706,7 @@ class _StickyBottomBar extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(12),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF10B981).withAlpha(50),
+                      color: const Color(0xFF35A862).withAlpha(50),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -715,7 +715,7 @@ class _StickyBottomBar extends ConsumerWidget {
                 child: ElevatedButton(
                   onPressed: state.isSubmitting ? null : onSubmit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
+                    backgroundColor: const Color(0xFF35A862),
                     foregroundColor: Colors.black,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -752,11 +752,11 @@ class _StickyBottomBar extends ConsumerWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                    colors: [Color(0xFF35A862), Color(0xFF24814A)],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF10B981).withAlpha(45),
+                      color: const Color(0xFF35A862).withAlpha(45),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),

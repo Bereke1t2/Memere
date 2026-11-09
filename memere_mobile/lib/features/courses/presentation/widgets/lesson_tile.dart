@@ -82,7 +82,7 @@ class _LessonTileState extends State<LessonTile> {
                         const Icon(
                           Icons.radio_button_unchecked_rounded,
                           size: 18,
-                          color: Color(0xFF64748B),
+                          color: Color(0xFF6E746C),
                         ),
                         const SizedBox(width: 6),
                         Text(
@@ -90,7 +90,7 @@ class _LessonTileState extends State<LessonTile> {
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
-                            color: Color(0xFF94A3B8),
+                            color: Color(0xFF9AA09A),
                           ),
                         ),
                       ],
@@ -129,7 +129,7 @@ class _LessonTileState extends State<LessonTile> {
                         _buildSubtitleText(lesson),
                         style: const TextStyle(
                           fontSize: 12,
-                          color: Color(0xFF64748B),
+                          color: Color(0xFF6E746C),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -177,11 +177,11 @@ class _LessonTileState extends State<LessonTile> {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: isCompleted
-                    ? const Color(0x3310B981)
+                    ? const Color(0x3335A862)
                     : (isOpenable
                         ? (lesson.isFreePreview && !canOpen
-                            ? const Color(0x2238BDF8)
-                            : const Color(0x2210B981))
+                            ? const Color(0x225FA8D3)
+                            : const Color(0x2235A862))
                         : const Color(0xFF1E2433)),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
@@ -189,8 +189,8 @@ class _LessonTileState extends State<LessonTile> {
                       ? AppColors.brandEmerald
                       : (isOpenable
                           ? (lesson.isFreePreview && !canOpen
-                              ? const Color(0x5538BDF8)
-                              : const Color(0x5510B981))
+                              ? const Color(0x555FA8D3)
+                              : const Color(0x5535A862))
                           : const Color(0xFF2A3449)),
                 ),
               ),
@@ -205,9 +205,9 @@ class _LessonTileState extends State<LessonTile> {
                     ? AppColors.brandEmerald
                     : (isOpenable
                         ? (lesson.isFreePreview && !canOpen
-                            ? const Color(0xFF38BDF8)
-                            : const Color(0xFF10B981))
-                        : const Color(0xFF64748B)),
+                            ? const Color(0xFF5FA8D3)
+                            : const Color(0xFF35A862))
+                        : const Color(0xFF6E746C)),
               ),
             ),
           ],

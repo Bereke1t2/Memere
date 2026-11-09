@@ -20,7 +20,7 @@ class ExamSaveStatus extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFF111116),
+        color: const Color(0xFF101311),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFF1E1E28)),
       ),
@@ -47,27 +47,27 @@ class ExamSaveStatus extends StatelessWidget {
       return (
         Icons.sync_rounded,
         'Saving...',
-        const Color(0xFF10B981),
+        const Color(0xFF35A862),
       );
     }
     if (saveError != null) {
       return (
         Icons.cloud_off_rounded,
         'Offline (will retry)',
-        const Color(0xFFF59E0B),
+        const Color(0xFFD99A2B),
       );
     }
     if (lastSavedAt != null) {
       return (
         Icons.check_circle_outline_rounded,
         'Progress saved',
-        const Color(0xFF71717A),
+        const Color(0xFF7E847C),
       );
     }
     return (
       Icons.cloud_queue_rounded,
       'Autosave active',
-      const Color(0xFF71717A),
+      const Color(0xFF7E847C),
     );
   }
 }

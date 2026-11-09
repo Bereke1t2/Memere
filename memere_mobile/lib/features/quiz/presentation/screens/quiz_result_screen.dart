@@ -94,7 +94,7 @@ class QuizResultScreen extends ConsumerWidget {
                   Icon(
                     Icons.assignment_outlined,
                     size: 20,
-                    color: Color(0xFF10B981),
+                    color: Color(0xFF35A862),
                   ),
                   SizedBox(width: 8),
                   Text(
