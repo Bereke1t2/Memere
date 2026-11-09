@@ -61,8 +61,6 @@ void main() {
   group('parseFragments — delimiter precedence and boundaries', () {
     List<ContentFragmentKind> kinds(String s) =>
         MathText.parseFragments(s).map((f) => f.kind).toList();
-    List<String> values(String s) =>
-        MathText.parseFragments(s).map((f) => f.value).toList();
 
     test('inline maths keeps the surrounding sentence intact', () {
       final f = MathText.parseFragments(r'Area of $\triangle ABC$ in units');
