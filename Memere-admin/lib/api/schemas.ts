@@ -141,28 +141,39 @@ export type AddLessonInput = z.infer<typeof AddLessonInputSchema>;
 
 export const QuizSchema = z.object({
   id: z.string(),
-  course_id: z.string().optional(),
+  // Null for a standalone quiz — one authored on its own rather than under a
+  // course. Only an admin may create or edit those.
+  course_id: z.string().optional().nullable(),
   lesson_id: z.string().optional().nullable(),
   title: z.string(),
   time_limit_seconds: z.number().optional().nullable(),
   pass_percentage: z.number().optional().default(60),
   randomize_questions: z.boolean().optional().default(false),
   max_attempts: z.number().optional().nullable(),
+  // Gates standalone quizzes only; a course-attached quiz is gated by access to
+  // its course and ignores this flag.
+  is_published: z.boolean().optional().default(false),
   question_count: z.number().optional(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
 });
 export type Quiz = z.infer<typeof QuizSchema>;
 
-export const QuizListResponseSchema = z.object({ data: QuizSchema.array() });
+export const QuizListResponseSchema = z.object({
+  data: QuizSchema.array(),
+  next_cursor: z.string().optional().nullable(),
+});
 
 export const CreateQuizInputSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
+  // Omit or null to create a standalone quiz (admin only).
+  course_id: z.string().optional().nullable(),
   lesson_id: z.string().optional().nullable(),
   time_limit_seconds: z.number().min(0).optional().nullable(),
   pass_percentage: z.number().min(0).max(100).optional(),
   randomize_questions: z.boolean().optional(),
   max_attempts: z.number().min(1).optional().nullable(),
+  is_published: z.boolean().optional(),
 });
 export type CreateQuizInput = z.infer<typeof CreateQuizInputSchema>;
 
@@ -216,10 +227,15 @@ export const ExamSchema = z.object({
 });
 export type Exam = z.infer<typeof ExamSchema>;
 
-export const ExamListResponseSchema = z.object({ data: ExamSchema.array() });
+export const ExamListResponseSchema = z.object({
+  data: ExamSchema.array(),
+  next_cursor: z.string().optional().nullable(),
+});
 
 export const CreateExamInputSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
+  // Omit or null to create a standalone exam (admin only).
+  course_id: z.string().optional().nullable(),
   subject: z.string().min(1, "Subject is required").max(100),
   grade: z.number().int().min(1).max(13),
   duration_minutes: z.number().min(1).optional(),
@@ -250,6 +266,162 @@ export const ExamQuestionInputSchema = z.object({
   answers: AnswerSchema.array().min(2, "At least 2 answers required").optional(),
 });
 export type ExamQuestionInput = z.infer<typeof ExamQuestionInputSchema>;
+
+// ---- Assessment authoring (per-question editing) -------------------------------
+
+// The authoring schemas below carry is_correct, which the student-facing API
+// never returns. They are only ever parsed from the teacher/admin-gated
+// authoring routes (GET /quizzes/:id/questions, GET /exams/:id/questions).
+
+export const AuthoredAnswerSchema = z.object({
+  id: z.string().optional(),
+  text: z.string(),
+  is_correct: z.boolean().optional().default(false),
+  order_index: z.number().optional().default(0),
+});
+export type AuthoredAnswer = z.infer<typeof AuthoredAnswerSchema>;
+
+export const AuthoredQuestionSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  type: z.string(),
+  points: z.number().optional().default(1),
+  marks: z.number().optional().default(1),
+  explanation: z.string().optional().nullable(),
+  order_index: z.number().optional().default(0),
+  subject: z.string().optional().nullable(),
+  topic: z.string().optional().nullable(),
+  answers: AuthoredAnswerSchema.array().default([]),
+});
+export type AuthoredQuestion = z.infer<typeof AuthoredQuestionSchema>;
+
+export const AuthoredQuizSchema = z.object({
+  quiz: QuizSchema,
+  questions: AuthoredQuestionSchema.array().default([]),
+});
+export type AuthoredQuiz = z.infer<typeof AuthoredQuizSchema>;
+
+export const AuthoredExamSchema = z.object({
+  exam: ExamSchema,
+  questions: AuthoredQuestionSchema.array().default([]),
+});
+export type AuthoredExam = z.infer<typeof AuthoredExamSchema>;
+
+// An answer option as submitted by the editor. At least one must be correct,
+// which the editor enforces before sending and the backend re-checks.
+export const EditAnswerInputSchema = z.object({
+  text: z.string().min(1, "Answer text is required"),
+  is_correct: z.boolean(),
+  order_index: z.number().int().min(0).optional(),
+});
+
+export const UpdateQuestionInputSchema = z.object({
+  text: z.string().min(1, "Question text is required").optional(),
+  type: z.enum(["multiple_choice", "true_false", "short_answer"]).optional(),
+  points: z.number().int().min(1).optional(),
+  explanation: z.string().optional().nullable(),
+  order_index: z.number().int().min(0).optional(),
+  subject: z.string().optional().nullable(),
+  topic: z.string().optional().nullable(),
+  answers: EditAnswerInputSchema.array().min(2, "At least 2 answers required").optional(),
+});
+export type UpdateQuestionInput = z.infer<typeof UpdateQuestionInputSchema>;
+
+export const UpdateExamQuestionInputSchema = UpdateQuestionInputSchema.omit({
+  points: true,
+}).extend({
+  marks: z.number().int().min(1).optional(),
+});
+export type UpdateExamQuestionInput = z.infer<typeof UpdateExamQuestionInputSchema>;
+
+export const ReorderQuestionsInputSchema = z.object({
+  question_ids: z.string().array().min(1),
+});
+export type ReorderQuestionsInput = z.infer<typeof ReorderQuestionsInputSchema>;
+
+// ---- Assessment import --------------------------------------------------------
+
+// Mirrors the backend wire format in dto/assessment_import.go. The browser-side
+// parser normalizes uploads (JSON or HTML) into this shape, the preview renders
+// it, and only after the operator confirms is it POSTed.
+
+export const IMPORT_FORMAT_VERSION = 1;
+
+export const ImportAnswerSchema = z.object({
+  text: z.string().min(1, "Answer text is required"),
+  is_correct: z.boolean(),
+});
+
+export const ImportQuestionSchema = z
+  .object({
+    text: z.string().min(1, "Question text is required"),
+    type: z.enum(["multiple_choice", "true_false", "short_answer"]).optional(),
+    points: z.number().int().min(1).optional(),
+    marks: z.number().int().min(1).optional(),
+    explanation: z.string().optional().nullable(),
+    subject: z.string().optional().nullable(),
+    topic: z.string().optional().nullable(),
+    answers: ImportAnswerSchema.array().optional(),
+    options: z.string().array().optional(),
+    correct: z.unknown().optional(),
+  })
+  .refine((q) => (q.answers?.length ?? 0) > 0 || (q.options?.length ?? 0) > 0, {
+    message: 'Provide either "answers" or "options" + "correct"',
+  })
+  .refine((q) => !((q.answers?.length ?? 0) > 0 && (q.options?.length ?? 0) > 0), {
+    message: 'Use either "answers" or "options" + "correct", not both',
+  })
+  .refine((q) => (q.options?.length ?? 0) === 0 || q.correct !== undefined, {
+    message: '"correct" is required when using "options"',
+  });
+export type ImportQuestion = z.infer<typeof ImportQuestionSchema>;
+
+export const ImportQuizHeaderSchema = z.object({
+  title: z.string().min(1, "Title is required").max(200),
+  course_id: z.string().optional().nullable(),
+  lesson_id: z.string().optional().nullable(),
+  time_limit_seconds: z.number().int().min(0).optional().nullable(),
+  pass_percentage: z.number().min(0).max(100).optional(),
+  randomize_questions: z.boolean().optional(),
+  max_attempts: z.number().int().min(1).optional().nullable(),
+});
+
+export const ImportExamHeaderSchema = z.object({
+  title: z.string().min(1, "Title is required").max(200),
+  course_id: z.string().optional().nullable(),
+  subject: z.string().min(1, "Subject is required").max(100),
+  grade: z.number().int().min(1).max(13),
+  duration_minutes: z.number().int().min(1),
+  pass_marks: z.number().int().min(0).optional(),
+  instructions: z.string().max(5000).optional().nullable(),
+});
+
+export const ImportDocumentSchema = z
+  .object({
+    version: z.literal(IMPORT_FORMAT_VERSION),
+    kind: z.enum(["quiz", "exam"]),
+    quiz: ImportQuizHeaderSchema.optional(),
+    exam: ImportExamHeaderSchema.optional(),
+    questions: ImportQuestionSchema.array().min(1, "At least one question is required"),
+  })
+  .refine((d) => d.kind !== "quiz" || d.quiz !== undefined, {
+    message: 'A "quiz" block is required when kind is "quiz"',
+    path: ["quiz"],
+  })
+  .refine((d) => d.kind !== "exam" || d.exam !== undefined, {
+    message: 'An "exam" block is required when kind is "exam"',
+    path: ["exam"],
+  });
+export type ImportDocument = z.infer<typeof ImportDocumentSchema>;
+
+export const ImportResultSchema = z.object({
+  kind: z.string(),
+  id: z.string(),
+  title: z.string(),
+  question_count: z.number(),
+  total_marks: z.number().optional().nullable(),
+});
+export type ImportResult = z.infer<typeof ImportResultSchema>;
 
 // ---- Video pipeline -----------------------------------------------------------
 
