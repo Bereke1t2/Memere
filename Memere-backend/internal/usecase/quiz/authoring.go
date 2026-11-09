@@ -17,8 +17,10 @@ const (
 )
 
 // CreateQuizInput is the teacher-facing quiz create request after decoding.
+// CourseID is nil for a standalone quiz — one authored on its own rather than
+// under a course, which only an admin may create.
 type CreateQuizInput struct {
-	CourseID           uuid.UUID
+	CourseID           *uuid.UUID
 	LessonID           *uuid.UUID
 	Title              string
 	TimeLimitSeconds   *int
@@ -34,6 +36,8 @@ type UpdateQuizInput struct {
 	PassPercentage     *float64
 	RandomizeQuestions *bool
 	MaxAttempts        *int
+	LessonID           *uuid.UUID
+	IsPublished        *bool
 }
 
 // AnswerInput is one answer option for a question being authored.
@@ -55,9 +59,16 @@ type QuestionInput struct {
 	Answers     []AnswerInput
 }
 
-// CreateQuiz creates a quiz under a course the actor owns.
+// CreateQuiz creates a quiz, either under a course the actor owns or — when
+// CourseID is nil — as a standalone quiz, which only an admin may author since
+// there is no course owner to scope it to. A new quiz is always unpublished, so
+// a standalone quiz is unreachable by students until it is explicitly published.
 func (s *Service) CreateQuiz(ctx context.Context, actor *Actor, in CreateQuizInput) (*entity.Quiz, error) {
-	if _, err := s.loadOwnedCourse(ctx, actor, in.CourseID); err != nil {
+	if in.CourseID == nil {
+		if !actor.isAdmin() {
+			return nil, apperror.Forbidden("only an admin may create a standalone quiz", nil)
+		}
+	} else if _, err := s.loadOwnedCourse(ctx, actor, *in.CourseID); err != nil {
 		return nil, err
 	}
 	if details := validateQuizInput(in.Title, in.PassPercentage, in.TimeLimitSeconds, in.MaxAttempts); len(details) > 0 {
@@ -136,6 +147,12 @@ func (s *Service) UpdateQuiz(ctx context.Context, actor *Actor, quizID uuid.UUID
 	if in.MaxAttempts != nil {
 		quiz.MaxAttempts = in.MaxAttempts
 	}
+	if in.LessonID != nil {
+		quiz.LessonID = in.LessonID
+	}
+	if in.IsPublished != nil {
+		quiz.IsPublished = *in.IsPublished
+	}
 
 	if details := validateQuizInput(quiz.Title, quiz.PassPercentage, quiz.TimeLimitSeconds, quiz.MaxAttempts); len(details) > 0 {
 		return nil, apperror.Validation(details, nil)
@@ -169,7 +186,10 @@ func (s *Service) loadOwnedCourse(ctx context.Context, actor *Actor, courseID uu
 	return course, nil
 }
 
-// loadOwnedQuiz loads a quiz and asserts the actor owns its parent course.
+// loadOwnedQuiz loads a quiz and asserts the actor may author it: an admin, or
+// the teacher who owns the quiz's parent course. A course-less (standalone) quiz
+// is editable by admins only, mirroring exam.loadOwnedExam — there is no course
+// owner to delegate to.
 func (s *Service) loadOwnedQuiz(ctx context.Context, actor *Actor, quizID uuid.UUID) (*entity.Quiz, error) {
 	if !actor.isTeacherOrAdmin() {
 		return nil, apperror.Forbidden("only teachers may author quizzes", nil)
@@ -178,7 +198,13 @@ func (s *Service) loadOwnedQuiz(ctx context.Context, actor *Actor, quizID uuid.U
 	if err != nil {
 		return nil, err
 	}
-	if _, err := s.loadOwnedCourse(ctx, actor, quiz.CourseID); err != nil {
+	if actor.isAdmin() {
+		return quiz, nil
+	}
+	if quiz.CourseID == nil {
+		return nil, apperror.Forbidden("only an admin may edit a standalone quiz", nil)
+	}
+	if _, err := s.loadOwnedCourse(ctx, actor, *quiz.CourseID); err != nil {
 		return nil, err
 	}
 	return quiz, nil
