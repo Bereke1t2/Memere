@@ -8,6 +8,7 @@ import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/errors/failures.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../../shared/widgets/assessment/review_filter_tabs.dart';
 import '../../domain/entities/exam_subject_score_entity.dart';
 import '../providers/exam_attempt_provider.dart';
 import '../providers/exam_providers.dart';
@@ -30,7 +31,7 @@ class ExamResultScreen extends ConsumerStatefulWidget {
 }
 
 class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
-  int _filterIndex = 0; // 0: All, 1: Correct, 2: Missed
+  ReviewFilter _filter = ReviewFilter.all;
   bool _isRetaking = false;
 
   Future<void> _handleRetake(String examId) async {
@@ -134,11 +135,14 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
             final correctCount = result.feedback.where((f) => f.correct).length;
             final missedCount = result.feedback.length - correctCount;
 
-            final filteredFeedback = result.feedback.asMap().entries.where((entry) {
-              if (_filterIndex == 1) return entry.value.correct;
-              if (_filterIndex == 2) return !entry.value.correct;
-              return true;
-            }).toList();
+            // The index is taken before filtering so a question keeps the
+            // number it had in the exam — renumbering a filtered list would stop
+            // it matching the paper the student just sat.
+            final filteredFeedback = result.feedback
+                .asMap()
+                .entries
+                .where((entry) => _filter.matches(entry.value.correct))
+                .toList();
 
             return ListView(
               physics: const BouncingScrollPhysics(),
@@ -237,20 +241,11 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
                 ],
 
                 // Filter Tabs: All, Correct, Missed
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF13131B),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: const Color(0xFF232825)),
-                  ),
-                  child: Row(
-                    children: [
-                      _buildFilterTab('All (${result.feedback.length})', 0),
-                      _buildFilterTab('Correct ($correctCount)', 1),
-                      _buildFilterTab('Missed ($missedCount)', 2),
-                    ],
-                  ),
+                ReviewFilterTabs(
+                  selected: _filter,
+                  total: result.feedback.length,
+                  correct: correctCount,
+                  onChanged: (f) => setState(() => _filter = f),
                 ),
                 const SizedBox(height: 16),
 
@@ -262,7 +257,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
                     child: Column(
                       children: [
                         Icon(
-                          _filterIndex == 1
+                          _filter == ReviewFilter.correct
                               ? Icons.sentiment_dissatisfied_rounded
                               : Icons.celebration_rounded,
                           size: 40,
@@ -270,7 +265,7 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          _filterIndex == 1
+                          _filter == ReviewFilter.correct
                               ? 'No correct answers yet.'
                               : 'Awesome! No missed questions in this section.',
                           style: const TextStyle(color: Color(0xFFA6ABA4), fontSize: 14),
@@ -332,32 +327,6 @@ class _ExamResultScreenState extends ConsumerState<ExamResultScreen> {
     );
   }
 
-  Widget _buildFilterTab(String label, int index) {
-    final isSelected = _filterIndex == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _filterIndex = index),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF1E1E2A) : Colors.transparent,
-            borderRadius: BorderRadius.circular(10),
-            border: isSelected ? Border.all(color: const Color(0xFF38384A)) : null,
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? Colors.white : const Color(0xFF7E847C),
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-              fontSize: 12,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _ResultErrorState extends StatelessWidget {

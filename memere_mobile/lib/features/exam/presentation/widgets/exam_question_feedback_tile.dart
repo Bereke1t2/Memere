@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/assessment/explanation_panel.dart';
 import '../../../../shared/widgets/math_text.dart';
 
 import '../../domain/entities/exam_feedback_answer_entity.dart';
@@ -161,53 +162,9 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
             // Explanation Box
             if (feedback.explanation != null && feedback.explanation!.trim().isNotEmpty) ...[
               const SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF151922),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFF5FA8D3).withAlpha(70),
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(
-                          Icons.lightbulb_rounded,
-                          size: 16,
-                          color: Color(0xFF5FA8D3),
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          'Explanation & Solution',
-                          style: TextStyle(
-                            color: Color(0xFF5FA8D3),
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    MathText(
-                      feedback.explanation!,
-                      style: const TextStyle(
-                        color: Color(0xFFD7D9D4),
-                        fontSize: 13,
-                        height: 1.4,
-                      ),
-                      // Formulas stay brighter than the surrounding prose so a
-                      // worked solution reads clearly on the tinted panel.
-                      mathColor: const Color(0xFFE2E4DF),
-                      selectable: true,
-                    ),
-                  ],
-                ),
+              ExplanationPanel(
+                explanation: feedback.explanation!,
+                title: 'Explanation & Solution',
               ),
             ],
           ],

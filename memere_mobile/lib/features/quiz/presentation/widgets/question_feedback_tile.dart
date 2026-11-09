@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
+import '../../../../shared/widgets/assessment/explanation_panel.dart';
 import '../../../../shared/widgets/math_text.dart';
 import '../../domain/entities/question_feedback_entity.dart';
 
@@ -188,55 +189,9 @@ class QuestionFeedbackTile extends StatelessWidget {
             _HumanReadableAnswerFallback(feedback: feedback),
           ],
           if (feedback.explanation != null &&
-              feedback.explanation!.isNotEmpty) ...[
+              feedback.explanation!.trim().isNotEmpty) ...[
             const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0x184E9FAE),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0x444E9FAE)),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    Icons.lightbulb_outline_rounded,
-                    size: 18,
-                    color: Color(0xFF5FA8D3),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Explanation',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF5FA8D3),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        MathText(
-                          feedback.explanation!,
-                          style: const TextStyle(
-                            fontSize: 12.5,
-                            color: Color(0xFFCDD0C9),
-                            height: 1.35,
-                          ),
-                          // Formulas stay brighter than the explanation prose
-                          // so a derivation reads clearly on the tinted panel.
-                          mathColor: const Color(0xFFE2E4DF),
-                          selectable: true,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            ExplanationPanel(explanation: feedback.explanation!),
           ],
         ],
       ),
