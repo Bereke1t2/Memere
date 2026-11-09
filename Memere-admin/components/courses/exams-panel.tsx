@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Loader2, Globe, BarChart3, Pencil, Trash2, X } from "lucide-react";
+import { Plus, Loader2, Globe, BarChart3, Pencil, Trash2, X, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { clientAction } from "@/lib/client-action";
+import { ImportAssessmentDialog } from "@/components/assessments/import-dialog";
 import {
   CreateExamInputSchema,
   ExamQuestionInputSchema,
@@ -566,7 +568,8 @@ export function ExamsPanel({ courseId, exams, canEdit = true }: ExamsPanelProps)
   return (
     <div className="flex flex-col gap-4">
       {canEdit && (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <ImportAssessmentDialog kind="exam" courseId={courseId} />
           <Button size="sm" onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4 mr-1.5" /> New Exam
           </Button>
@@ -605,6 +608,13 @@ export function ExamsPanel({ courseId, exams, canEdit = true }: ExamsPanelProps)
                 </div>
                 {canEdit && (
                   <div className="flex items-center gap-1.5 shrink-0">
+                    {/* The full question-by-question editor lives on the exam's
+                        own page; this panel keeps the quick actions. */}
+                    <Button asChild size="sm" variant="outline" className="text-xs h-7">
+                      <Link href={`/exams/${exam.id}`}>
+                        <ListChecks className="h-3 w-3 mr-1" /> Questions
+                      </Link>
+                    </Button>
                     <EditExamDialog exam={exam} onDone={() => router.refresh()} />
                     <AddExamQuestionDialog exam={exam} onDone={() => router.refresh()} />
                     {!exam.is_published && (

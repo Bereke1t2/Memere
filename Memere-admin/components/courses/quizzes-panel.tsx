@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Loader2, Trash2, Pencil, HelpCircle, X } from "lucide-react";
+import { Plus, Loader2, Trash2, Pencil, HelpCircle, X, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { clientAction } from "@/lib/client-action";
+import { ImportAssessmentDialog } from "@/components/assessments/import-dialog";
 import {
   CreateQuizInputSchema,
   AddQuizQuestionInputSchema,
@@ -495,7 +497,8 @@ export function QuizzesPanel({
   return (
     <div className="flex flex-col gap-4">
       {canEdit && (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <ImportAssessmentDialog kind="quiz" courseId={courseId} />
           <Button size="sm" onClick={() => setCreateOpen(true)}>
             <Plus className="h-4 w-4 mr-1.5" /> New Quiz
           </Button>
@@ -529,6 +532,13 @@ export function QuizzesPanel({
                 </div>
                 {canEdit && (
                   <div className="flex items-center gap-1.5">
+                    {/* The full question-by-question editor lives on the quiz's
+                        own page; this panel keeps the quick actions. */}
+                    <Button asChild size="sm" variant="outline" className="text-xs h-7">
+                      <Link href={`/quizzes/${quiz.id}`}>
+                        <ListChecks className="h-3 w-3 mr-1" /> Questions
+                      </Link>
+                    </Button>
                     <EditQuizDialog
                       quiz={quiz}
                       lessons={lessons}
