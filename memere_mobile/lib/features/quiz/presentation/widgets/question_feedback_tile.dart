@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
+import '../../../../shared/widgets/math_text.dart';
 import '../../domain/entities/question_feedback_entity.dart';
 
 class QuestionFeedbackTile extends StatelessWidget {
@@ -79,7 +80,7 @@ class QuestionFeedbackTile extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          Text(
+          MathText(
             feedback.questionText != null && feedback.questionText!.isNotEmpty
                 ? 'Q${index + 1}. ${feedback.questionText!}'
                 : 'Question ${index + 1}',
@@ -89,6 +90,8 @@ class QuestionFeedbackTile extends StatelessWidget {
               color: Colors.white,
               height: 1.35,
             ),
+            // A review screen is where a student wants to copy a worked answer.
+            selectable: true,
           ),
           const SizedBox(height: 14),
           if (feedback.answers.isNotEmpty) ...[
@@ -161,7 +164,7 @@ class QuestionFeedbackTile extends StatelessWidget {
                       ),
                       const SizedBox(width: 10),
                       Expanded(
-                        child: Text(
+                        child: MathText(
                           ans.text,
                           style: TextStyle(
                             fontSize: 13.5,
@@ -216,13 +219,17 @@ class QuestionFeedbackTile extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(
+                        MathText(
                           feedback.explanation!,
                           style: const TextStyle(
                             fontSize: 12.5,
                             color: Color(0xFFCBD5E1),
                             height: 1.35,
                           ),
+                          // Formulas stay brighter than the explanation prose
+                          // so a derivation reads clearly on the tinted panel.
+                          mathColor: const Color(0xFFE2E8F0),
+                          selectable: true,
                         ),
                       ],
                     ),

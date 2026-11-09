@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_sizes.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../shared/widgets/math_text.dart';
 import '../../domain/entities/quiz_answer_entity.dart';
 
 class AnswerOptionTile extends StatelessWidget {
@@ -87,7 +88,7 @@ class AnswerOptionTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 14),
                 Expanded(
-                  child: Text(
+                  child: MathText(
                     answer.text,
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: isSelected ? Colors.white : AppColors.textPrimary,

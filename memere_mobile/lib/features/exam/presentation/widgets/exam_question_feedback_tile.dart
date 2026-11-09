@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/math_text.dart';
+
 import '../../domain/entities/exam_feedback_answer_entity.dart';
 import '../../domain/entities/exam_question_feedback_entity.dart';
 
@@ -131,7 +133,7 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
             const SizedBox(height: 14),
 
             // Question Prompt
-            Text(
+            MathText(
               prompt,
               style: const TextStyle(
                 color: Colors.white,
@@ -139,6 +141,8 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
                 fontSize: 15,
                 height: 1.45,
               ),
+              // A review screen is where a student wants to copy a question.
+              selectable: true,
             ),
             const SizedBox(height: 14),
 
@@ -190,13 +194,17 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Text(
+                    MathText(
                       feedback.explanation!,
                       style: const TextStyle(
                         color: Color(0xFFD4D4D8),
                         fontSize: 13,
                         height: 1.4,
                       ),
+                      // Formulas stay brighter than the surrounding prose so a
+                      // worked solution reads clearly on the tinted panel.
+                      mathColor: const Color(0xFFE4E4E7),
+                      selectable: true,
                     ),
                   ],
                 ),
@@ -310,7 +318,7 @@ class ExamQuestionFeedbackTile extends StatelessWidget {
           const SizedBox(width: 10),
           // Option text
           Expanded(
-            child: Text(
+            child: MathText(
               answer.text,
               style: TextStyle(
                 color: isKeyCorrect

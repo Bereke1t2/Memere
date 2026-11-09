@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../shared/widgets/math_text.dart';
 import '../../domain/entities/quiz_question_entity.dart';
 import 'answer_option_tile.dart';
 import 'short_answer_field.dart';
@@ -51,7 +52,7 @@ class QuizQuestionCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Text(
+          MathText(
             question.text,
             style: const TextStyle(
               fontSize: 17,

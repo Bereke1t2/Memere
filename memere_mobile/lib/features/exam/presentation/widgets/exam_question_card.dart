@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../shared/widgets/math_text.dart';
 import '../../domain/entities/exam_question_entity.dart';
 import 'exam_answer_option_tile.dart';
 
@@ -127,7 +128,7 @@ class ExamQuestionCard extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               // Question Prompt Text
-              Text(
+              MathText(
                 question.text,
                 style: AppTextStyles.titleMedium.copyWith(
                   fontSize: 17,
