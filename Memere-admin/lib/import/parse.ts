@@ -4,6 +4,7 @@ import {
   type ImportDocument,
   type ImportQuestion,
 } from "@/lib/api/schemas";
+import { readQuestionBank, bankToDocument, BankFormatError } from "./dialects";
 
 /**
  * Parsing of uploaded assessment files into the canonical import document.
@@ -26,6 +27,17 @@ export interface ParseResult {
   warnings: string[];
   /** Which input format produced the document. */
   source: "json" | "html";
+  /**
+   * How the document was recognized, for the preview to report — "canonical" for
+   * this system's own format, otherwise the question-bank shape that matched.
+   */
+  dialect?: string;
+  /**
+   * Required header fields the file did not supply, which the operator must fill
+   * in before importing. A question bank carries no grade and often no duration,
+   * and silently defaulting either on a graded exam is worse than asking.
+   */
+  missingHeader?: ("title" | "subject" | "grade" | "duration_minutes")[];
 }
 
 export class ParseError extends Error {
@@ -39,15 +51,25 @@ export class ParseError extends Error {
   }
 }
 
-/** Dispatches on file extension, falling back to sniffing the content. */
-export function parseImportFile(fileName: string, text: string): ParseResult {
+/**
+ * Dispatches on file extension, falling back to sniffing the content.
+ *
+ * `targetKind` is the kind of assessment the page is importing. A file in this
+ * system's own format declares its own kind and is checked against this one; a
+ * question-bank file declares none, so this is what it becomes.
+ */
+export function parseImportFile(
+  fileName: string,
+  text: string,
+  targetKind: "quiz" | "exam"
+): ParseResult {
   const lower = fileName.toLowerCase();
   if (lower.endsWith(".json")) return parseJson(text);
-  if (lower.endsWith(".html") || lower.endsWith(".htm")) return parseHtml(text);
+  if (lower.endsWith(".html") || lower.endsWith(".htm")) return parseHtml(text, targetKind);
 
   // Unknown extension: a leading "{" means JSON, anything else is treated as
   // markup. Guessing beats rejecting a correctly-formatted file over its name.
-  return text.trimStart().startsWith("{") ? parseJson(text) : parseHtml(text);
+  return text.trimStart().startsWith("{") ? parseJson(text) : parseHtml(text, targetKind);
 }
 
 // ---- JSON --------------------------------------------------------------------
@@ -70,7 +92,12 @@ export function parseJson(text: string): ParseResult {
     );
   }
 
-  return { document: parsed.data, warnings: collectWarnings(parsed.data), source: "json" };
+  return {
+    document: parsed.data,
+    warnings: collectWarnings(parsed.data),
+    source: "json",
+    dialect: "canonical",
+  };
 }
 
 // ---- HTML --------------------------------------------------------------------
@@ -92,19 +119,55 @@ export function parseJson(text: string): ParseResult {
  * `<script type="application/json">` is read from that block instead, which is
  * exact and warning-free.
  */
-export function parseHtml(text: string): ParseResult {
+export function parseHtml(text: string, targetKind: "quiz" | "exam" = "quiz"): ParseResult {
   if (typeof DOMParser === "undefined") {
     throw new ParseError("HTML files can only be parsed in the browser.");
   }
 
   const doc = new DOMParser().parseFromString(text, "text/html");
 
-  // An embedded canonical block is unambiguous, so prefer it over scraping.
-  const embedded = doc.querySelector('script[type="application/json"]');
-  if (embedded?.textContent?.trim()) {
-    const result = parseJson(embedded.textContent);
-    return { ...result, source: "html" };
+  // Three readers, most reliable first.
+  //
+  // 1. An embedded block in this system's own format is exact. It is only
+  //    accepted when it actually validates: several question-bank files ship an
+  //    EMPTY json block beside their real data, and treating that as the answer
+  //    would import zero questions while appearing to succeed.
+  for (const script of Array.from(doc.querySelectorAll('script[type="application/json"]'))) {
+    const body = script.textContent?.trim();
+    if (!body || body === "[]" || body === "{}") continue;
+    try {
+      const result = parseJson(body);
+      return { ...result, source: "html" };
+    } catch {
+      // Not this system's format — fall through to the question-bank readers.
+      break;
+    }
   }
+
+  // 2. A question-bank file: the content team's self-contained exam viewers,
+  //    which carry their questions in a machine-readable block under their own
+  //    field names. Exact, so no markup-interpretation warning is needed.
+  const bank = readQuestionBankOrThrow(doc, text);
+  if (bank) {
+    const document = bankToDocument(bank, targetKind);
+    const missingHeader: ParseResult["missingHeader"] = [];
+    if (!bank.header.title) missingHeader.push("title");
+    if (targetKind === "exam") {
+      if (!bank.header.subject) missingHeader.push("subject");
+      // A bank file never states a grade, and most state no duration.
+      missingHeader.push("grade");
+      if (!bank.header.durationMinutes) missingHeader.push("duration_minutes");
+    }
+    return {
+      document,
+      warnings: [...bank.warnings, ...collectWarnings(document)],
+      source: "html",
+      dialect: bank.dialect,
+      missingHeader,
+    };
+  }
+
+  // 3. Hand-written markup, read structurally — the lossy path.
 
   const warnings: string[] = [
     "This file was read from HTML markup, which cannot be interpreted with certainty. Check the correct answer on every question below before importing.",
@@ -114,9 +177,14 @@ export function parseHtml(text: string): ParseResult {
     doc.querySelectorAll<HTMLElement>("[data-question], .question")
   );
   if (nodes.length === 0) {
-    throw new ParseError(
-      "No questions found in this HTML. Each question needs a data-question attribute or a question class."
-    );
+    // Nothing matched any of the three readers, so say what was looked for
+    // rather than naming only the last one tried.
+    throw new ParseError("No questions could be read from this HTML file.", [
+      'No embedded data block in this system\'s import format.',
+      "No question bank: no populated <script type=\"application/json\"> array, and no window.__EXAM_DATA__ or window.__EXAM_STORE__ assignment.",
+      "No question markup either: nothing carries a data-question attribute or a question class.",
+      "If this file is study notes or revision material rather than a question set, there is nothing here to import.",
+    ]);
   }
 
   const questions: ImportQuestion[] = [];
@@ -205,7 +273,29 @@ export function parseHtml(text: string): ParseResult {
           questions,
         };
 
-  return { document, warnings: [...warnings, ...collectWarnings(document)], source: "html" };
+  return {
+    document,
+    warnings: [...warnings, ...collectWarnings(document)],
+    source: "html",
+    dialect: "markup",
+  };
+}
+
+/**
+ * Runs the question-bank readers, translating their format errors into the
+ * ParseError the dialog renders. A BankFormatError means the file IS a bank file
+ * but one of its questions cannot be trusted — never a reason to fall through to
+ * the lossy markup scrape, which would read the same file far less accurately.
+ */
+function readQuestionBankOrThrow(doc: Document, rawHtml: string) {
+  try {
+    return readQuestionBank(doc, rawHtml);
+  } catch (err) {
+    if (err instanceof BankFormatError) {
+      throw new ParseError(err.message);
+    }
+    throw err;
+  }
 }
 
 // ---- helpers -----------------------------------------------------------------
