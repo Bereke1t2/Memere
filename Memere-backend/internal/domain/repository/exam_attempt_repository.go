@@ -43,6 +43,42 @@ type ExamAttemptRepository interface {
 	// score per exam, summed, with the distinct-exam count and average of those
 	// best percentages. Best-per-exam so retakes never double-count (§9.3).
 	SumBestScores(ctx context.Context, studentID uuid.UUID) (StudentScoreTotals, error)
+	// StatsByExamIDs returns one aggregate row per requested exam (zeros when an
+	// exam has no attempts), for the teacher/admin analytics overview (§9.3).
+	StatsByExamIDs(ctx context.Context, examIDs []uuid.UUID) ([]ExamOverviewStat, error)
+	// ScoreDistribution returns the graded-score histogram for an exam in ten
+	// 10-point buckets (bucket 0 = 0–9.99%, …, bucket 9 = 90–100%). Buckets with
+	// no attempts are omitted.
+	ScoreDistribution(ctx context.Context, examID uuid.UUID) ([]ScoreBucket, error)
+	// DailyAttempts counts attempts started per day across the given exams since
+	// the cutoff, oldest day first. Days with no attempts are omitted.
+	DailyAttempts(ctx context.Context, examIDs []uuid.UUID, since time.Time) ([]DailyAttemptCount, error)
+	// CountDistinctStudents counts how many distinct students have a graded
+	// attempt across the given exams.
+	CountDistinctStudents(ctx context.Context, examIDs []uuid.UUID) (int64, error)
+}
+
+// ExamOverviewStat is one exam's aggregate row in the analytics overview (§9.3).
+type ExamOverviewStat struct {
+	ExamID           uuid.UUID
+	TotalAttempts    int
+	DistinctStudents int
+	AvgPercentage    float64
+	PassedCount      int
+	InProgressCount  int
+	LastSubmittedAt  *time.Time
+}
+
+// ScoreBucket is one 10-point histogram bucket of graded exam scores.
+type ScoreBucket struct {
+	Bucket   int // 0–9; bucket n covers [n*10, n*10+10) percent, 9 includes 100
+	Attempts int
+}
+
+// DailyAttemptCount is the number of attempts started on one day.
+type DailyAttemptCount struct {
+	Day      time.Time
+	Attempts int
 }
 
 // ExamAttemptStats is the aggregate result behind GetExamStats (§9.3).

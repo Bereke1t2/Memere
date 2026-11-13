@@ -14,6 +14,7 @@ import {
   Activity,
   ListChecks,
   FileCheck,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -24,6 +25,7 @@ const ADMIN_NAV = [
   { href: "/courses",         label: "Courses",         icon: BookOpen },
   { href: "/quizzes",         label: "Quizzes",         icon: ListChecks },
   { href: "/exams",           label: "Exams",           icon: FileCheck },
+  { href: "/exam-analytics",  label: "Exam Analytics",  icon: BarChart3 },
   { href: "/course-requests", label: "Course Requests", icon: KeyRound },
   { href: "/payments",        label: "Payments",        icon: CreditCard },
   { href: "/revenue",         label: "Revenue",         icon: TrendingUp },
@@ -36,6 +38,7 @@ const TEACHER_NAV = [
   { href: "/my-courses",      label: "My Courses",      icon: BookOpen },
   { href: "/quizzes",         label: "Quizzes",         icon: ListChecks },
   { href: "/exams",           label: "Exams",           icon: FileCheck },
+  { href: "/exam-analytics",  label: "Exam Analytics",  icon: BarChart3 },
   { href: "/course-requests", label: "Course Requests", icon: KeyRound },
   { href: "/earnings",        label: "Earnings",        icon: DollarSign },
 ];

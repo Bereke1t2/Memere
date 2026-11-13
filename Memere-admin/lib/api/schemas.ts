@@ -244,15 +244,53 @@ export const CreateExamInputSchema = z.object({
 });
 export type CreateExamInput = z.infer<typeof CreateExamInputSchema>;
 
+export const DailyAttemptsSchema = z.object({
+  date: z.string(), // YYYY-MM-DD
+  attempts: z.number(),
+});
+export type DailyAttempts = z.infer<typeof DailyAttemptsSchema>;
+
+export const DistributionBucketSchema = z.object({
+  range: z.string(), // "0-9" … "90-100"
+  attempts: z.number(),
+});
+export type DistributionBucket = z.infer<typeof DistributionBucketSchema>;
+
 export const ExamStatsSchema = z.object({
   exam_id: z.string(),
   total_attempts: z.number(),
-  avg_score: z.number().optional(),
+  avg_percentage: z.number().optional(),
   pass_rate: z.number().optional(),
-  highest_score: z.number().optional(),
-  lowest_score: z.number().optional(),
+  distinct_students: z.number().optional(),
+  passed_count: z.number().optional(),
+  in_progress_count: z.number().optional(),
+  last_submitted_at: z.string().optional().nullable(),
+  distribution: DistributionBucketSchema.array().optional(),
+  daily: DailyAttemptsSchema.array().optional(),
 }).passthrough();
 export type ExamStats = z.infer<typeof ExamStatsSchema>;
+
+export const ExamOverviewStatSchema = z.object({
+  total_attempts: z.number(),
+  distinct_students: z.number(),
+  avg_percentage: z.number(),
+  passed_count: z.number(),
+  pass_rate: z.number(),
+  in_progress_count: z.number(),
+  last_submitted_at: z.string().optional().nullable(),
+});
+export type ExamOverviewStat = z.infer<typeof ExamOverviewStatSchema>;
+
+export const ExamsOverviewSchema = z.object({
+  exams: z.object({ exam: ExamSchema, stats: ExamOverviewStatSchema }).array(),
+  total_attempts: z.number(),
+  distinct_students: z.number(),
+  avg_percentage: z.number(),
+  pass_rate: z.number(),
+  in_progress_count: z.number(),
+  daily: DailyAttemptsSchema.array(),
+}).passthrough();
+export type ExamsOverview = z.infer<typeof ExamsOverviewSchema>;
 
 export const ExamQuestionInputSchema = z.object({
   question_id: z.string().optional(),

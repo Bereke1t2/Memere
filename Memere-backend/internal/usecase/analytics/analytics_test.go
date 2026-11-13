@@ -190,10 +190,14 @@ func (f *fakeRanking) RebuildFromScores(context.Context, uuid.UUID, map[uuid.UUI
 }
 
 type fakeExamAttemptRepo struct {
-	byID   map[uuid.UUID]*entity.ExamAttempt
-	trend  []*entity.ExamAttempt
-	stats  repository.ExamAttemptStats
-	totals repository.StudentScoreTotals
+	byID     map[uuid.UUID]*entity.ExamAttempt
+	trend    []*entity.ExamAttempt
+	stats    repository.ExamAttemptStats
+	totals   repository.StudentScoreTotals
+	overview []repository.ExamOverviewStat
+	buckets  []repository.ScoreBucket
+	daily    []repository.DailyAttemptCount
+	students int64
 }
 
 func (f *fakeExamAttemptRepo) FindByID(_ context.Context, id, studentID uuid.UUID) (*entity.ExamAttempt, error) {
@@ -213,6 +217,18 @@ func (f *fakeExamAttemptRepo) Stats(context.Context, uuid.UUID) (repository.Exam
 func (f *fakeExamAttemptRepo) SumBestScores(context.Context, uuid.UUID) (repository.StudentScoreTotals, error) {
 	return f.totals, nil
 }
+func (f *fakeExamAttemptRepo) StatsByExamIDs(context.Context, []uuid.UUID) ([]repository.ExamOverviewStat, error) {
+	return f.overview, nil
+}
+func (f *fakeExamAttemptRepo) ScoreDistribution(context.Context, uuid.UUID) ([]repository.ScoreBucket, error) {
+	return f.buckets, nil
+}
+func (f *fakeExamAttemptRepo) DailyAttempts(context.Context, []uuid.UUID, time.Time) ([]repository.DailyAttemptCount, error) {
+	return f.daily, nil
+}
+func (f *fakeExamAttemptRepo) CountDistinctStudents(context.Context, []uuid.UUID) (int64, error) {
+	return f.students, nil
+}
 func (f *fakeExamAttemptRepo) Create(context.Context, *entity.ExamAttempt) error { return nil }
 func (f *fakeExamAttemptRepo) GetActive(context.Context, uuid.UUID, uuid.UUID) (*entity.ExamAttempt, error) {
 	return nil, apperror.NotFound("none", nil)
@@ -231,6 +247,7 @@ func (f *fakeExamAttemptRepo) Grade(context.Context, *entity.ExamAttempt) error 
 
 type fakeExamRepo struct {
 	byID map[uuid.UUID]*entity.Exam
+	list []*entity.Exam
 }
 
 func (f *fakeExamRepo) FindByID(_ context.Context, id uuid.UUID) (*entity.Exam, error) {
@@ -242,7 +259,7 @@ func (f *fakeExamRepo) FindByID(_ context.Context, id uuid.UUID) (*entity.Exam, 
 }
 func (f *fakeExamRepo) Create(context.Context, *entity.Exam) error { return nil }
 func (f *fakeExamRepo) List(context.Context, repository.ExamFilter, *pagination.Cursor, int) ([]*entity.Exam, *pagination.Cursor, error) {
-	return nil, nil, nil
+	return f.list, nil, nil
 }
 func (f *fakeExamRepo) Update(context.Context, *entity.Exam) error              { return nil }
 func (f *fakeExamRepo) Delete(context.Context, uuid.UUID) error                 { return nil }
@@ -268,6 +285,7 @@ func (f *fakeExamRepo) GetQuestionsForClient(context.Context, uuid.UUID) ([]repo
 
 type fakeCourseRepo struct {
 	byID map[uuid.UUID]*entity.Course
+	list []*entity.Course
 }
 
 func (f *fakeCourseRepo) FindByID(_ context.Context, id uuid.UUID) (*entity.Course, error) {
@@ -281,8 +299,17 @@ func (f *fakeCourseRepo) Create(context.Context, *entity.Course) error { return 
 func (f *fakeCourseRepo) FindBySlug(context.Context, string) (*entity.Course, error) {
 	return nil, apperror.NotFound("course not found", nil)
 }
-func (f *fakeCourseRepo) List(context.Context, repository.CourseFilter, *pagination.Cursor, int) ([]*entity.Course, *pagination.Cursor, error) {
-	return nil, nil, nil
+func (f *fakeCourseRepo) List(_ context.Context, filter repository.CourseFilter, _ *pagination.Cursor, _ int) ([]*entity.Course, *pagination.Cursor, error) {
+	if filter.TeacherID == nil {
+		return f.list, nil, nil
+	}
+	out := make([]*entity.Course, 0, len(f.list))
+	for _, c := range f.list {
+		if c.TeacherID == *filter.TeacherID {
+			out = append(out, c)
+		}
+	}
+	return out, nil, nil
 }
 func (f *fakeCourseRepo) Update(context.Context, *entity.Course) error       { return nil }
 func (f *fakeCourseRepo) SoftDelete(context.Context, uuid.UUID) error        { return nil }
