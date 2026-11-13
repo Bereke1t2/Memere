@@ -28,6 +28,7 @@ import {
   ExamSchema,
   ExamListResponseSchema,
   ExamStatsSchema,
+  ExamsOverviewSchema,
   ExamQuestionInputSchema,
   VideoUploadResponseSchema,
   VideoStatusSchema,
@@ -69,6 +70,7 @@ import {
   type Exam,
   type CreateExamInput,
   type ExamStats,
+  type ExamsOverview,
   type ExamQuestionInput,
   type VideoUploadResponse,
   type VideoStatus,
@@ -503,6 +505,15 @@ export async function publishExamEndpoint(examId: string): Promise<void> {
 
 export async function getExamStats(examId: string): Promise<ExamStats> {
   const data = await apiFetch(`/exams/${examId}/stats`, { schema: ExamStatsSchema });
+  return data!;
+}
+
+/**
+ * Per-exam attempt aggregates for the analytics dashboard. Admins get every
+ * exam; teachers get the exams under their own courses (scoped server-side).
+ */
+export async function getExamsAnalytics(): Promise<ExamsOverview> {
+  const data = await apiFetch("/analytics/exams", { schema: ExamsOverviewSchema });
   return data!;
 }
 

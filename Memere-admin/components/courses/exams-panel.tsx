@@ -492,28 +492,28 @@ function ExamStatsCard({ examId }: { examId: string }) {
         <p className="text-muted-foreground">Attempts</p>
         <p className="font-medium">{stats.total_attempts}</p>
       </div>
-      {stats.avg_score != null && (
+      {stats.distinct_students != null && (
+        <div>
+          <p className="text-muted-foreground">Students</p>
+          <p className="font-medium">{stats.distinct_students}</p>
+        </div>
+      )}
+      {stats.avg_percentage != null && (
         <div>
           <p className="text-muted-foreground">Avg score</p>
-          <p className="font-medium">{stats.avg_score.toFixed(1)}</p>
+          <p className="font-medium">{stats.avg_percentage.toFixed(1)}%</p>
         </div>
       )}
       {stats.pass_rate != null && (
         <div>
           <p className="text-muted-foreground">Pass rate</p>
-          <p className="font-medium">{(stats.pass_rate * 100).toFixed(0)}%</p>
+          <p className="font-medium">{stats.pass_rate.toFixed(0)}%</p>
         </div>
       )}
-      {stats.highest_score != null && (
+      {stats.in_progress_count != null && stats.in_progress_count > 0 && (
         <div>
-          <p className="text-muted-foreground">Highest</p>
-          <p className="font-medium">{stats.highest_score}</p>
-        </div>
-      )}
-      {stats.lowest_score != null && (
-        <div>
-          <p className="text-muted-foreground">Lowest</p>
-          <p className="font-medium">{stats.lowest_score}</p>
+          <p className="text-muted-foreground">In progress</p>
+          <p className="font-medium">{stats.in_progress_count}</p>
         </div>
       )}
     </div>

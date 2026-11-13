@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BarChart3 } from "lucide-react";
 import { requireStaff } from "@/lib/auth/session";
 import { listAllExams, listMyCourses, listCourses } from "@/lib/api/endpoints";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +40,13 @@ export default async function ExamsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href="/exam-analytics"
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-sm font-medium transition-colors hover:bg-muted/40"
+          >
+            <BarChart3 className="h-4 w-4" aria-hidden="true" />
+            Analytics
+          </Link>
           <ImportAssessmentDialog kind="exam" />
           <CreateExamDialog courses={courses} canCreateStandalone={isAdmin} />
         </div>
