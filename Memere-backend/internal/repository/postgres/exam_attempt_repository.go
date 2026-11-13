@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Bereke1t2/Memere/memere-backend/internal/domain/entity"
@@ -174,6 +175,70 @@ func (r *ExamAttemptRepo) SumBestScores(ctx context.Context, studentID uuid.UUID
 		Count:         row.ExamCount,
 		AvgPercentage: row.AvgPercentage,
 	}, nil
+}
+
+func (r *ExamAttemptRepo) StatsByExamIDs(ctx context.Context, examIDs []uuid.UUID) ([]repository.ExamOverviewStat, error) {
+	rows, err := queriesFor(ctx, r.q).ListExamAttemptStatsByExamIDs(ctx, toPgUUIDs(examIDs))
+	if err != nil {
+		return nil, apperror.Internal(err)
+	}
+	out := make([]repository.ExamOverviewStat, len(rows))
+	for i, row := range rows {
+		out[i] = repository.ExamOverviewStat{
+			ExamID:           fromPgUUID(row.ExamID),
+			TotalAttempts:    int(row.TotalAttempts),
+			DistinctStudents: int(row.DistinctStudents),
+			AvgPercentage:    row.AvgPercentage,
+			PassedCount:      int(row.PassedCount),
+			InProgressCount:  int(row.InProgressCount),
+			LastSubmittedAt:  fromPgTimestamptz(row.LastSubmittedAt),
+		}
+	}
+	return out, nil
+}
+
+func (r *ExamAttemptRepo) ScoreDistribution(ctx context.Context, examID uuid.UUID) ([]repository.ScoreBucket, error) {
+	rows, err := queriesFor(ctx, r.q).GetExamScoreDistribution(ctx, toPgUUID(examID))
+	if err != nil {
+		return nil, apperror.Internal(err)
+	}
+	out := make([]repository.ScoreBucket, len(rows))
+	for i, row := range rows {
+		out[i] = repository.ScoreBucket{Bucket: int(row.Bucket), Attempts: int(row.Attempts)}
+	}
+	return out, nil
+}
+
+func (r *ExamAttemptRepo) DailyAttempts(ctx context.Context, examIDs []uuid.UUID, since time.Time) ([]repository.DailyAttemptCount, error) {
+	rows, err := queriesFor(ctx, r.q).ListDailyExamAttempts(ctx, sqlcgen.ListDailyExamAttemptsParams{
+		Column1:   toPgUUIDs(examIDs),
+		StartedAt: pgTimestamptzValue(since),
+	})
+	if err != nil {
+		return nil, apperror.Internal(err)
+	}
+	out := make([]repository.DailyAttemptCount, len(rows))
+	for i, row := range rows {
+		out[i] = repository.DailyAttemptCount{Day: row.Day.Time, Attempts: int(row.Attempts)}
+	}
+	return out, nil
+}
+
+func (r *ExamAttemptRepo) CountDistinctStudents(ctx context.Context, examIDs []uuid.UUID) (int64, error) {
+	n, err := queriesFor(ctx, r.q).CountDistinctExamStudents(ctx, toPgUUIDs(examIDs))
+	if err != nil {
+		return 0, apperror.Internal(err)
+	}
+	return n, nil
+}
+
+// toPgUUIDs converts a UUID slice for `= ANY($1::uuid[])` parameters.
+func toPgUUIDs(ids []uuid.UUID) []pgtype.UUID {
+	out := make([]pgtype.UUID, len(ids))
+	for i, id := range ids {
+		out[i] = toPgUUID(id)
+	}
+	return out
 }
 
 func mapExamAttemptErr(err error) error {

@@ -396,6 +396,22 @@ func (f *fakeExamAttemptRepo) SumBestScores(context.Context, uuid.UUID) (reposit
 	return repository.StudentScoreTotals{}, nil
 }
 
+func (f *fakeExamAttemptRepo) StatsByExamIDs(context.Context, []uuid.UUID) ([]repository.ExamOverviewStat, error) {
+	return nil, nil
+}
+
+func (f *fakeExamAttemptRepo) ScoreDistribution(context.Context, uuid.UUID) ([]repository.ScoreBucket, error) {
+	return nil, nil
+}
+
+func (f *fakeExamAttemptRepo) DailyAttempts(context.Context, []uuid.UUID, time.Time) ([]repository.DailyAttemptCount, error) {
+	return nil, nil
+}
+
+func (f *fakeExamAttemptRepo) CountDistinctStudents(context.Context, []uuid.UUID) (int64, error) {
+	return 0, nil
+}
+
 func (f *fakeExamAttemptRepo) Grade(_ context.Context, a *entity.ExamAttempt) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()

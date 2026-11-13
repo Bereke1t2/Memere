@@ -202,24 +202,8 @@ func (s *Service) GetMyPoints(ctx context.Context, actor *Actor) (*StudentPoints
 // GetExamStats returns aggregate stats for an exam, for the teacher who owns its
 // course or an admin (§9.3). Students may not see cohort stats.
 func (s *Service) GetExamStats(ctx context.Context, actor *Actor, examID uuid.UUID) (*ExamStats, error) {
-	if !actor.isTeacherOrAdmin() {
-		return nil, apperror.Forbidden("only teachers may view exam statistics", nil)
-	}
-	exam, err := s.exams.FindByID(ctx, examID)
-	if err != nil {
+	if _, err := s.authorizeExamStats(ctx, actor, examID); err != nil {
 		return nil, err
-	}
-	if actor.Role != entity.RoleAdmin {
-		if exam.CourseID == nil {
-			return nil, apperror.Forbidden("only an admin may view stats for a standalone exam", nil)
-		}
-		course, err := s.courses.FindByID(ctx, *exam.CourseID)
-		if err != nil {
-			return nil, err
-		}
-		if course.TeacherID != actor.UserID {
-			return nil, apperror.Forbidden("you do not own this exam's course", nil)
-		}
 	}
 
 	stats, err := s.examAttempts.Stats(ctx, examID)

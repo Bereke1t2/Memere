@@ -75,19 +75,35 @@ func (h *AnalyticsHandler) Points(c *gin.Context) {
 	respondJSON(c, http.StatusOK, &resp)
 }
 
-// ExamStats handles GET /exams/:id/stats → 200 (teacher/admin only).
+// ExamStats handles GET /exams/:id/stats → 200 (teacher/admin only). The
+// response is a superset of the original stats payload: it adds the distinct
+// student count, in-progress sittings, the score-distribution histogram, and
+// the attempts-per-day series.
 func (h *AnalyticsHandler) ExamStats(c *gin.Context) {
 	examID, err := parseUUIDParam(c, "id")
 	if err != nil {
 		respondError(c, err)
 		return
 	}
-	stats, err := h.svc.GetExamStats(c.Request.Context(), analyticsActor(c), examID)
+	insights, err := h.svc.GetExamInsights(c.Request.Context(), analyticsActor(c), examID)
 	if err != nil {
 		respondError(c, err)
 		return
 	}
-	resp := dto.NewExamStatsResponse(stats)
+	resp := dto.NewExamInsightsResponse(insights)
+	respondJSON(c, http.StatusOK, &resp)
+}
+
+// ExamsOverview handles GET /analytics/exams → 200 (teacher/admin only): one
+// aggregate row per exam the caller may see stats for, plus cross-exam totals
+// and the attempts-per-day series for the dashboard.
+func (h *AnalyticsHandler) ExamsOverview(c *gin.Context) {
+	overview, err := h.svc.GetExamsOverview(c.Request.Context(), analyticsActor(c))
+	if err != nil {
+		respondError(c, err)
+		return
+	}
+	resp := dto.NewExamsOverviewResponse(overview)
 	respondJSON(c, http.StatusOK, &resp)
 }
 

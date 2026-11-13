@@ -282,6 +282,10 @@ func NewRouter(deps Deps) *gin.Engine {
 	v1.GET("/me/trend", requireAuth, deps.Analytics.Trend)
 	v1.GET("/me/points", requireAuth, deps.Analytics.Points)
 
+	// Teacher/admin exam-analytics overview: per-exam attempt aggregates for the
+	// dashboard. Admins see every exam; teachers only exams under their courses.
+	v1.GET("/analytics/exams", requireAuth, teacherOrAdmin, deps.Analytics.ExamsOverview)
+
 	// Video pipeline (Phase 3). Reads (status/stream/download) use OptionalAuth so
 	// unregistered guests can watch/download published & free content; access
 	// control (owner/admin or free/preview/enrolled/subscribed) is enforced in the
